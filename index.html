@@ -82,6 +82,7 @@ h3{font-size:19px;margin:0 0 6px;letter-spacing:-.01em}
 .note{font-size:14px;color:var(--mute);margin-top:14px}
 .plans.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:900px){.plans.three{grid-template-columns:1fr}}
+.trial{align-self:flex-start;font-size:13px;font-weight:600;color:var(--ok);background:#E6F3EC;border-radius:999px;padding:3px 10px}
 .pdesc{margin:0;color:var(--mute);font-size:15px}
 .cmpwrap{overflow-x:auto;margin-top:24px;border:1px solid var(--line);border-radius:14px}
 .cmp{width:100%;border-collapse:collapse;font-size:15px;min-width:520px}
@@ -150,7 +151,7 @@ details p{color:var(--ink2);font-size:15px}
         <a class="btn primary" href="#anfrage">Vorführung anfragen</a>
         <a class="btn ghost" href="/app" data-login>Anmelden</a>
       </div>
-      <div class="checks"><span>Deine bisherigen Händler bleiben</span><span>Deine eigenen Einkaufspreise</span><span>Persönlich eingerichtet</span></div>
+      <div class="checks"><span>Erster Monat kostenlos</span><span>Deine bisherigen Händler bleiben</span><span>Deine eigenen Einkaufspreise</span><span>Persönlich eingerichtet</span></div>
     </div>
     <div class="compare" aria-label="Beispiel eines Preisvergleichs">
       <div class="head"><b>Ein Teil, vier Händler</b><span class="tag">Beispiel · fiktive Händler</span></div>
@@ -210,14 +211,14 @@ details p{color:var(--ink2);font-size:15px}
   <section id="preise">
     <div class="wrap">
       <p class="eyebrow">Preise für Werkstätten</p>
-      <h2>Suchen und bestellen ab 19 €. Mit Pro und Business schneller einkaufen.</h2>
-      <p style="color:var(--ink2);max-width:640px;margin:0">Basis enthält Suche, Vergleich und Bestellung ohne Begrenzung der Suchen. Du entscheidest immer selbst, was du kaufst – Vorschläge von Spareway sind nur Vorschläge.</p>
+      <h2>Erster Monat kostenlos. Danach ab 19 € im Monat.</h2>
+      <p style="color:var(--ink2);max-width:640px;margin:0">Jeder Tarif startet mit einem kostenlosen Probemonat. Basis enthält Suche, Vergleich und Bestellung ohne Begrenzung der Suchen. Du entscheidest immer selbst, was du kaufst – Vorschläge von Spareway sind nur Vorschläge.</p>
       <div class="plans three">
-        <div class="plan"><h3>Basis</h3><div class="price">19 € <small>/ Monat</small></div><p class="pdesc">Für die normale Suche, den Vergleich und die Bestellung.</p><ul>
+        <div class="plan"><h3>Basis</h3><div class="price">19 € <small>/ Monat</small></div><span class="trial">1. Monat kostenlos</span><p class="pdesc">Für die normale Suche, den Vergleich und die Bestellung.</p><ul>
           <li>Fahrzeug- und Teilesuche ohne Begrenzung</li><li>Alle angebundenen Händler, Marken und Varianten</li><li>Preise, Bestand, Lieferzeit und Versand</li><li>Warenkorb und Bestellung</li><li>Bestellbestätigung und Status</li></ul></div>
-        <div class="plan feat"><h3>Pro</h3><div class="price">79 € <small>/ Monat</small></div><p class="pdesc">Für Werkstätten, die schneller und günstiger einkaufen wollen.</p><ul>
+        <div class="plan feat"><h3>Pro</h3><div class="price">79 € <small>/ Monat</small></div><span class="trial">1. Monat kostenlos</span><p class="pdesc">Für Werkstätten, die schneller und günstiger einkaufen wollen.</p><ul>
           <li>Alles aus Basis</li><li>Vorschläge: günstigste, schnellste und beste Händlerkombination</li><li>Hinweise wie „zusammen mit deinen Artikeln günstiger“</li><li>Übersicht möglicher Ersparnisse</li><li>Gemerkte Fahrzeuge und Favoriten</li><li>Nochmal bestellen, Verlauf mit Filtern</li><li>Einkaufsauswertung und eigenes Dashboard</li></ul></div>
-        <div class="plan"><h3>Business</h3><div class="price">129 € <small>/ Monat</small></div><p class="pdesc">Für Werkstätten mit Team, die ihren Einkauf organisieren.</p><ul>
+        <div class="plan"><h3>Business</h3><div class="price">129 € <small>/ Monat</small></div><span class="trial">1. Monat kostenlos</span><p class="pdesc">Für Werkstätten mit Team, die ihren Einkauf organisieren.</p><ul>
           <li>Alles aus Pro</li><li>Mehrere Mitarbeiter mit Rollen und Bestelllimits</li><li>Berichte nach Händlern und Teilegruppen</li><li>Kosten- und Einsparberichte, Export</li><li>Optimierungsvorschlag direkt im Warenkorb</li><li>Bestellung aus Vorschlag vorbereiten (Freigabe bleibt bei dir)</li><li>Wiederbestellungsvorschläge</li></ul></div>
       </div>
       <div class="cmpwrap"><table class="cmp">
@@ -231,7 +232,7 @@ details p{color:var(--ink2);font-size:15px}
         <tr><td>Mitarbeiterkonten mit Rollen</td><td>–</td><td>–</td><td>✓</td></tr>
         <tr><td>Einsparberichte und Export</td><td>–</td><td>–</td><td>✓</td></tr>
       </table></div>
-      <p class="note">Alle Preise monatlich, netto zzgl. gesetzlicher Umsatzsteuer. Während der Pilotphase besprechen wir den Start mit jeder Werkstatt persönlich.</p>
+      <p class="note">Der erste Monat ist kostenlos, danach gelten die Preise ab dem zweiten Monat. Alle Preise monatlich, netto zzgl. gesetzlicher Umsatzsteuer. Während der Pilotphase besprechen wir den Start mit jeder Werkstatt persönlich.</p>
     </div>
   </section>
 
@@ -243,6 +244,7 @@ details p{color:var(--ink2);font-size:15px}
         <div><h3>Muss ich meine Händler wechseln?</h3><p>Nein. Du nutzt deine bisherigen Händler und Kundennummern weiter. Spareway bündelt nur Suche und Bestellung.</p></div>
         <div><h3>Wer liefert und schreibt die Rechnung?</h3><p>Der Händler, direkt an dich, wie bisher. Spareway ist Vermittler und verkauft selbst keine Teile.</p></div>
         <div><h3>Wer sieht meine Einkaufspreise?</h3><p>Nur deine Werkstatt nach der Anmeldung. Andere Werkstätten und Besucher dieser Website sehen sie nicht.</p></div>
+        <div><h3>Was kostet es?</h3><p>Der erste Monat ist kostenlos. Danach kostet Basis 19 € im Monat, Pro 79 € und Business 129 € (netto). Aufschläge auf Teile gibt es nicht.</p></div>
         <div><h3>Wie fange ich an?</h3><p>Wir kommen vorbei, richten dein Konto mit deinen Händlern ein und zeigen dir Spareway an einem echten Auftrag.</p></div>
       </div>
     </div>
