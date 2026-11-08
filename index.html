@@ -80,6 +80,14 @@ h3{font-size:19px;margin:0 0 6px;letter-spacing:-.01em}
 .plan ul{list-style:none;padding:0;margin:4px 0 0;display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--ink2)}
 .plan li::before{content:"✓";color:var(--ok);font-weight:700;margin-right:6px}
 .note{font-size:14px;color:var(--mute);margin-top:14px}
+.plans.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:900px){.plans.three{grid-template-columns:1fr}}
+.pdesc{margin:0;color:var(--mute);font-size:15px}
+.cmpwrap{overflow-x:auto;margin-top:24px;border:1px solid var(--line);border-radius:14px}
+.cmp{width:100%;border-collapse:collapse;font-size:15px;min-width:520px}
+.cmp th,.cmp td{padding:10px 14px;border-bottom:1px solid var(--line);text-align:center}
+.cmp th:first-child,.cmp td:first-child{text-align:left}
+.cmp tr:last-child td{border-bottom:0}.cmp th{background:var(--soft);font-size:14px}
 .faq{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 40px;margin-top:24px}
 @media (max-width:820px){.faq{grid-template-columns:1fr}}
 .contact{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:center;background:var(--ink);color:#fff;border-radius:18px;padding:36px}
@@ -202,14 +210,28 @@ details p{color:var(--ink2);font-size:15px}
   <section id="preise">
     <div class="wrap">
       <p class="eyebrow">Preise für Werkstätten</p>
-      <h2>Keine Aufschläge auf Teile</h2>
-      <div class="plans">
-        <div class="plan"><h3>Basis</h3><div class="price">0 €</div><ul><li>Suche und Händlervergleich</li><li>Gemeinsamer Warenkorb</li><li>Bis zu 2 Benutzer</li></ul></div>
-        <div class="plan feat"><h3>Pro</h3><div class="price">59 € <small>/ Monat</small></div><ul><li>Alles aus Basis</li><li>Bestelllimits je Mitarbeiter</li><li>Liefer- und Bestellstatus</li><li>Bis zu 5 Benutzer</li></ul></div>
-        <div class="plan"><h3>Business</h3><div class="price">149 € <small>/ Monat</small></div><ul><li>Alles aus Pro</li><li>Einkaufsauswertung (in Vorbereitung)</li><li>Bis zu 15 Benutzer</li></ul></div>
-        <div class="plan"><h3>Mehrere Standorte</h3><div class="price">ab 299 € <small>/ Monat</small></div><ul><li>Mehrere Standorte</li><li>Individuelle Schnittstellen</li><li>Persönlicher Ansprechpartner</li></ul></div>
+      <h2>Suchen und bestellen ab 19 €. Mit Pro und Business schneller einkaufen.</h2>
+      <p style="color:var(--ink2);max-width:640px;margin:0">Basis enthält Suche, Vergleich und Bestellung ohne Begrenzung der Suchen. Du entscheidest immer selbst, was du kaufst – Vorschläge von Spareway sind nur Vorschläge.</p>
+      <div class="plans three">
+        <div class="plan"><h3>Basis</h3><div class="price">19 € <small>/ Monat</small></div><p class="pdesc">Für die normale Suche, den Vergleich und die Bestellung.</p><ul>
+          <li>Fahrzeug- und Teilesuche ohne Begrenzung</li><li>Alle angebundenen Händler, Marken und Varianten</li><li>Preise, Bestand, Lieferzeit und Versand</li><li>Warenkorb und Bestellung</li><li>Bestellbestätigung und Status</li></ul></div>
+        <div class="plan feat"><h3>Pro</h3><div class="price">79 € <small>/ Monat</small></div><p class="pdesc">Für Werkstätten, die schneller und günstiger einkaufen wollen.</p><ul>
+          <li>Alles aus Basis</li><li>Vorschläge: günstigste, schnellste und beste Händlerkombination</li><li>Hinweise wie „zusammen mit deinen Artikeln günstiger“</li><li>Übersicht möglicher Ersparnisse</li><li>Gemerkte Fahrzeuge und Favoriten</li><li>Nochmal bestellen, Verlauf mit Filtern</li><li>Einkaufsauswertung und eigenes Dashboard</li></ul></div>
+        <div class="plan"><h3>Business</h3><div class="price">129 € <small>/ Monat</small></div><p class="pdesc">Für Werkstätten mit Team, die ihren Einkauf organisieren.</p><ul>
+          <li>Alles aus Pro</li><li>Mehrere Mitarbeiter mit Rollen und Bestelllimits</li><li>Berichte nach Händlern und Teilegruppen</li><li>Kosten- und Einsparberichte, Export</li><li>Optimierungsvorschlag direkt im Warenkorb</li><li>Bestellung aus Vorschlag vorbereiten (Freigabe bleibt bei dir)</li><li>Wiederbestellungsvorschläge</li></ul></div>
       </div>
-      <p class="note">Alle Preise netto zzgl. USt. Während der Pilotphase besprechen wir den Start mit jeder Werkstatt persönlich.</p>
+      <div class="cmpwrap"><table class="cmp">
+        <tr><th>Funktion</th><th>Basis</th><th>Pro</th><th>Business</th></tr>
+        <tr><td>Suche, Vergleich, Warenkorb, Bestellung</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Alle Varianten, OE und Aftermarket</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Vorschläge für Händlerkombinationen</td><td>–</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Hinweise bei Suchergebnissen</td><td>–</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Gemerkte Fahrzeuge, Favoriten, Nochmal bestellen</td><td>–</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Einkaufsauswertung</td><td>–</td><td>Grundlagen</td><td>Erweitert</td></tr>
+        <tr><td>Mitarbeiterkonten mit Rollen</td><td>–</td><td>–</td><td>✓</td></tr>
+        <tr><td>Einsparberichte und Export</td><td>–</td><td>–</td><td>✓</td></tr>
+      </table></div>
+      <p class="note">Alle Preise monatlich, netto zzgl. gesetzlicher Umsatzsteuer. Während der Pilotphase besprechen wir den Start mit jeder Werkstatt persönlich.</p>
     </div>
   </section>
 
