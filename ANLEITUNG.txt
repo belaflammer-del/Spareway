@@ -1,0 +1,49 @@
+SPAREWAY ALS APP AUF DEM HOME-BILDSCHIRM
+(Demo-Version mit Beispieldaten, ohne Gründerbereich)
+
+WICHTIG VORAB
+- Nach dem Hochladen ist die Seite öffentlich. Jeder mit der Adresse kann sie sehen,
+  auch deine Telefonnummer und E-Mail im Impressum/Kontakt.
+- Es werden keine echten Bestellungen ausgelöst. Alles sind Beispieldaten.
+- Kostenlos. Eine eigene Domain (z. B. spareway.de) brauchst du dafür nicht.
+
+------------------------------------------------------------
+WEG A: NUR MIT DEM IPHONE (GitHub Pages)
+------------------------------------------------------------
+1. ZIP entpacken: In der App "Dateien" auf spareway-demo-app.zip tippen.
+   Es entsteht ein Ordner "spareway-demo-app" mit 7 Dateien.
+2. In Safari github.com öffnen und ein kostenloses Konto anlegen.
+   Tipp: Wenn ein Menüpunkt fehlt, in Safari auf "aA" tippen > "Desktop-Website anfordern".
+3. Oben auf "+" > "New repository".
+   Name: spareway   ·   "Public" auswählen   ·   "Create repository".
+4. Auf "uploading an existing file" tippen (oder "Add file" > "Upload files").
+   In "Dateien" den Ordner öffnen und diese 6 Dateien auswählen:
+   index.html, manifest.webmanifest, sw.js, apple-touch-icon.png, icon-192.png, icon-512.png
+   Dann unten "Commit changes".
+5. Im Repository auf "Settings" > links "Pages".
+   Bei "Branch" "main" und "/ (root)" wählen > "Save".
+6. 1–2 Minuten warten. Deine Adresse lautet:
+   https://DEIN-BENUTZERNAME.github.io/spareway/
+7. Diese Adresse in Safari öffnen > Teilen-Symbol > "Zum Home-Bildschirm" > "Hinzufügen".
+   Fertig: Spareway-Symbol auf dem Home-Bildschirm, startet ohne Browserleiste.
+
+Später aktualisieren: Im Repository erneut "Add file" > "Upload files" und die neue
+index.html hochladen. Nach ein paar Minuten ist die neue Version da.
+
+------------------------------------------------------------
+WEG B: AM COMPUTER (Netlify Drop, am schnellsten)
+------------------------------------------------------------
+1. https://app.netlify.com/drop öffnen, kostenloses Konto anlegen
+   (ohne Konto wird die Seite nach einer Stunde gelöscht).
+2. Den entpackten Ordner "spareway-demo-app" in das Feld ziehen.
+3. Die angezeigte Adresse (z. B. https://xyz.netlify.app) am iPhone in Safari öffnen
+   > Teilen > "Zum Home-Bildschirm".
+
+------------------------------------------------------------
+ANDERE GERÄTE
+------------------------------------------------------------
+Android: Seite in Chrome öffnen > Menü (drei Punkte) > "App installieren".
+Windows: Seite in Edge oder Chrome öffnen > Symbol "App installieren" in der Adresszeile.
+
+Hinweis: Warenkorb und Einstellungen werden nur auf dem jeweiligen Gerät gespeichert.
+Ohne Internet startet die App trotzdem; nur die Diagramme unter "Statistiken" brauchen Internet.
