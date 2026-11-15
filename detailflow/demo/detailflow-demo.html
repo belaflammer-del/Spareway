@@ -10,18 +10,19 @@
   --blue-bg: #eff6ff; --blue-fg: #1d4ed8; --green-bg: #ecfdf5; --green-fg: #047857; --amber-bg: #fffbeb; --amber-fg: #b45309;
   --red-bg: #fef2f2; --red-fg: #b91c1c; --violet-bg: #f5f3ff; --violet-fg: #6d28d9;
   --doc-bg: #ffffff; --doc-fg: #18181b; --doc-muted: #71717a; --doc-line: #e4e4e7;
+  --ev-a: #14b8a6; --ev-a-bg: #ccfbf1; --ev-a-fg: #042f2e; --ev-b: #38bdf8; --ev-b-bg: #e0f2fe; --ev-b-fg: #082f49; --ev-c: #f59e0b; --ev-c-bg: #fef3c7; --ev-c-fg: #451a03;
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0b0b0d; --fg: #f4f4f5; --card: #141417; --muted: #1c1c20; --muted-fg: #a1a1aa; --border: #27272a;
   --accent: #2dd4bf; --accent-fg: #042f2e; --accent-soft: #134e4a; --danger: #f87171;
   --blue-bg: #172554; --blue-fg: #93c5fd; --green-bg: #052e24; --green-fg: #6ee7b7; --amber-bg: #3b2506; --amber-fg: #fcd34d;
-  --red-bg: #3f1111; --red-fg: #fca5a5; --violet-bg: #2e1065; --violet-fg: #c4b5fd; color-scheme: dark } }
+  --red-bg: #3f1111; --red-fg: #fca5a5; --violet-bg: #2e1065; --violet-fg: #c4b5fd; --ev-a: #14b8a6; --ev-a-bg: #042f2e; --ev-a-fg: #ccfbf1; --ev-b: #0ea5e9; --ev-b-bg: #082f49; --ev-b-fg: #e0f2fe; --ev-c: #f59e0b; --ev-c-bg: #451a03; --ev-c-fg: #fef3c7; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #0b0b0d; --fg: #f4f4f5; --card: #141417; --muted: #1c1c20; --muted-fg: #a1a1aa; --border: #27272a;
   --accent: #2dd4bf; --accent-fg: #042f2e; --accent-soft: #134e4a; --danger: #f87171;
   --blue-bg: #172554; --blue-fg: #93c5fd; --green-bg: #052e24; --green-fg: #6ee7b7; --amber-bg: #3b2506; --amber-fg: #fcd34d;
-  --red-bg: #3f1111; --red-fg: #fca5a5; --violet-bg: #2e1065; --violet-fg: #c4b5fd; color-scheme: dark }
+  --red-bg: #3f1111; --red-fg: #fca5a5; --violet-bg: #2e1065; --violet-fg: #c4b5fd; --ev-a: #14b8a6; --ev-a-bg: #042f2e; --ev-a-fg: #ccfbf1; --ev-b: #0ea5e9; --ev-b-bg: #082f49; --ev-b-fg: #e0f2fe; --ev-c: #f59e0b; --ev-c-bg: #451a03; --ev-c-fg: #fef3c7; color-scheme: dark }
 
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
@@ -41,7 +42,7 @@ a { color: inherit; text-decoration: none; }
 .nav a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; color: var(--muted-fg); }
 .nav a:hover { background: var(--muted); color: var(--fg); }
 .nav a.on { background: var(--muted); color: var(--fg); font-weight: 500; }
-.nav svg, .bnav svg { width: 17px; height: 17px; flex-shrink: 0; }
+.nav svg, .bnav svg, .side .foot svg { width: 17px; height: 17px; flex-shrink: 0; }
 .side .foot { border-top: 1px solid var(--border); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
 .side .foot button { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 0; background: none; border-radius: 8px; color: var(--muted-fg); cursor: pointer; text-align: left; }
 .side .foot button:hover { background: var(--muted); color: var(--fg); }
@@ -207,6 +208,35 @@ textarea.inp { height: auto; min-height: 72px; padding: 8px 12px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 .fade { animation: fade .18s ease-out both; }
 @keyframes fade { from { opacity: .4; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+.cal-grid { display: grid; grid-template-columns: 46px repeat(7, minmax(0,1fr)); position: relative; }
+.cal-h { text-align: center; padding: 8px 2px; font-weight: 500; }
+.cal-h small { display: block; font-size: 11px; text-transform: uppercase; color: var(--muted-fg); font-weight: 400; }
+.cal-h.today { color: var(--accent); }
+.cal-hours { position: relative; }
+.cal-hours span { position: absolute; right: 6px; transform: translateY(-50%); font-size: 11px; color: var(--muted-fg); font-variant-numeric: tabular-nums; }
+.cal-col { position: relative; border-left: 1px solid var(--border); }
+.cal-col.today { background: color-mix(in srgb, var(--accent-soft) 25%, transparent); }
+.cal-line { position: absolute; left: 0; right: 0; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.ev { position: absolute; left: 3px; right: 3px; border-radius: 6px; border-left: 3px solid; padding: 3px 6px; font-size: 11px; line-height: 1.25; overflow: hidden; background: var(--muted); border-color: var(--muted-fg); }
+.ev:hover { filter: brightness(.96); }
+.ev b, .ev span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev span { font-weight: 500; } .ev .op { font-weight: 400; opacity: .8; }
+.ev-a, .lg.ev-a { background: var(--ev-a-bg); border-color: var(--ev-a); color: var(--ev-a-fg); }
+.ev-b, .lg.ev-b { background: var(--ev-b-bg); border-color: var(--ev-b); color: var(--ev-b-fg); }
+.ev-c, .lg.ev-c { background: var(--ev-c-bg); border-color: var(--ev-c); color: var(--ev-c-fg); }
+.lg { width: 12px; height: 12px; border-radius: 3px; border-left: 3px solid; display: inline-block; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .gl { stroke: var(--border); }
+.chart .ax { fill: var(--muted-fg); font-size: 11px; }
+.chart .hit { fill: transparent; }
+.chart .bar:hover .hit { fill: var(--muted); }
+.chart .mk { fill: color-mix(in srgb, var(--accent) 55%, transparent); }
+.chart .bar:hover .mk, .chart .bar.last .mk { fill: var(--accent); }
+.chart .val { fill: var(--fg); font-size: 11px; font-weight: 500; opacity: 0; }
+.chart .bar:hover .val, .chart .bar.last .val { opacity: 1; }
+.rb { height: 8px; border-radius: 99px; background: var(--muted); margin: 4px 0 2px; }
+.rb i { display: block; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--accent) 70%, transparent); }
 </style>
 
 <div id="app"></div>
@@ -317,6 +347,9 @@ function seed() {
     mk("o8", 8, "c2", "v2", "geplant", "Felgenversiegelung", at(1, 11), 72, [["Felgenversiegelung", 72]]),
     mk("o9", 9, "c1", "v1", "geplant", "Handwäsche", at(3, 15), 43, [["Handwäsche", 43]]),
   ];
+  const BOXES = ["Box 1", "Box 2", "Waschplatz"];
+  const BOXMAP = { o1: "Box 1", o2: "Box 1", o3: "Waschplatz", o4: "Box 2", o5: "Box 1", o6: "Waschplatz", o8: "Box 2", o9: "Box 1" };
+  orders.forEach((o) => { o.box = o.start ? BOXMAP[o.id] || null : null; o.end = o.start ? new Date(new Date(o.start).getTime() + (o.items.length > 2 ? 240 : 150) * 60000).toISOString() : null; });
   const quotes = [
     { id: "q1", number: "AN-2026-0001", customer_id: "c2", vehicle_id: "v2", status: "sent", created: at(-3, 10), calc: { vehicleClass: "sportwagen", soiling: "normal", serviceIds: [], packageIds: [CATALOG.packages.find((p) => p.name === "Keramik Premium").id], effort: 0, extras: [], discount: 0, override: null }, intro: "" },
     { id: "q2", number: "AN-2026-0002", customer_id: "c4", vehicle_id: "v4", status: "draft", created: at(-1, 16), calc: { vehicleClass: "kompaktwagen", soiling: "stark", serviceIds: ["Sprühextraktion", "Tierhaarentfernung"].map((n) => CATALOG.services.find((s) => s.name === n).id), packageIds: [], effort: 0, extras: [], discount: 0, override: null }, intro: "" },
@@ -325,7 +358,7 @@ function seed() {
 }
 
 // ---------- Zustand ----------
-const KEY = "detailflow-demo-v1";
+const KEY = "detailflow-demo-v3";
 let S;
 try { S = JSON.parse(localStorage.getItem(KEY)) || seed(); } catch { S = seed(); }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
@@ -334,7 +367,7 @@ const cust = (id) => S.customers.find((x) => x.id === id);
 const veh = (id) => S.vehicles.find((x) => x.id === id);
 const vname = (v) => (v ? `${v.make} ${v.model}` : "Ohne Fahrzeug");
 
-let UI = { calc: null, openCat: null, svcSearch: "", custSearch: "", vehSearch: "", modal: null, toast: null, menu: false, boardView: "board", calcTarget: "quote" };
+let UI = { calWeek: 0, calc: null, openCat: null, svcSearch: "", custSearch: "", vehSearch: "", modal: null, toast: null, menu: false, boardView: "board", calcTarget: "quote" };
 function newCalc(pre = {}) {
   const v = pre.vehicle_id ? veh(pre.vehicle_id) : null;
   return { customer_id: pre.customer_id || (v && v.customer_id) || "", vehicle_id: pre.vehicle_id || "", vehicleClass: v ? v.vc : "kompaktwagen", soiling: "normal", serviceIds: [], packageIds: [], effort: 0, extras: [], discount: 0, override: null, intro: "", start: "", target: pre.target || "quote" };
@@ -354,6 +387,7 @@ const I = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   check: '<path d="m5 12 5 5 9-10"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
 };
 const ic = (n, cls = "") => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
@@ -363,7 +397,7 @@ const obadge = (s) => badge(OSL[s], OST[s]);
 const qbadge = (s) => badge(QSL[s], QST[s]);
 
 // ---------- Routing ----------
-const NAV = [["uebersicht", "Übersicht", "home"], ["auftraege", "Aufträge", "clip"], ["angebote", "Angebote", "file"], ["kunden", "Kunden", "users"], ["fahrzeuge", "Fahrzeuge", "car"], ["leistungen", "Leistungen & Preise", "spark"]];
+const NAV = [["uebersicht", "Übersicht", "home"], ["kalender", "Kalender", "cal"], ["auftraege", "Aufträge", "clip"], ["angebote", "Angebote", "file"], ["kunden", "Kunden", "users"], ["fahrzeuge", "Fahrzeuge", "car"], ["leistungen", "Leistungen & Preise", "spark"], ["auswertungen", "Auswertungen", "chart"]];
 function route() { const h = (location.hash || "").slice(1); const [view, id] = h.split("--"); return { view: view || "uebersicht", id }; }
 const go = (v, id) => { location.hash = id ? `${v}--${id}` : v; };
 
@@ -571,6 +605,75 @@ function viewServices() {
   <div style="display:flex;flex-direction:column;gap:16px">${[...groups.entries()].map(([cat, list]) => `<div class="card" style="overflow:hidden"><div class="ch"><div><h2>${esc(cat)}</h2><p>${list.length} Leistungen</p></div></div>${list.map((s) => `<div class="svc-row ${s.active ? "" : "off"}"><div class="t"><b style="font-size:13px">${esc(s.name)}</b><span>${fmtMin(s.duration_minutes)}</span></div><div class="row" style="flex-wrap:nowrap"><input class="price-in tnum" inputmode="decimal" data-price="${s.id}" value="${String(s.base_price).replace(".", ",")}" aria-label="Preis ${esc(s.name)}"><span class="muted">€</span><button class="toggle ${s.active ? "on" : ""}" data-a="toggleSvc" data-id="${s.id}" aria-label="${s.active ? "Deaktivieren" : "Aktivieren"}"></button></div></div>`).join("")}</div>`).join("")}</div>`;
 }
 
+
+const BOXES = ["Box 1", "Box 2", "Waschplatz"];
+const BOXCLS = { "Box 1": "ev-a", "Box 2": "ev-b", "Waschplatz": "ev-c" };
+// Überlappende Termine nebeneinander legen (wie src/lib/calendar-layout.ts)
+function lanes(items) {
+  const sorted = [...items].sort((a, b) => a.start - b.start || b.end - a.end), out = [];
+  let group = [], ends = [], gEnd = -Infinity;
+  const flush = () => { group.forEach((g) => (g.n = ends.length)); out.push(...group); group = []; ends = []; };
+  for (const it of sorted) {
+    if (it.start >= gEnd && group.length) flush();
+    let lane = ends.findIndex((e) => e <= it.start);
+    if (lane === -1) { lane = ends.length; ends.push(it.end); } else ends[lane] = it.end;
+    group.push({ ...it, lane, n: 1 }); gEnd = group.length === 1 ? it.end : Math.max(gEnd, it.end);
+  }
+  if (group.length) flush();
+  return out;
+}
+function viewCalendar() {
+  const t0 = today(); const wd = t0.getDay() || 7;
+  const mon = new Date(t0); mon.setDate(mon.getDate() - wd + 1 + UI.calWeek * 7);
+  const days = [...Array(7)].map((_, i) => { const d = new Date(mon); d.setDate(d.getDate() + i); return d; });
+  const H0 = 7, H1 = 20, PX = 46;
+  const cols = days.map((d) => {
+    const next = new Date(d.getTime() + 864e5);
+    const evs = S.orders.filter((o) => o.start && o.status !== "storniert" && new Date(o.start) >= d && new Date(o.start) < next);
+    const isToday = d.getTime() === t0.getTime();
+    const placed = lanes(evs.map((o) => {
+      const s = new Date(o.start), e = new Date(o.end || o.start);
+      const sh = Math.max(H0, s.getHours() + s.getMinutes() / 60), eh = Math.min(H1, e.getHours() + e.getMinutes() / 60);
+      return { o, sh, h: Math.max(22, (eh - sh) * PX - 2), start: sh, end: eh };
+    }));
+    return `<div class="cal-col ${isToday ? "today" : ""}">${[...Array(H1 - H0)].map((_, i) => `<div class="cal-line" style="top:${i * PX}px"></div>`).join("")}${placed.map(({ o, sh, h, lane, n }) => {
+      return `<a class="ev ${BOXCLS[o.box] || ""}" href="#auftrag--${o.id}" style="top:${(sh - H0) * PX}px;height:${h}px;left:calc(${(lane / n) * 100}% + 3px);width:calc(${100 / n}% - 6px);right:auto"><b class="tnum">${fmtTime(o.start)}</b><span>${esc(vname(veh(o.vehicle_id)))}</span>${h > 60 ? `<span class="op">${esc(o.title)}</span>` : ""}</a>`;
+    }).join("")}</div>`;
+  }).join("");
+  const head = days.map((d) => `<div class="cal-h ${d.getTime() === t0.getTime() ? "today" : ""}"><small>${fmtDate(d, { weekday: "short" })}</small>${d.getDate()}</div>`).join("");
+  const unplanned = S.orders.filter((o) => !o.start && ["anfrage", "bestaetigt"].includes(o.status));
+  return `<div class="ph"><div><h1>Kalender</h1><p>Termine deines Teams, farbig nach Box. Eine Box kann nicht doppelt belegt werden.</p></div><a class="btn" href="#kalkulator" data-a="calcOrder">${ic("plus")}Neuer Termin</a></div>
+  <div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="row"><button class="btn sec sm" data-a="calWeek" data-v="-1" aria-label="Vorherige Woche">‹</button><button class="btn sec sm" data-a="calWeek" data-v="0">Heute</button><button class="btn sec sm" data-a="calWeek" data-v="1" aria-label="Nächste Woche">›</button><b style="margin-left:6px">${fmtDate(days[0], { day: "numeric", month: "short" })} – ${fmtDate(days[6], { day: "numeric", month: "short", year: "numeric" })}</b></div><div class="seg"><button>Tag</button><button class="on">Woche</button><button>Monat</button></div></div>
+  <div class="card" style="overflow:hidden"><div style="overflow-x:auto" id="calscroll"><div style="min-width:760px">
+    <div class="cal-grid" style="border-bottom:1px solid var(--border)"><div></div>${head}</div>
+    <div class="cal-grid" style="height:${(H1 - H0) * PX}px"><div class="cal-hours">${[...Array(H1 - H0)].map((_, i) => i ? `<span style="top:${i * PX}px">${H0 + i}:00</span>` : "").join("")}</div>${cols}</div>
+  </div></div></div>
+  <div class="row small muted" style="margin-top:10px;gap:14px">${BOXES.map((b) => `<span class="row" style="gap:6px"><i class="lg ${BOXCLS[b]}"></i>${b}</span>`).join("")}</div>
+  ${unplanned.length ? `<div class="card" style="margin-top:20px"><div class="ch"><div><h2>Noch nicht eingeplant</h2><p>Bestätigte Aufträge und Anfragen ohne Termin</p></div></div><div class="list">${unplanned.map((o) => `<a href="#auftrag--${o.id}"><div class="t"><b>${esc(vname(veh(o.vehicle_id)))}</b><span>${esc(o.title)}</span></div>${obadge(o.status)}</a>`).join("")}</div></div>` : ""}`;
+}
+
+function viewAnalytics() {
+  const now = new Date();
+  const hist = [9820, 11240, 12910, 10480, 13650, 15120, 16480, 14230, 13760, 15890, 17340];
+  const done = S.orders.filter((o) => o.status === "abgeschlossen").reduce((a, o) => a + o.net, 0);
+  const months = [...Array(12)].map((_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 15); return { label: fmtDate(d, { month: "short" }), value: i < 11 ? hist[i] : 12489 + done }; });
+  const total = months.reduce((a, m) => a + m.value, 0), orders = 412;
+  const W = 720, H = 220, pl = 52, pb = 26, pt = 18, max = 20000, bw = (W - pl) / 12, y = (v) => pt + (H - pt - pb) * (1 - v / max);
+  const bars = months.map((m, i) => { const x = pl + i * bw + bw * 0.18, w = bw * 0.64, top = y(m.value), last = i === 11;
+    return `<g class="bar ${last ? "last" : ""}"><title>${m.label}: ${eur(m.value)}</title><rect x="${pl + i * bw}" y="${pt}" width="${bw}" height="${H - pt - pb}" class="hit"/><rect x="${x}" y="${top}" width="${w}" height="${y(0) - top}" rx="4" class="mk"/><text x="${x + w / 2}" y="${top - 6}" text-anchor="middle" class="val">${(m.value / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 })} T€</text><text x="${x + w / 2}" y="${H - 8}" text-anchor="middle" class="ax">${m.label}</text></g>`; }).join("");
+  const grid = [0, 5000, 10000, 15000, 20000].map((t) => `<line x1="${pl}" x2="${W}" y1="${y(t)}" y2="${y(t)}" class="gl"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" class="ax">${t / 1000} T€</text>`).join("");
+  const top = [["Paket · Komplettaufbereitung", 28430, 47], ["Paket · Keramik Premium", 24680, 16], ["Zweistufige Politur", 15715, 35], ["Paket · Verkaufsaufbereitung", 13260, 39], ["Sprühextraktion", 9790, 110], ["Paket · Leasingrückgabe", 8910, 27], ["Mehrschicht-Keramikversiegelung", 7990, 10], ["Tierhaarentfernung", 6370, 130]];
+  const tmax = top[0][1];
+  const stat = (l, v, h) => `<div class="card stat"><p>${l}</p><strong>${v}</strong>${h ? `<span class="small muted">${h}</span>` : ""}</div>`;
+  return `<div class="ph"><div><h1>Auswertungen</h1><p>Abgeschlossene Aufträge der letzten 12 Monate, Beträge netto.</p></div></div>
+  <div class="grid4" style="margin-bottom:20px">${stat("Umsatz (12 Monate)", eur(total), orders + " Aufträge")}${stat("Ø Auftragswert", eur(total / orders))}${stat("Geschätzter Gewinn", eur(total * 0.46), "nach Material & internen Stundenkosten")}${stat("Angebotsannahmequote", "68 %", S.quotes.filter((q) => q.status === "sent").length + " Angebote offen")}${stat("Wiederkehrende Kunden", "41 %", "73 von 178 Kunden")}${stat("Arbeitszeit (12 Monate)", "1.284 Std.")}${stat("Materialkosten (12 Monate)", eur(total * 0.07))}${stat("Auslastung diesen Monat", "72 %", "geplant / Öffnungszeit × Boxen")}</div>
+  <div class="side-layout">
+    <div class="card"><div class="ch"><div><h2>Umsatz pro Monat</h2><p>netto, abgeschlossene Aufträge – Balken antippen für Werte</p></div></div><div style="padding:16px 12px 8px"><svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Umsatz pro Monat">${grid}${bars}</svg></div></div>
+    <div class="card"><div class="ch"><div><h2>Umsatz nach Leistung</h2><p>Top 8, inkl. Pakete</p></div></div><div class="pad" style="display:flex;flex-direction:column;gap:12px">${top.map(([l, v, n]) => `<div title="${l}: ${eur(v)}"><div class="kv small"><span>${l}</span><span class="tnum">${eur(v)}</span></div><div class="rb"><i style="width:${(v / tmax) * 100}%"></i></div><span class="small muted">${n}× gebucht</span></div>`).join("")}</div></div>
+  </div>
+  <p class="small muted" style="margin-top:12px">Demo-Zahlen. In der echten App werden sie aus deinen abgeschlossenen Aufträgen berechnet.</p>`;
+}
+
 function notFound() { return `<div class="card pad"><b>Nicht gefunden.</b> <a href="#uebersicht" style="color:var(--accent)">Zur Übersicht</a></div>`; }
 
 // ---------- Modal: Kunde / Fahrzeug ----------
@@ -601,7 +704,7 @@ function isDark() { const t = document.documentElement.getAttribute("data-theme"
 function render() {
   const { view, id } = route();
   const navKey = { auftrag: "auftraege", angebot: "angebote", kunde: "kunden", fahrzeug: "fahrzeuge", kalkulator: UI.calc?.target === "order" ? "auftraege" : "angebote" }[view] || view;
-  const views = { uebersicht: viewDashboard, auftraege: viewOrders, auftrag: () => viewOrder(id), angebote: viewQuotes, angebot: () => viewQuote(id), kalkulator: viewCalc, kunden: viewCustomers, kunde: () => viewCustomer(id), fahrzeuge: viewVehicles, fahrzeug: () => viewVehicle(id), leistungen: viewServices };
+  const views = { kalender: viewCalendar, auswertungen: viewAnalytics, uebersicht: viewDashboard, auftraege: viewOrders, auftrag: () => viewOrder(id), angebote: viewQuotes, angebot: () => viewQuote(id), kalkulator: viewCalc, kunden: viewCustomers, kunde: () => viewCustomer(id), fahrzeuge: viewVehicles, fahrzeug: () => viewVehicle(id), leistungen: viewServices };
   const body = (views[view] || viewDashboard)();
   const focusId = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
   app.innerHTML = `
@@ -614,9 +717,11 @@ function render() {
     <div class="demo-bar"><span><b>Demo mit Beispieldaten.</b> Alles ist klickbar; Änderungen bleiben nur in diesem Browser.</span><button data-a="reset">Zurücksetzen</button></div>
     <div class="wrap fade">${body}</div>
   </main>
-  <nav class="bnav">${NAV.slice(0, 4).map(([k, l, i]) => `<a href="#${k}" class="${navKey === k ? "on" : ""}">${ic(i)}${l}</a>`).join("")}</nav>
+  <nav class="bnav">${[NAV[0], NAV[1], NAV[2], NAV[4]].map(([k, l, i]) => `<a href="#${k}" class="${navKey === k ? "on" : ""}">${ic(i)}${l}</a>`).join("")}</nav>
   ${modalHtml()}
   ${UI.toast ? `<div class="toast">${esc(UI.toast)}</div>` : ""}`;
+  const cs = document.getElementById("calscroll"), tc = cs && cs.querySelector(".cal-col.today");
+  if (cs && tc && cs.scrollWidth > cs.clientWidth) cs.scrollLeft = tc.offsetLeft - 46;
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (selStart != null) el.setSelectionRange(selStart, selStart); } catch {} } }
 }
 let toastT;
@@ -636,6 +741,7 @@ app.addEventListener("click", (ev) => {
     case "menu": UI.menu = !UI.menu; render(); break;
     case "theme": document.documentElement.setAttribute("data-theme", isDark() ? "light" : "dark"); render(); break;
     case "reset": S = seed(); UI.calc = null; save(); toast("Demo zurückgesetzt"); break;
+    case "calWeek": UI.calWeek = el.dataset.v === "0" ? 0 : UI.calWeek + Number(el.dataset.v); render(); break;
     case "boardView": UI.boardView = el.dataset.v; render(); break;
     case "orderNext": { const o = S.orders.find((x) => x.id === el.dataset.id); setOrderStatus(o, NEXT[o.status]); break; }
     case "orderSet": { const o = S.orders.find((x) => x.id === el.dataset.id); setOrderStatus(o, document.getElementById("ostatus").value); break; }

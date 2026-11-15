@@ -6,6 +6,7 @@ import { getContext } from "@/lib/auth";
 import { vehicleDisplayName, type OrderStatus } from "@/lib/domain";
 import { addDays, berlinDay, berlinParts, dayStart, isValidDay, weekStart } from "@/lib/time";
 import { cn, formatDate } from "@/lib/utils";
+import { layoutLanes } from "@/lib/calendar-layout";
 
 export const metadata = { title: "Kalender" };
 
@@ -84,11 +85,13 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           {cols.map((c) => (
             <div key={c.key} className={cn("relative border-l border-border", c.highlight && "bg-accent-soft/20")}>
               {Array.from({ length: HOUR_TO - HOUR_FROM }, (_, i) => <div key={i} className="absolute inset-x-0 border-t border-border/60" style={{ top: i * PX }} />)}
-              {events.filter((e) => onDay(e, c.day) && c.filter(e)).map((e) => {
+              {layoutLanes(events.filter((e) => onDay(e, c.day) && c.filter(e)).flatMap((e) => {
                 const pos = timed(e, c.day);
-                if (!pos) return null;
+                return pos ? [{ e, pos, start: pos.top, end: pos.top + pos.height }] : [];
+              })).map(({ e, pos, lane, lanes }) => {
                 return (
-                  <Link key={e.id} href={`/app/auftraege/${e.id}`} className={cn("absolute inset-x-1 overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-[11px] leading-tight shadow-xs transition hover:brightness-95", color(e))} style={pos}>
+                  <Link key={e.id} href={`/app/auftraege/${e.id}`} className={cn("absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-[11px] leading-tight shadow-xs transition hover:brightness-95", color(e))}
+                    style={{ ...pos, left: `calc(${(lane / lanes) * 100}% + 3px)`, width: `calc(${100 / lanes}% - 6px)` }}>
                     <span className="block font-semibold tabular-nums">{formatDate(e.scheduled_start, { hour: "2-digit", minute: "2-digit" })}</span>
                     <span className="block truncate font-medium">{label(e)}</span>
                     {pos.height > 50 && <span className="block truncate opacity-80">{e.title}</span>}

@@ -209,7 +209,7 @@ keine fremden Angebote umwandeln, keine fremden Nummernkreise nutzen; Mitarbeite
 ihre Rolle nicht erhöhen; Tarifdaten sind clientseitig unveränderlich; anonyme Nutzer sehen nur per gültigem Token ein Angebot ohne
 interne Kalkulationsdaten.
 
-**Letzter Lauf (in dieser Entwicklungsumgebung):** 49/49 Tests bestanden (27 DB, 22 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
+**Letzter Lauf (in dieser Entwicklungsumgebung):** 52/52 Tests bestanden (27 DB, 25 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
 Die Oberfläche wurde **nicht** gegen eine laufende Supabase-Instanz durchgeklickt.
 
 CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-Service, Build).
