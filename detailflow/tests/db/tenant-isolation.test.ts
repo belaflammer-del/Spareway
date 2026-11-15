@@ -308,3 +308,107 @@ run("Phase 3: Kalender, Fotos, Checklisten, Auswertungen", () => {
     expect(out[0].n).toBe(0);
   });
 });
+
+run("Phase 4: Rechnungen, Portal, Online-Anfrage, Nachrichten", () => {
+  let d: Db;
+  let orderA: string;
+  let invoiceId: string;
+  let portalToken: string;
+  beforeAll(async () => {
+    d = new Db();
+    await d.connect();
+    await d.admin("update companies set street = 'Industriestraße 42', zip = '50735', city = 'Köln', tax_id = '217/5123/4567', slug = 'premium-koeln', booking_enabled = true where id = $1", [companyA]);
+    orderA = (await d.as(ownerA, `select public.create_order_with_items($1::jsonb, $2::jsonb) as id`, [
+      JSON.stringify({ company_id: companyA, customer_id: customerA, status: "abgeschlossen", total_net: 150, total_gross: 178.5 }),
+      JSON.stringify([{ title: "Handwäsche", quantity: 1, unit_price_net: 50, tax_rate: 19, total_net: 50 }, { title: "Innenraum", quantity: 2, unit_price_net: 50, tax_rate: 19, total_net: 100 }]),
+    ]))[0].id;
+    portalToken = (await d.admin("select portal_token from customers where id = $1", [customerA])).rows[0].portal_token;
+  });
+  afterAll(async () => d?.end());
+
+  it("erstellt Rechnungsentwurf aus Auftrag mit korrekten Summen", async () => {
+    invoiceId = (await d.as(staffA, "select public.create_invoice_from_order($1) as id", [orderA]))[0].id;
+    const inv = (await d.as(staffA, "select status, number, subtotal_net::float, tax_total::float, total_gross::float from invoices where id = $1", [invoiceId]))[0];
+    expect(inv).toMatchObject({ status: "draft", number: null, subtotal_net: 150, tax_total: 28.5, total_gross: 178.5 });
+  });
+
+  it("Mitarbeiter dürfen nicht finalisieren", async () => {
+    await expect(d.as(staffA, "select public.finalize_invoice($1)", [invoiceId])).rejects.toThrow(/Keine Berechtigung/);
+    await expect(d.as(staffA, "update invoices set status = 'finalized' where id = $1", [invoiceId])).rejects.toThrow(/Keine Berechtigung/);
+  });
+
+  it("Finalisieren vergibt lückenlose Nummer, friert Daten ein und bildet Hash", async () => {
+    const num = (await d.as(ownerA, "select public.finalize_invoice($1) as n", [invoiceId]))[0].n;
+    expect(num).toBe(`RE-${new Date().getFullYear()}-0001`);
+    const inv = (await d.as(ownerA, "select status, content_hash, seller_snapshot, buyer_snapshot, due_date from invoices where id = $1", [invoiceId]))[0];
+    expect(inv.status).toBe("finalized");
+    expect(inv.content_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(inv.seller_snapshot.tax_id).toBe("217/5123/4567");
+    expect(inv.buyer_snapshot.name).toBe("Lena Schmitz");
+    expect(inv.due_date).not.toBeNull();
+  });
+
+  it("finalisierte Rechnungen sind unveränderbar und nicht löschbar", async () => {
+    await expect(d.as(ownerA, "update invoices set total_gross = 1 where id = $1", [invoiceId])).rejects.toThrow(/unveränderbar/);
+    await expect(d.as(ownerA, "update invoice_items set total_net = 1 where invoice_id = $1", [invoiceId])).rejects.toThrow(/unveränderbar/);
+    await expect(d.as(ownerA, "delete from invoices where id = $1", [invoiceId])).rejects.toThrow(/nicht gelöscht/);
+    // Kundendaten-Änderung verändert die Rechnung nicht
+    await d.as(ownerA, "update customers set last_name = 'Müller' where id = $1", [customerA]);
+    const inv = (await d.as(ownerA, "select buyer_snapshot from invoices where id = $1", [invoiceId]))[0];
+    expect(inv.buyer_snapshot.name).toBe("Lena Schmitz");
+    await d.as(ownerA, "update customers set last_name = 'Schmitz' where id = $1", [customerA]);
+  });
+
+  it("Zahlungen setzen den Status, sind aber selbst unveränderbar", async () => {
+    await d.as(ownerA, "insert into invoice_payments(company_id, invoice_id, amount) values ($1, $2, 100)", [companyA, invoiceId]);
+    expect((await d.as(ownerA, "select status from invoices where id = $1", [invoiceId]))[0].status).toBe("finalized");
+    await d.as(ownerA, "insert into invoice_payments(company_id, invoice_id, amount) values ($1, $2, 78.5)", [companyA, invoiceId]);
+    expect((await d.as(ownerA, "select status from invoices where id = $1", [invoiceId]))[0].status).toBe("paid");
+    const del = await d.as(ownerA, "delete from invoice_payments where invoice_id = $1 returning id", [invoiceId]);
+    expect(del).toHaveLength(0); // keine Lösch-Policy: Zahlungen bleiben erhalten
+    await expect(d.admin("delete from invoice_payments where invoice_id = $1", [invoiceId])).rejects.toThrow(/nicht geändert/); // auch nicht mit Admin-Rechten
+  });
+
+  it("Storno erzeugt eine finalisierte Gegenrechnung mit eigener Nummer", async () => {
+    const st = (await d.as(ownerA, "select public.cancel_invoice($1) as id", [invoiceId]))[0].id;
+    const s = (await d.as(ownerA, "select number, kind, status, total_gross::float from invoices where id = $1", [st]))[0];
+    expect(s).toMatchObject({ number: `RE-${new Date().getFullYear()}-0002`, kind: "cancellation", status: "finalized", total_gross: -178.5 });
+    expect((await d.as(ownerA, "select status from invoices where id = $1", [invoiceId]))[0].status).toBe("cancelled");
+  });
+
+  it("Firma B sieht keine Rechnungen, Zahlungen oder Nachrichten von Firma A", async () => {
+    for (const t of ["invoices", "invoice_items", "invoice_payments", "messages", "message_templates"]) {
+      const r = await d.as(ownerB, `select count(*)::int as n from ${t} where company_id = $1`, [companyA]);
+      expect(r[0].n, t).toBe(0);
+    }
+    await expect(d.as(ownerB, "select public.create_invoice_from_order($1)", [orderA])).rejects.toThrow(/nicht gefunden/);
+    await expect(d.as(ownerB, "select public.finalize_invoice($1)", [invoiceId])).rejects.toThrow(/nicht gefunden/);
+  });
+
+  it("Kundenportal zeigt nur die eigenen Daten des Kunden; Nachrichten kommen im Betrieb an", async () => {
+    const p = (await d.as(null, "select public.get_portal($1) as p", [portalToken]))[0].p;
+    expect(p.customer.name).toBe("Lena Schmitz");
+    expect(p.invoices.length).toBe(2);
+    expect(JSON.stringify(p)).not.toContain("internal_notes");
+    await d.as(null, "select public.portal_send_message($1, 'Kann ich das Auto schon um 16 Uhr holen?')", [portalToken]);
+    const m = await d.as(ownerA, "select direction, body from messages where customer_id = $1", [customerA]);
+    expect(m.some((x) => x.direction === "in" && x.body.includes("16 Uhr"))).toBe(true);
+    expect((await d.as(null, "select public.get_portal($1) as p", ["0".repeat(48)]))[0].p).toBeNull();
+    // anon sieht Tabellen weiterhin nicht
+    expect((await d.as(null, "select count(*)::int as n from messages"))[0].n).toBe(0);
+  });
+
+  it("Online-Anfrage legt Kunde, Fahrzeug, Anfrage und Nachricht an – nur bei aktivierter Buchungsseite", async () => {
+    const tok = (await d.as(null, "select public.submit_booking_request('premium-koeln', $1::jsonb) as t", [
+      JSON.stringify({ name: "Kai Neu", email: "kai@example.com", phone: "0170 1", make: "Audi", model: "A4", vehicle_class: "kombi", message: "Bitte Innenraum", wish_date: "Freitag" }),
+    ]))[0].t;
+    expect(tok).toHaveLength(48);
+    const o = await d.as(ownerA, "select o.status, v.make from orders o join customers c on c.id = o.customer_id left join vehicles v on v.id = o.vehicle_id where c.email = 'kai@example.com'");
+    expect(o).toEqual([{ status: "anfrage", make: "Audi" }]);
+    // zweite Anfrage mit gleicher E-Mail -> gleicher Kunde
+    const tok2 = (await d.as(null, "select public.submit_booking_request('premium-koeln', $1::jsonb) as t", [JSON.stringify({ name: "Kai Neu", email: "KAI@example.com" })]))[0].t;
+    expect(tok2).toBe(tok);
+    await expect(d.as(null, "select public.submit_booking_request('autocare', $1::jsonb)", [JSON.stringify({ name: "X Y", email: "x@y.de" })])).rejects.toThrow(/nicht gefunden/);
+    await expect(d.as(null, "select public.submit_booking_request('premium-koeln', $1::jsonb)", [JSON.stringify({ name: "X", email: "kaputt" })])).rejects.toThrow();
+  });
+});

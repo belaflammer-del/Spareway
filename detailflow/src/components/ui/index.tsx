@@ -33,9 +33,9 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
   return <input ref={ref} className={cn(fieldBase, "h-10", className)} {...p} />;
 });
 
-export function Textarea({ className, ...p }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn(fieldBase, "min-h-24 py-2", className)} {...p} />;
-}
+export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...p }, ref) {
+  return <textarea ref={ref} className={cn(fieldBase, "min-h-24 py-2", className)} {...p} />;
+});
 
 export function Select({ className, ...p }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return <select className={cn(fieldBase, "h-10 pr-8", className)} {...p} />;

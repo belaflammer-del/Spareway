@@ -10,6 +10,8 @@ import { customerDisplayName, ORDER_STATUSES, ORDER_STATUS_LABELS, vehicleDispla
 import { formatDateTime, formatEUR } from "@/lib/utils";
 import { formatMinutes } from "@/lib/pricing";
 import { setOrderStatus, toggleOrderItem } from "@/app/actions/orders";
+import { createInvoiceFromOrder } from "@/app/actions/invoices";
+import { Notice } from "@/components/ui";
 
 const NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
   anfrage: "bestaetigt", angebot_erstellt: "bestaetigt", bestaetigt: "geplant", geplant: "fahrzeug_angenommen",
@@ -17,18 +19,21 @@ const NEXT: Partial<Record<OrderStatus, OrderStatus>> = {
   fertig: "abholbereit", abholbereit: "abgeschlossen",
 };
 
-export default async function OrderDetail({ params }: { params: Promise<{ id: string }> }) {
+export default async function OrderDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ fehler?: string }> }) {
   const { id } = await params;
+  const { fehler } = await searchParams;
   const ctx = await getContext();
   const { data: o } = await ctx.supabase.from("orders")
     .select("*, customers(id, type, first_name, last_name, company_name, phone, email), vehicles(id, make, model, variant, license_plate, known_damages, special_notes), order_items(*), quotes(id, number)")
     .eq("id", id).maybeSingle();
   if (!o) notFound();
-  const [{ data: members }, { data: history }, { data: workstations }] = await Promise.all([
+  const [{ data: members }, { data: history }, { data: workstations }, { data: invoices }] = await Promise.all([
     ctx.supabase.from("memberships").select("user_id, role").eq("company_id", ctx.companyId),
     ctx.supabase.from("order_status_history").select("to_status, changed_at").eq("order_id", id).order("changed_at", { ascending: false }).limit(20),
     ctx.supabase.from("workstations").select("id, name").eq("company_id", ctx.companyId).eq("active", true).order("sort"),
+    ctx.supabase.from("invoices").select("id, number, status, kind").eq("order_id", id).order("created_at"),
   ]);
+  const invoice = (invoices ?? []).find((i) => i.kind === "invoice" && i.status !== "cancelled");
   const ids = (members ?? []).map((m) => m.user_id);
   const { data: profiles } = ids.length ? await ctx.supabase.from("profiles").select("user_id, full_name").in("user_id", ids) : { data: [] };
   const memberList = (members ?? []).map((m) => ({ id: m.user_id as string, name: profiles?.find((p) => p.user_id === m.user_id)?.full_name || (m.user_id === ctx.user.id ? ctx.user.email ?? "Ich" : "Mitarbeiter") }));
@@ -43,6 +48,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
   return (
     <>
       <PageHeader title={v ? vehicleDisplayName(v) : `Auftrag ${o.number}`} description={`${o.number} · ${customerDisplayName(c)}${o.scheduled_start ? ` · ${formatDateTime(o.scheduled_start)}` : ""}`} actions={<OrderStatusBadge status={status} />} />
+      {fehler && <div className="mb-4"><Notice tone="red">{fehler}</Notice></div>}
       <Card className="mb-6 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         {next ? (
           <form action={setOrderStatus}>
@@ -97,6 +103,11 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
               {v.known_damages && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Vorschäden: {v.known_damages}</p>}
               {v.special_notes && <p className="mt-1 text-xs text-muted-foreground">{v.special_notes}</p>}
             </>)}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href={`/app/nachrichten/${c.id}`} className={buttonClass("secondary", "sm")}>Kunde benachrichtigen</Link>
+              {invoice ? <Link href={`/app/rechnungen/${invoice.id}`} className={buttonClass("secondary", "sm")}>Rechnung {invoice.number ?? "(Entwurf)"}</Link>
+                : <form action={createInvoiceFromOrder}><input type="hidden" name="order_id" value={id} /><button className={buttonClass("primary", "sm")}>Rechnung erstellen</button></form>}
+            </div>
             {o.quotes && <><h3 className="mt-4 font-medium">Angebot</h3><Link href={`/app/angebote/${o.quotes.id}`} className="mt-1 block text-accent">{o.quotes.number}</Link></>}
           </Card>
           <Card>

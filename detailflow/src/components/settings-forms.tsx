@@ -31,6 +31,14 @@ export function CompanyForm({ company, readOnly }: { company: C; readOnly: boole
           <Field label="Präfix Aufträge" name="order_prefix"><Input name="order_prefix" defaultValue={v("order_prefix")} /></Field>
           <Field label="Präfix Rechnungen" name="invoice_prefix"><Input name="invoice_prefix" defaultValue={v("invoice_prefix")} /></Field>
         </div>
+        <Field label="Ansprechpartner (für E-Rechnung)" name="contact_name"><Input name="contact_name" defaultValue={v("contact_name")} /></Field>
+        <Field label="Zahlungsziel Rechnungen (Tage)" name="payment_terms_days"><Input name="payment_terms_days" inputMode="numeric" defaultValue={String(company.payment_terms_days ?? 14)} /></Field>
+        <div className="space-y-2 rounded-xl border border-border p-4 sm:col-span-2">
+          <p className="text-sm font-medium">Online-Anfrage / Buchungsseite</p>
+          <p className="text-xs text-muted-foreground">Kunden können über deine eigene Seite Termine anfragen. Anfragen landen unter Nachrichten und Aufträge.</p>
+          <div className="flex items-center gap-2"><span className="shrink-0 text-sm text-muted-foreground">…/buchen/</span><Input name="slug" defaultValue={v("slug")} placeholder="premium-detailing-koeln" /></div>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="booking_enabled" defaultChecked={Boolean(company.booking_enabled)} />Buchungsseite aktiv</label>
+        </div>
         <Field label="Gültigkeit von Angeboten (Tage)" name="quote_validity_days"><Input name="quote_validity_days" inputMode="numeric" defaultValue={String(company.quote_validity_days ?? 30)} /></Field>
         <Field label="Standard-Angebotsbedingungen" name="quote_terms" className="sm:col-span-2"><Textarea name="quote_terms" defaultValue={v("quote_terms")} /></Field>
       </fieldset>

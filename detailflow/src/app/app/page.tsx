@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, Car, ClipboardList, FileText, Receipt, UserPlus } from "lucide-react";
+import { CalendarClock, Car, ClipboardList, FileText, UserPlus } from "lucide-react";
 import { Card, CardHeader, Notice, Stat, buttonClass } from "@/components/ui";
 import { OrderStatusBadge, QuoteStatusBadge } from "@/components/status";
 import { getContext } from "@/lib/auth";
@@ -35,6 +35,17 @@ export default async function Dashboard() {
     sb.from("quotes").select("id, number, status, total_gross, valid_until, customers(type, first_name, last_name, company_name)").eq("company_id", ctx.companyId).in("status", ["draft", "sent"]).order("created_at", { ascending: false }).limit(6),
     sb.from("orders").select("total_gross").eq("company_id", ctx.companyId).eq("status", "abgeschlossen").gte("completed_at", monthStart.toISOString()),
   ]);
+  const [unread, openInvoices, doneOrders, invoicedOrders] = await Promise.all([
+    sb.from("messages").select("id", { count: "exact", head: true }).eq("company_id", ctx.companyId).eq("direction", "in").is("read_at", null),
+    sb.from("invoices").select("total_gross, paid_amount, due_date").eq("company_id", ctx.companyId).eq("status", "finalized").eq("kind", "invoice"),
+    sb.from("orders").select("id").eq("company_id", ctx.companyId).eq("status", "abgeschlossen").limit(1000),
+    sb.from("invoices").select("order_id").eq("company_id", ctx.companyId).eq("kind", "invoice").neq("status", "cancelled").not("order_id", "is", null).limit(5000),
+  ]);
+  const openInv = (openInvoices.data ?? []).reduce((a, i) => a + Number(i.total_gross) - Number(i.paid_amount), 0);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const overdueCount = (openInvoices.data ?? []).filter((i) => i.due_date && i.due_date < todayIso).length;
+  const invoiced = new Set((invoicedOrders.data ?? []).map((i) => i.order_id));
+  const toInvoice = (doneOrders.data ?? []).filter((o) => !invoiced.has(o.id)).length;
   const revenue = (monthDone.data ?? []).reduce((a, o) => a + Number(o.total_gross), 0);
   const count = monthDone.data?.length ?? 0;
   const days = Array.from({ length: 7 }, (_, i) => berlinDayBounds(i));
@@ -124,9 +135,13 @@ export default async function Dashboard() {
             </div>
           ) : <p className="px-5 py-6 text-sm text-muted-foreground">Keine offenen Angebote.</p>}
         </Card>
-        <Card className="lg:col-span-2 p-5 text-sm text-muted-foreground">
-          <p className="flex items-center gap-2 font-medium text-foreground"><Receipt className="size-4" />Offene Rechnungen & Aufgaben</p>
-          <p className="mt-1">Das Rechnungsmodul und die Aufgabenliste folgen in Phase 3/4. Bis dahin werden hier keine Platzhalterzahlen angezeigt.</p>
+        <Card className="lg:col-span-2">
+          <CardHeader title="Posteingang & Rechnungen" />
+          <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <Link href="/app/nachrichten" className="p-5 hover:bg-muted/50"><p className="text-xs text-muted-foreground">Ungelesene Nachrichten</p><p className="text-2xl font-semibold tabular-nums">{unread.count ?? 0}</p></Link>
+            <Link href="/app/rechnungen?status=finalized" className="p-5 hover:bg-muted/50"><p className="text-xs text-muted-foreground">Offene Rechnungen</p><p className="text-2xl font-semibold tabular-nums">{formatEUR(openInv)}</p><p className="text-xs text-muted-foreground">{openInvoices.data?.length ?? 0} Rechnung(en){overdueCount ? ` · ${overdueCount} überfällig` : ""}</p></Link>
+            <Link href="/app/auftraege?archiv=1&ansicht=liste" className="p-5 hover:bg-muted/50"><p className="text-xs text-muted-foreground">Abgeschlossen, ohne Rechnung</p><p className="text-2xl font-semibold tabular-nums">{toInvoice}</p></Link>
+          </div>
         </Card>
       </div>
     </>

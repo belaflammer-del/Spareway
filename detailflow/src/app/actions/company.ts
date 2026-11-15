@@ -21,10 +21,11 @@ export async function switchCompany(form: FormData) {
 export async function updateCompany(_: ActionState, form: FormData): Promise<ActionState> {
   const ctx = await requireAdmin();
   const raw = emptyToNull(Object.fromEntries(form)) as Record<string, unknown>;
-  const parsed = companySchema.safeParse({ ...raw, small_business: form.get("small_business") === "on" });
+  const parsed = companySchema.safeParse({ ...raw, small_business: form.get("small_business") === "on", booking_enabled: form.get("booking_enabled") === "on" });
   if (!parsed.success) return { message: parsed.error.issues[0].message };
+  if (parsed.data.booking_enabled && !parsed.data.slug) return { message: "Für die Online-Anfrage bitte eine Adresse (z. B. „premium-detailing-koeln“) festlegen." };
   const { error } = await ctx.supabase.from("companies").update(parsed.data).eq("id", ctx.companyId);
-  if (error) return { message: error.message };
+  if (error) return { message: error.code === "23505" ? "Diese Adresse für die Buchungsseite ist schon vergeben." : error.message };
   revalidatePath("/app", "layout");
   return { ok: true, message: "Gespeichert." };
 }

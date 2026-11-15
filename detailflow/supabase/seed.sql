@@ -43,6 +43,10 @@ begin
   perform seed_company_catalog(c_b);
   perform seed_company_operations(c_a);
   perform seed_company_operations(c_b);
+  perform seed_message_templates(c_a);
+  perform seed_message_templates(c_b);
+  update companies set slug = 'premium-detailing-koeln', booking_enabled = true, contact_name = 'Markus Weber',
+    iban = 'DE89370400440532013000', bic = 'COBADEFFXXX', bank_name = 'Commerzbank Köln' where id = c_a;
 
   -- Beispielpreise (nur Demo!). Grundregel ~1 €/Minute, gängige Leistungen individuell.
   update services set base_price = greatest(10, round(duration_minutes * 1.0 / 5) * 5), material_cost = round(duration_minutes * 0.08, 2)
@@ -112,4 +116,16 @@ begin
   -- Firma B: ein Kunde
   insert into customers(company_id, type, first_name, last_name, email, phone, city) values (c_b, 'private', 'Peter', 'Wagner', 'p.wagner@example.com', '0228 112233', 'Bonn') returning id into cu;
   insert into vehicles(company_id, customer_id, make, model, vehicle_class, license_plate, color) values (c_b, cu, 'Audi', 'A6 Avant', 'kombi', 'BN-PW 66', 'Daytonagrau');
+
+  -- Nachrichten & eine finalisierte Rechnung (als Inhaber ausgeführt, damit Rechteprüfungen greifen)
+  select id into cu from customers where company_id = c_a and last_name = 'Yilmaz';
+  insert into messages(company_id, customer_id, direction, channel, body, created_at) values
+    (c_a, cu, 'in', 'portal', 'Hallo, kann ich den Golf morgen schon um 16 Uhr abholen?', now() - interval '2 hours');
+  select id into cu from customers where company_id = c_a and last_name = 'Becker';
+  insert into messages(company_id, customer_id, direction, channel, body, created_at, read_at) values
+    (c_a, cu, 'in', 'portal', 'Neue Online-Anfrage für „Keramik Premium“' || E'\n' || 'Fahrzeug: Porsche 911' || E'\n' || 'Wunschtermin: nächste Woche', now() - interval '3 days', now()),
+    (c_a, cu, 'out', 'portal', 'Hallo Herr Becker, vielen Dank! Das Angebot finden Sie in Ihrem Kundenbereich.', now() - interval '3 days' + interval '1 hour', null);
+  perform set_config('request.jwt.claims', json_build_object('sub', u_a, 'role', 'authenticated')::text, true);
+  perform finalize_invoice(create_invoice_from_order((select id from orders where company_id = c_a and status = 'abgeschlossen' limit 1)));
+  perform set_config('request.jwt.claims', '', true);
 end $$;

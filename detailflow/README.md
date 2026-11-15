@@ -3,8 +3,8 @@
 Betriebssoftware (B2B-SaaS) für professionelle Fahrzeugaufbereiter, Detailing-Studios und Keramikversiegelungs-Spezialisten.
 Von der Anfrage über Kalkulation, Angebot und Auftrag bis zur Fahrzeugübergabe.
 
-> Stand: **Phase 1 (Architektur), Phase 2 (Kern) und Phase 3 (Betriebsverwaltung)** sind umgesetzt.
-> Phasen 4–5 sind vorbereitet, aber noch nicht gebaut – siehe [Status](#status).
+> Stand: **Phasen 1–3** sowie aus Phase 4 **Rechnungen inkl. E-Rechnung, Kundenportal, Online-Anfrage und Nachrichten** sind umgesetzt.
+> Offen: Material/Lager, automatische Erinnerungen, Stripe-Abos – siehe [Status](#status).
 >
 > **Klickbare Demo ohne Konto:** `demo/detailflow-demo.html` (eigenständige Seite mit Beispieldaten und derselben Preislogik).
 
@@ -62,7 +62,8 @@ detailflow/
 │  │  ├─ …0001_core.sql          Tabellen, Enums, Konsistenz-Trigger (gleiche Firma), Statusverlauf
 │  │  ├─ …0002_security_rpc.sql  RLS-Policies, Tarife, Audit-Log, Nummernkreise, RPCs, Storage-Policies
 │  │  ├─ …0003_catalog.sql       Leistungskatalog-Vorlage (136 Leistungen, 8 Pakete), create_company()
-│  │  └─ …0004_operations.sql    Boxen + Belegungsschutz, Fotos, Checklisten, Auswertungs-Views
+│  │  ├─ …0004_operations.sql    Boxen + Belegungsschutz, Fotos, Checklisten, Auswertungs-Views
+│  │  └─ …0005_invoices_portal.sql Rechnungen (GoBD-Schutz, Storno, Hash), Kundenportal, Online-Anfrage, Nachrichten
 │  └─ seed.sql                   Beispieldaten (2 Betriebe, Kunden, Fahrzeuge, Angebote, Aufträge)
 ├─ src/
 │  ├─ middleware.ts              Auth-Schutz & Session-Refresh
@@ -150,8 +151,14 @@ Legende: ✅ implementiert & getestet · 🟢 implementiert (Build/Typecheck ok,
 | Fotodokumentation (6 Kategorien, Kamera-Upload, Vorher/Nachher-Schieberegler, signierte URLs) | ✅ (DB/Storage-Rechte) / 🟢 (UI) | Pfad- und Firmenprüfung getestet |
 | Checklisten (7 Standardvorlagen, abhaken mit Person/Zeit, Problem melden, eigene Vorlagen) | ✅ (DB) / 🟢 (UI) | Protokollierung getestet |
 | Auswertungen (Umsatz/Monat, nach Leistung, Ø-Wert, Gewinn, Annahmequote, Wiederkehrer, Arbeitszeit, Material, Auslastung) | ✅ (Views/RLS) / 🟢 (UI) | Tarifabhängig ab Professional |
-| Rechnungen, E-Rechnung (XRechnung/ZUGFeRD), Storno | ⚪ | Phase 4 – Nummernkreis & Präfix vorhanden |
-| Material/Lager, Kundenkommunikation (E-Mail), Automatisierungen | ⚪ | Phase 4 |
+| Rechnungen: Entwurf aus Auftrag, lückenlose Nummer erst beim Finalisieren, Leistungsdatum, eingefrorene Firmen-/Kundendaten, SHA-256-Prüfsumme | ✅ (DB) / 🟢 (UI) | getestet |
+| Finalisierte Rechnungen unveränderbar & nicht löschbar, Korrektur nur per Stornorechnung | ✅ | getestet |
+| Zahlungen erfassen (Teilzahlungen, Status „bezahlt“), Zahlungen unveränderbar | ✅ | getestet |
+| E-Rechnung XRechnung 3.0 (UBL 2.1) als XML-Download, Kleinunternehmer, Storno (Typ 384) | ✅ (Generator, 7 Tests) | ⚖️ vor Produktivbetrieb mit KoSIT-Validator prüfen; ZUGFeRD (PDF/A-3) offen |
+| Kundenportal per persönlichem Link: Status-Fortschritt, Termin, Vorher/Nachher, Angebote, Rechnungen, Nachrichten | ✅ (DB) / 🟢 (UI) | Fotos im Portal benötigen `SUPABASE_SERVICE_ROLE_KEY` |
+| Online-Anfrage `/buchen/<adresse>`: legt Kunde, Fahrzeug, Anfrage und Nachricht an | ✅ (DB) / 🟢 (UI) | Honeypot, Rate-Limit, Einwilligung |
+| Nachrichten-Postfach mit Vorlagen (Termin, Erinnerung, Abholbereit, Pflegehinweise, Rechnung) | 🟢 | E-Mail-Versand vorbereitet (Resend), ohne Schlüssel nur Portal |
+| Material/Lager, automatische Erinnerungen | ⚪ | Phase 4 |
 | Serverseitige PDF-Erzeugung | ⚪ | derzeit Browser-Druck „Als PDF speichern“ |
 | E2E-Tests (Playwright) gegen laufende Supabase | ⚪ | |
 
@@ -209,7 +216,7 @@ keine fremden Angebote umwandeln, keine fremden Nummernkreise nutzen; Mitarbeite
 ihre Rolle nicht erhöhen; Tarifdaten sind clientseitig unveränderlich; anonyme Nutzer sehen nur per gültigem Token ein Angebot ohne
 interne Kalkulationsdaten.
 
-**Letzter Lauf (in dieser Entwicklungsumgebung):** 52/52 Tests bestanden (27 DB, 25 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
+**Letzter Lauf (in dieser Entwicklungsumgebung):** 68/68 Tests bestanden (36 DB, 32 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
 Die Oberfläche wurde **nicht** gegen eine laufende Supabase-Instanz durchgeklickt.
 
 CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-Service, Build).
@@ -253,7 +260,7 @@ CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-
 ## Vor dem Produktivbetrieb rechtlich / steuerlich zu prüfen
 
 - ⚖️ **Rechnungen / GoBD:** Unveränderbarkeit, Aufbewahrung (8–10 Jahre), Verfahrensdokumentation. Das Rechnungsmodul ist noch nicht gebaut.
-- ⚖️ **E-Rechnung (B2B):** Empfangspflicht seit 2025, Ausstellungspflicht gestaffelt ab 2027/2028 – XRechnung/ZUGFeRD mit Steuerberater abstimmen.
+- ⚖️ **E-Rechnung (B2B):** Empfangspflicht seit 2025, Ausstellungspflicht gestaffelt ab 2027/2028 (nur B2B, nicht für Privatkunden). XRechnung-Export ist implementiert; vor Produktivbetrieb mit dem KoSIT-Validator prüfen und mit Steuerberatung abstimmen.
 - ⚖️ **Kleinunternehmerregelung § 19 UStG** (Hinweistext und Grenzen) und Steuersätze – fachlich prüfen.
 - ⚖️ **DSGVO:** Auftragsverarbeitungsvertrag (AVV) mit Kunden-Betrieben, AVV mit Supabase/Vercel, Hosting in der EU, Löschkonzept,
   Verzeichnis der Verarbeitungstätigkeiten, Datenschutzerklärung, Impressum. Fahrzeugfotos (Kennzeichen, Personen) sind personenbezogen.

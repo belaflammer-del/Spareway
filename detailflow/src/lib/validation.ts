@@ -27,6 +27,8 @@ export const customerSchema = z.object({
   street: opt(160), zip: opt(10), city: opt(100),
   billing_street: opt(160), billing_zip: opt(10), billing_city: opt(100),
   notes: opt(4000),
+  vat_id: opt(20),
+  buyer_reference: opt(100),
 }).refine((c) => c.company_name || c.last_name || c.first_name, {
   message: "Bitte einen Namen oder Firmennamen angeben.", path: ["last_name"],
 });
@@ -121,6 +123,11 @@ export const companySchema = z.object({
   invoice_prefix: z.string().trim().min(1).max(10),
   quote_validity_days: z.coerce.number().int().min(1).max(365),
   quote_terms: z.string().trim().max(4000),
+  contact_name: opt(120),
+  payment_terms_days: z.coerce.number().int().min(0).max(120),
+  slug: z.string().trim().toLowerCase().optional().nullable().transform((v) => (v ? v : null))
+    .refine((v) => v === null || /^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])$/.test(v), { message: "Adresse der Buchungsseite: nur Kleinbuchstaben, Zahlen und Bindestriche (3–50 Zeichen)." }),
+  booking_enabled: z.coerce.boolean(),
 });
 
 export function fieldErrors(error: z.ZodError) {

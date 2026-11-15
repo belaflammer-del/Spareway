@@ -28,6 +28,8 @@ export function CustomerForm({ customer, onboarding }: { customer?: Customer; on
           <>
             <Field label="Firmenname" name="company_name" error={e.company_name} className="sm:col-span-2"><Input id="company_name" name="company_name" defaultValue={v("company_name")} /></Field>
             <Field label="Ansprechpartner" name="contact_person" className="sm:col-span-2"><Input id="contact_person" name="contact_person" defaultValue={v("contact_person")} /></Field>
+            <Field label="USt-IdNr. des Kunden" name="vat_id"><Input id="vat_id" name="vat_id" defaultValue={v("vat_id")} placeholder="DE…" /></Field>
+            <Field label="Käuferreferenz (E-Rechnung)" name="buyer_reference" hint="z. B. Leitweg-ID oder Bestellnummer"><Input id="buyer_reference" name="buyer_reference" defaultValue={v("buyer_reference")} /></Field>
           </>
         )}
         <Field label="Vorname" name="first_name"><Input id="first_name" name="first_name" autoComplete="off" defaultValue={v("first_name")} /></Field>
