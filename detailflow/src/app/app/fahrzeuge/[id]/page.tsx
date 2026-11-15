@@ -53,7 +53,7 @@ export default async function VehicleDetail({ params, searchParams }: { params: 
           </Card>
           <Card className="p-5">
             <h3 className="font-medium">Fotos</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Die Fotodokumentation (Vorher/Nachher, Schäden) folgt in Phase 3. Der gesicherte Speicher ist bereits eingerichtet.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Fotos werden am jeweiligen Auftrag dokumentiert (Vorher/Nachher, Schäden) und sind über die Pflegehistorie erreichbar.</p>
           </Card>
           {ctx.role !== "staff" && (
             <form action={deleteVehicle} className="px-1"><input type="hidden" name="id" value={id} /><ConfirmSubmit message="Fahrzeug endgültig löschen?">Fahrzeug löschen</ConfirmSubmit></form>

@@ -4,6 +4,7 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { Card, CardHeader, PageHeader, buttonClass } from "@/components/ui";
 import { OrderStatusBadge } from "@/components/status";
 import { OrderForm } from "@/components/order-form";
+import { OrderChecklists, OrderPhotos } from "@/components/order-operations";
 import { getContext } from "@/lib/auth";
 import { customerDisplayName, ORDER_STATUSES, ORDER_STATUS_LABELS, vehicleDisplayName, type OrderStatus } from "@/lib/domain";
 import { formatDateTime, formatEUR } from "@/lib/utils";
@@ -23,9 +24,10 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
     .select("*, customers(id, type, first_name, last_name, company_name, phone, email), vehicles(id, make, model, variant, license_plate, known_damages, special_notes), order_items(*), quotes(id, number)")
     .eq("id", id).maybeSingle();
   if (!o) notFound();
-  const [{ data: members }, { data: history }] = await Promise.all([
+  const [{ data: members }, { data: history }, { data: workstations }] = await Promise.all([
     ctx.supabase.from("memberships").select("user_id, role").eq("company_id", ctx.companyId),
     ctx.supabase.from("order_status_history").select("to_status, changed_at").eq("order_id", id).order("changed_at", { ascending: false }).limit(20),
+    ctx.supabase.from("workstations").select("id, name").eq("company_id", ctx.companyId).eq("active", true).order("sort"),
   ]);
   const ids = (members ?? []).map((m) => m.user_id);
   const { data: profiles } = ids.length ? await ctx.supabase.from("profiles").select("user_id, full_name").in("user_id", ids) : { data: [] };
@@ -79,7 +81,9 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
               <div className="flex justify-between font-semibold"><dt>Endpreis brutto</dt><dd className="tabular-nums">{formatEUR(o.total_gross)}</dd></div>
             </dl>
           </Card>
-          <Card><CardHeader title="Planung & Notizen" /><div className="p-5"><OrderForm order={o} members={memberList} /></div></Card>
+          <OrderChecklists ctx={ctx} orderId={id} names={Object.fromEntries(memberList.map((m) => [m.id, m.name]))} />
+          <OrderPhotos ctx={ctx} orderId={id} />
+          <Card><CardHeader title="Planung & Notizen" /><div className="p-5"><OrderForm order={o} members={memberList} workstations={workstations ?? []} /></div></Card>
         </div>
         <div className="space-y-6">
           <Card className="p-5 text-sm">
@@ -103,7 +107,6 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
               ))}
             </ol>
           </Card>
-          <Card className="p-5 text-sm text-muted-foreground"><p className="font-medium text-foreground">Fotos & Checklisten</p><p className="mt-1">Vorher/Nachher-Fotos und digitale Checklisten folgen in Phase 3.</p></Card>
         </div>
       </div>
     </>

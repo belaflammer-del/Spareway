@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getContext } from "@/lib/auth";
 import { orderStatusSchema, uuid, type ActionState } from "@/lib/validation";
+import { berlinLocalToISO } from "@/lib/time";
 
 export async function setOrderStatus(form: FormData) {
   const ctx = await getContext();
@@ -16,8 +17,9 @@ export async function setOrderStatus(form: FormData) {
 
 const updateSchema = z.object({
   assigned_to: z.string().optional().transform((v) => (v ? v : null)),
-  scheduled_start: z.string().optional().transform((v) => (v ? new Date(v).toISOString() : null)),
-  scheduled_end: z.string().optional().transform((v) => (v ? new Date(v).toISOString() : null)),
+  workstation_id: z.string().optional().transform((v) => (v ? v : null)),
+  scheduled_start: z.string().optional().transform((v) => berlinLocalToISO(v)),
+  scheduled_end: z.string().optional().transform((v) => berlinLocalToISO(v)),
   actual_minutes: z.union([z.literal(""), z.coerce.number().int().min(0).max(100_000)]).optional().transform((v) => (v === "" || v == null ? null : v)),
   internal_notes: z.string().max(8000).optional().transform((v) => (v ? v : null)),
 });
@@ -37,18 +39,23 @@ export async function updateOrder(_: ActionState, form: FormData): Promise<Actio
   const patch: Record<string, unknown> = { ...d };
   if (d.scheduled_start && cur && ["anfrage", "angebot_erstellt", "bestaetigt"].includes(cur.status)) patch.status = "geplant";
   const { error } = await ctx.supabase.from("orders").update(patch).eq("id", id);
-  if (error) return { message: error.message };
+  if (error) {
+    if (error.code === "23P01") return { message: "Diese Box ist im gewählten Zeitraum schon belegt. Bitte andere Zeit oder Box wählen." };
+    return { message: error.message };
+  }
 
-  // Überschneidungen erkennen (gleicher Mitarbeiter, überlappender Zeitraum)
+  // Überschneidungen erkennen (gleicher Mitarbeiter, überlappender Zeitraum).
+  // Doppelbelegung einer Box verhindert bereits die Datenbank (Exclusion Constraint).
   let warning = "";
-  if (d.scheduled_start && d.scheduled_end) {
+  if (d.scheduled_start && d.scheduled_end && d.assigned_to) {
     let q = ctx.supabase.from("orders").select("number").neq("id", id).not("status", "in", "(storniert,abgeschlossen)")
       .lt("scheduled_start", d.scheduled_end).gt("scheduled_end", d.scheduled_start);
-    if (d.assigned_to) q = q.eq("assigned_to", d.assigned_to);
+    q = q.eq("assigned_to", d.assigned_to);
     const { data: clashes } = await q.limit(5);
-    if (clashes?.length) warning = ` Achtung: Überschneidung mit ${clashes.map((c) => c.number).join(", ")}${d.assigned_to ? " (gleicher Mitarbeiter)" : ""}.`;
+    if (clashes?.length) warning = ` Achtung: Der Mitarbeiter ist zur gleichen Zeit bei ${clashes.map((c) => c.number).join(", ")} eingeplant.`;
   }
   revalidatePath(`/app/auftraege/${id}`);
+  revalidatePath("/app/kalender");
   return { ok: !warning, message: "Gespeichert." + warning };
 }
 

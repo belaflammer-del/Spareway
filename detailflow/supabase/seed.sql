@@ -41,6 +41,8 @@ begin
 
   perform seed_company_catalog(c_a);
   perform seed_company_catalog(c_b);
+  perform seed_company_operations(c_a);
+  perform seed_company_operations(c_b);
 
   -- Beispielpreise (nur Demo!). Grundregel ~1 €/Minute, gängige Leistungen individuell.
   update services set base_price = greatest(10, round(duration_minutes * 1.0 / 5) * 5), material_cost = round(duration_minutes * 0.08, 2)
@@ -83,6 +85,9 @@ begin
     insert into order_items(company_id, order_id, title, quantity, unit_price_net, tax_rate, total_net, done, sort)
     values (c_a, o, 'Handwäsche', 1, 39, 19, 39, i > 2, 0), (c_a, o, 'Innenraum saugen', 1, 29, 19, 29, i > 3, 1), (c_a, o, 'Sonstige Leistungen', 1, 150 + i * 120 - 68, 19, 150 + i * 120 - 68, false, 2);
   end loop;
+  -- Aufträge auf Boxen verteilen (keine Überschneidung: unterschiedliche Box je Zeitfenster)
+  update orders o set workstation_id = (select id from workstations w where w.company_id = c_a order by sort offset ((right(o.number, 4)::int - 1) % 3) limit 1)
+  where o.company_id = c_a;
   insert into document_counters(company_id, kind, year, last_value) values (c_a, 'order', y, i) on conflict (company_id, kind, year) do update set last_value = excluded.last_value;
 
   -- Zwei Angebote (Entwurf + versendet)

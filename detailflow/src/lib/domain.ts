@@ -91,3 +91,9 @@ export const DAYS = [
 export const DEFAULT_OPENING_HOURS: Record<string, { open: boolean; from: string; to: string }> = Object.fromEntries(
   DAYS.map(([k]) => [k, { open: !["sa", "so"].includes(k), from: "08:00", to: "18:00" }]),
 );
+
+export const PHOTO_CATEGORIES = ["vorher", "waehrend", "nachher", "schaden", "verschmutzung", "endkontrolle"] as const;
+export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
+export const PHOTO_CATEGORY_LABELS: Record<PhotoCategory, string> = {
+  vorher: "Vorher", waehrend: "Währenddessen", nachher: "Nachher", schaden: "Schäden", verschmutzung: "Besondere Verschmutzung", endkontrolle: "Endkontrolle",
+};

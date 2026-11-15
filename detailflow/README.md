@@ -3,8 +3,10 @@
 Betriebssoftware (B2B-SaaS) für professionelle Fahrzeugaufbereiter, Detailing-Studios und Keramikversiegelungs-Spezialisten.
 Von der Anfrage über Kalkulation, Angebot und Auftrag bis zur Fahrzeugübergabe.
 
-> Stand: **Phase 1 (Architektur) und Phase 2 (funktionsfähiger Kern)** sind umgesetzt.
-> Phasen 3–5 sind architektonisch vorbereitet, aber noch nicht gebaut – siehe [Status](#status).
+> Stand: **Phase 1 (Architektur), Phase 2 (Kern) und Phase 3 (Betriebsverwaltung)** sind umgesetzt.
+> Phasen 4–5 sind vorbereitet, aber noch nicht gebaut – siehe [Status](#status).
+>
+> **Klickbare Demo ohne Konto:** `demo/detailflow-demo.html` (eigenständige Seite mit Beispieldaten und derselben Preislogik).
 
 ---
 
@@ -59,7 +61,8 @@ detailflow/
 │  ├─ migrations/
 │  │  ├─ …0001_core.sql          Tabellen, Enums, Konsistenz-Trigger (gleiche Firma), Statusverlauf
 │  │  ├─ …0002_security_rpc.sql  RLS-Policies, Tarife, Audit-Log, Nummernkreise, RPCs, Storage-Policies
-│  │  └─ …0003_catalog.sql       Leistungskatalog-Vorlage (136 Leistungen, 8 Pakete), create_company()
+│  │  ├─ …0003_catalog.sql       Leistungskatalog-Vorlage (136 Leistungen, 8 Pakete), create_company()
+│  │  └─ …0004_operations.sql    Boxen + Belegungsschutz, Fotos, Checklisten, Auswertungs-Views
 │  └─ seed.sql                   Beispieldaten (2 Betriebe, Kunden, Fahrzeuge, Angebote, Aufträge)
 ├─ src/
 │  ├─ middleware.ts              Auth-Schutz & Session-Refresh
@@ -81,7 +84,8 @@ detailflow/
 │  └─ components/                UI-Bausteine & Formulare
 └─ tests/
    ├─ unit/pricing.test.ts       15 Tests Preislogik
-   └─ db/tenant-isolation.test.ts 19 Tests Mandantentrennung & Geschäftsregeln gegen echtes PostgreSQL
+   ├─ unit/time.test.ts           7 Tests Zeitzone Europe/Berlin (Sommer-/Winterzeit)
+   └─ db/tenant-isolation.test.ts 27 Tests Mandantentrennung & Geschäftsregeln gegen echtes PostgreSQL
 ```
 
 ### Tatsächlich verwendete Versionen
@@ -104,7 +108,7 @@ detailflow/
 **Abweichungen vom Wunsch-Stack (bewusst):**
 - **shadcn/ui:** Nicht per CLI installiert. Die UI-Bausteine (`src/components/ui`) folgen demselben Muster (Tailwind + `cn()`), ohne Radix-Abhängigkeit. Können später 1:1 durch shadcn-Komponenten ersetzt werden.
 - **React Hook Form:** Noch nicht verwendet. Formulare nutzen Server Actions + `useActionState` mit serverseitiger Zod-Validierung (funktioniert auch ohne JavaScript). RHF lohnt sich für die komplexeren Formulare der Phasen 3/4.
-- **Diagrammbibliothek:** Kommt mit dem Auswertungsmodul (Phase 3, Empfehlung: Recharts).
+- **Diagrammbibliothek:** Bewusst keine. Die Auswertungen nutzen schlanke, serverseitig gerenderte SVG-Diagramme (eine Datenreihe, Tooltips, Tabellenansicht) – kein zusätzliches JavaScript im Browser.
 - **Next.js 16** ist inzwischen verfügbar; 15.5 wurde als gut erprobte Linie gewählt. Upgrade (u. a. `middleware` → `proxy`) ist überschaubar.
 
 ---
@@ -139,10 +143,13 @@ Legende: ✅ implementiert & getestet · 🟢 implementiert (Build/Typecheck ok,
 | Security-Header, Rate Limiting (Login, Registrierung, Reset, öffentliche Links) | 🟢 | In-Memory → für mehrere Instanzen Redis nötig |
 | Tarife Starter/Professional/Business | 🟡 | Tabelle `plans` (Preise/Limits änderbar ohne Code); Benutzerlimit wird erzwungen |
 | Stripe-Abonnements | 🟡 | Env-Variablen + Felder + Schutz vor Client-Änderung; Checkout/Webhook **nicht** implementiert |
-| Storage für Fotos | 🟡 | Bucket + RLS-Policies + Tests; Foto-UI offen |
 | Angebote bearbeiten (Entwurf) | ⚪ | aktuell: neu kalkulieren |
-| Kalender (Tag/Woche/Monat), Arbeitsplätze/Boxen | ⚪ | Phase 3 (Termine sind bereits an Aufträgen) |
-| Checklisten, Fotodokumentation, Auswertungen | ⚪ | Phase 3 |
+| Kalender Tag (Spalten je Box) / Woche / Monat, „Noch nicht eingeplant“ | 🟢 | Zeiten konsequent in Europe/Berlin (7 Unit-Tests) |
+| Arbeitsplätze/Boxen, Doppelbelegung in der DB ausgeschlossen (Exclusion Constraint) | ✅ | getestet |
+| Mitarbeiter-Überschneidungswarnung | 🟢 | |
+| Fotodokumentation (6 Kategorien, Kamera-Upload, Vorher/Nachher-Schieberegler, signierte URLs) | ✅ (DB/Storage-Rechte) / 🟢 (UI) | Pfad- und Firmenprüfung getestet |
+| Checklisten (7 Standardvorlagen, abhaken mit Person/Zeit, Problem melden, eigene Vorlagen) | ✅ (DB) / 🟢 (UI) | Protokollierung getestet |
+| Auswertungen (Umsatz/Monat, nach Leistung, Ø-Wert, Gewinn, Annahmequote, Wiederkehrer, Arbeitszeit, Material, Auslastung) | ✅ (Views/RLS) / 🟢 (UI) | Tarifabhängig ab Professional |
 | Rechnungen, E-Rechnung (XRechnung/ZUGFeRD), Storno | ⚪ | Phase 4 – Nummernkreis & Präfix vorhanden |
 | Material/Lager, Kundenkommunikation (E-Mail), Automatisierungen | ⚪ | Phase 4 |
 | Serverseitige PDF-Erzeugung | ⚪ | derzeit Browser-Druck „Als PDF speichern“ |
@@ -202,7 +209,7 @@ keine fremden Angebote umwandeln, keine fremden Nummernkreise nutzen; Mitarbeite
 ihre Rolle nicht erhöhen; Tarifdaten sind clientseitig unveränderlich; anonyme Nutzer sehen nur per gültigem Token ein Angebot ohne
 interne Kalkulationsdaten.
 
-**Letzter Lauf (in dieser Entwicklungsumgebung):** 34/34 Tests bestanden (19 DB, 15 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
+**Letzter Lauf (in dieser Entwicklungsumgebung):** 49/49 Tests bestanden (27 DB, 22 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
 Die Oberfläche wurde **nicht** gegen eine laufende Supabase-Instanz durchgeklickt.
 
 CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-Service, Build).
@@ -259,11 +266,7 @@ CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-
 
 ## Implementierungsplan (nächste Phasen)
 
-**Phase 3 – Betriebsverwaltung**
-1. Kalender (Tag/Woche/Monat) auf Basis `orders.scheduled_*`, Tabelle `workstations` (Boxen), Drag & Drop, Überschneidungsprüfung in der DB (Exclusion Constraint).
-2. Fotodokumentation: Tabelle `order_photos` (Kategorie Vorher/Während/Nachher/Schaden/…), Upload in `company-files/<company>/orders/<order>/…`, Vorher-Nachher-Slider.
-3. Checklisten: `checklist_templates` + `order_checklists` (abhaken, Zeit, verantwortliche Person, Problem melden).
-4. Auswertungen mit Recharts (Umsatz/Monat, nach Leistung/Paket, Annahmequote, Auslastung, Wiederkehrer) über SQL-Views.
+**Phase 3 – Betriebsverwaltung** ✔ umgesetzt (offen: Drag & Drop im Kalender, Bildverkleinerung vor Upload, Fotos im Kundenlink)
 
 **Phase 4 – Erweiterungen**
 5. Rechnungen: `invoices`/`invoice_items` mit Status *Entwurf → finalisiert* (danach unveränderlich, Trigger), Storno als eigene Rechnung, Hash-Kette für Revisionssicherheit, XRechnung/ZUGFeRD-Export.

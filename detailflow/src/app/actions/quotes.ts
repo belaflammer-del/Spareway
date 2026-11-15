@@ -5,6 +5,7 @@ import { getContext } from "@/lib/auth";
 import { loadCatalog } from "@/lib/catalog";
 import { calculate } from "@/lib/pricing";
 import { normalizePricingConfig } from "@/lib/domain";
+import { berlinLocalToISO } from "@/lib/time";
 import { quoteCreateSchema, quoteStatusSchema, uuid, type ActionState } from "@/lib/validation";
 
 /**
@@ -36,7 +37,8 @@ export async function saveCalculation(_: ActionState, form: FormData): Promise<A
   }));
 
   if (d.target === "order") {
-    const start = d.scheduled_start ? new Date(d.scheduled_start) : null;
+    const startIso = berlinLocalToISO(d.scheduled_start);
+    const start = startIso ? new Date(startIso) : null;
     const end = start ? new Date(start.getTime() + result.minutes * 60_000) : null;
     // Rabatt/Override als eigene Position abbilden, damit Positionen = Summe
     if (result.discountAmount !== 0) {

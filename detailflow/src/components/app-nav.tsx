@@ -2,20 +2,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Car, ClipboardList, FileText, Home, LogOut, Menu, Moon, Settings, Sparkles, Sun, Users, X } from "lucide-react";
+import { BarChart3, CalendarDays, Car, ClipboardList, FileText, Home, LogOut, Menu, Moon, Settings, Sparkles, Sun, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 
 const NAV = [
   { href: "/app", label: "Übersicht", icon: Home, exact: true },
+  { href: "/app/kalender", label: "Kalender", icon: CalendarDays },
   { href: "/app/auftraege", label: "Aufträge", icon: ClipboardList },
   { href: "/app/angebote", label: "Angebote", icon: FileText },
   { href: "/app/kunden", label: "Kunden", icon: Users },
   { href: "/app/fahrzeuge", label: "Fahrzeuge", icon: Car },
   { href: "/app/leistungen", label: "Leistungen & Preise", icon: Sparkles },
+  { href: "/app/auswertungen", label: "Auswertungen", icon: BarChart3 },
   { href: "/app/einstellungen", label: "Einstellungen", icon: Settings },
 ];
-const MOBILE = NAV.slice(0, 4);
+const MOBILE = [NAV[0], NAV[1], NAV[2], NAV[4]];
 
 function useActive() {
   const path = usePathname();

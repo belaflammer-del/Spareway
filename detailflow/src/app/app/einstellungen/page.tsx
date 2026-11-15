@@ -7,16 +7,21 @@ import { DEFAULT_OPENING_HOURS, ROLE_LABELS, type Role } from "@/lib/domain";
 import { formatDate, formatEUR } from "@/lib/utils";
 import { isStripeConfigured } from "@/lib/env";
 import { removeMember, updateMemberRole } from "@/app/actions/company";
+import { toggleWorkstation } from "@/app/actions/operations";
+import { ChecklistTemplateForm, WorkstationForm } from "@/components/operations-settings";
 
 export const metadata = { title: "Einstellungen" };
 
 export default async function Settings() {
   const ctx = await getContext();
-  const [{ data: members }, { data: invites }, { data: plans }] = await Promise.all([
+  const [{ data: members }, { data: invites }, { data: plans }, { data: boxes }, { data: templates }] = await Promise.all([
     ctx.supabase.from("memberships").select("id, user_id, role, can_edit_prices, created_at").eq("company_id", ctx.companyId).order("created_at"),
     ctx.isAdmin ? ctx.supabase.from("invitations").select("id, email, role, expires_at, accepted_at").eq("company_id", ctx.companyId).is("accepted_at", null).order("created_at", { ascending: false }) : Promise.resolve({ data: [] as { id: string; email: string; role: string; expires_at: string }[] }),
     ctx.supabase.from("plans").select("*").order("price_monthly_cents"),
+    ctx.supabase.from("workstations").select("id, name, active").eq("company_id", ctx.companyId).order("sort"),
+    ctx.supabase.from("checklist_templates").select("id, name, items").eq("company_id", ctx.companyId).order("sort"),
   ]);
+  const canManage = ctx.role !== "staff";
   const ids = (members ?? []).map((m) => m.user_id);
   const { data: profiles } = ids.length ? await ctx.supabase.from("profiles").select("user_id, full_name").in("user_id", ids) : { data: [] };
   const plan = plans?.find((p) => p.id === ctx.company.plan);
@@ -27,6 +32,30 @@ export default async function Settings() {
       <div className="space-y-6">
         <Card><CardHeader title="Firmendaten" description="Erscheinen auf Angeboten und später auf Rechnungen." /><div className="p-5"><CompanyForm company={ctx.company as unknown as Record<string, unknown>} readOnly={!ctx.isAdmin} /></div></Card>
         <Card><CardHeader title="Öffnungszeiten" /><div className="p-5"><OpeningHoursForm fromSettings hours={Object.keys(ctx.company.opening_hours ?? {}).length ? ctx.company.opening_hours : DEFAULT_OPENING_HOURS} /></div></Card>
+        <Card>
+          <CardHeader title="Arbeitsplätze / Boxen" description="Werden im Kalender als Spalten angezeigt. Eine Box kann nicht doppelt belegt werden." />
+          <ul className="divide-y divide-border">
+            {(boxes ?? []).map((b) => (
+              <li key={b.id} className={`flex items-center justify-between px-5 py-2.5 text-sm ${b.active ? "" : "opacity-50"}`}>
+                <span>{b.name}</span>
+                {canManage && <form action={toggleWorkstation}><input type="hidden" name="id" value={b.id} /><input type="hidden" name="active" value={String(!b.active)} /><button className={buttonClass("ghost", "sm")}>{b.active ? "Deaktivieren" : "Aktivieren"}</button></form>}
+              </li>
+            ))}
+          </ul>
+          {canManage && <div className="border-t border-border p-5"><WorkstationForm /></div>}
+        </Card>
+        <Card>
+          <CardHeader title="Checklisten-Vorlagen" description="Werden im Auftrag mit einem Klick hinzugefügt." />
+          <div className="divide-y divide-border">
+            {(templates ?? []).map((t) => (
+              <details key={t.id} className="px-5 py-3">
+                <summary className="flex cursor-pointer list-none justify-between text-sm"><span className="font-medium">{t.name}</span><span className="text-muted-foreground">{t.items.length} Schritte</span></summary>
+                <div className="pt-3">{canManage ? <ChecklistTemplateForm template={t} /> : <ol className="list-decimal pl-5 text-sm text-muted-foreground">{t.items.map((i: string) => <li key={i}>{i}</li>)}</ol>}</div>
+              </details>
+            ))}
+          </div>
+          {canManage && <details className="border-t border-border px-5 py-3"><summary className="cursor-pointer text-sm font-medium text-accent">+ Neue Vorlage</summary><div className="pt-3"><ChecklistTemplateForm /></div></details>}
+        </Card>
         <Card>
           <CardHeader title="Team" description={`${members?.length ?? 0} von ${plan?.max_users ?? "∞"} Benutzern (Tarif ${plan?.name ?? ctx.company.plan})`} />
           <ul className="divide-y divide-border">

@@ -223,3 +223,88 @@ run("Geschäftsregeln Angebote", () => {
     await expect(dbx.as(null, "select public.respond_public_quote($1, false)", [quoteBToken])).rejects.toThrow(/nicht mehr/);
   });
 });
+
+run("Phase 3: Kalender, Fotos, Checklisten, Auswertungen", () => {
+  let d: Db;
+  let orderA: string;
+  let orderB: string;
+  let boxA: string;
+  let boxB: string;
+  beforeAll(async () => {
+    d = new Db();
+    await d.connect();
+    boxA = (await d.as(ownerA, "select id from workstations where company_id = $1 and name = 'Box 1'", [companyA]))[0].id;
+    boxB = (await d.as(ownerB, "select id from workstations where company_id = $1 and name = 'Box 1'", [companyB]))[0].id;
+    orderA = (await d.as(ownerA, `select public.create_order_with_items($1::jsonb, '[]'::jsonb) as id`, [
+      JSON.stringify({ company_id: companyA, customer_id: customerA, scheduled_start: "2026-12-01T09:00:00Z", estimated_minutes: 120 }),
+    ]))[0].id;
+    orderB = (await d.admin("select id from orders where company_id = $1 limit 1", [companyB])).rows[0].id;
+  });
+  afterAll(async () => d?.end());
+
+  it("legt für neue Firmen Boxen und 7 Checklisten-Vorlagen an", async () => {
+    const t = await d.as(ownerA, "select count(*)::int as n from checklist_templates");
+    expect(t[0].n).toBe(7);
+    const w = await d.as(ownerA, "select count(*)::int as n from workstations");
+    expect(w[0].n).toBe(3);
+  });
+
+  it("leitet das Terminende aus der geschätzten Dauer ab", async () => {
+    const r = await d.as(ownerA, "select scheduled_end from orders where id = $1", [orderA]);
+    expect(new Date(r[0].scheduled_end).toISOString()).toBe("2026-12-01T11:00:00.000Z");
+  });
+
+  it("verhindert Doppelbelegung einer Box in der Datenbank", async () => {
+    await d.as(ownerA, "update orders set workstation_id = $1 where id = $2", [boxA, orderA]);
+    await expect(d.as(ownerA, `select public.create_order_with_items($1::jsonb, '[]'::jsonb)`, [
+      JSON.stringify({ company_id: companyA, customer_id: customerA, scheduled_start: "2026-12-01T10:00:00Z", scheduled_end: "2026-12-01T12:00:00Z" }),
+    ]).then(async (rows: any) => d.as(ownerA, "update orders set workstation_id = $1 where id = $2", [boxA, rows[0].create_order_with_items]))).rejects.toThrow(/orders_no_workstation_overlap/);
+  });
+
+  it("Firma A kann keine fremde Box zuweisen und fremde Boxen nicht sehen", async () => {
+    await expect(d.as(ownerA, "update orders set workstation_id = $1 where id = $2", [boxB, orderA])).rejects.toThrow(/gehört nicht zu dieser Firma/);
+    const rows = await d.as(ownerA, "select id from workstations where id = $1", [boxB]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("Fotos: nur im eigenen Auftragsordner und nicht für fremde Aufträge", async () => {
+    await d.as(staffA, "insert into order_photos(company_id, order_id, category, storage_path) values ($1, $2, 'vorher', $3)", [companyA, orderA, `${companyA}/orders/${orderA}/a.jpg`]);
+    await expect(d.as(ownerA, "insert into order_photos(company_id, order_id, category, storage_path) values ($1, $2, 'vorher', $3)", [companyA, orderA, `${companyB}/orders/${orderA}/x.jpg`])).rejects.toThrow(/check constraint/);
+    await expect(d.as(ownerA, "insert into order_photos(company_id, order_id, category, storage_path) values ($1, $2, 'vorher', $3)", [companyA, orderB, `${companyA}/orders/${orderB}/x.jpg`])).rejects.toThrow(/gehört nicht zu dieser Firma/);
+    const foreign = await d.as(ownerB, "select count(*)::int as n from order_photos");
+    expect(foreign[0].n).toBe(0);
+    const del = await d.as(staffA, "delete from order_photos returning id");
+    expect(del).toHaveLength(0); // Mitarbeiter dürfen Fotos nicht löschen
+  });
+
+  it("Checklisten: aus Vorlage anlegen, Abhaken protokolliert Person und Zeit", async () => {
+    const tpl = (await d.as(ownerA, "select id from checklist_templates where name = 'Fahrzeugannahme'"))[0].id;
+    const cl = (await d.as(staffA, "select public.add_checklist_to_order($1, $2) as id", [orderA, tpl]))[0].id;
+    const items = await d.as(staffA, "select id from order_checklist_items where checklist_id = $1 order by sort", [cl]);
+    expect(items).toHaveLength(6);
+    await d.as(staffA, "update order_checklist_items set done = true where id = $1", [items[0].id]);
+    const it = await d.as(ownerA, "select done_by, done_at from order_checklist_items where id = $1", [items[0].id]);
+    expect(it[0].done_by).toBe(staffA.id);
+    expect(it[0].done_at).not.toBeNull();
+    const foreign = await d.as(ownerB, "select count(*)::int as n from order_checklist_items");
+    expect(foreign[0].n).toBe(0);
+    await expect(d.as(ownerB, "select public.add_checklist_to_order($1, $2)", [orderA, tpl])).rejects.toThrow(/nicht gefunden/);
+  });
+
+  it("Mitarbeiter können keine Vorlagen oder Boxen ändern", async () => {
+    const r = await d.as(staffA, "update checklist_templates set name = 'X' returning id");
+    expect(r).toHaveLength(0);
+    await expect(d.as(staffA, "insert into workstations(company_id, name) values ($1, 'Box 9')", [companyA])).rejects.toThrow(/row-level security/);
+  });
+
+  it("Auswertungs-Views zeigen nur eigene Zahlen", async () => {
+    await d.as(ownerA, "update orders set status = 'abgeschlossen', total_net = 100, total_gross = 119 where id = $1", [orderA]);
+    const a = await d.as(ownerA, "select company_id from v_revenue_monthly");
+    expect(a.length).toBeGreaterThan(0);
+    expect(a.every((r) => r.company_id === companyA)).toBe(true);
+    const b = await d.as(ownerB, "select company_id from v_revenue_monthly where company_id = $1", [companyA]);
+    expect(b).toHaveLength(0);
+    const out = await d.as(outsider, "select count(*)::int as n from v_quote_stats");
+    expect(out[0].n).toBe(0);
+  });
+});
