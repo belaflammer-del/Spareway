@@ -56,7 +56,7 @@ export default async function OrderDetail({ params }: { params: Promise<{ id: st
           <button className={buttonClass("secondary")}>Status setzen</button>
         </form>
       </Card>
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-6">
           <Card>
             <CardHeader title="Leistungen" description={`${doneCount} von ${items.length} erledigt · geschätzt ${formatMinutes(o.estimated_minutes)}`} />

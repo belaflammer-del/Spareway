@@ -29,7 +29,7 @@ export default async function VehicleDetail({ params, searchParams }: { params: 
         actions={<LinkButton href={`/app/angebote/neu?kunde=${v.customer_id ?? ""}&fahrzeug=${id}`}><Plus className="size-4" />Angebot für dieses Fahrzeug</LinkButton>}
       />
       {fehler && <div className="mb-4"><Notice tone="red">{fehler}</Notice></div>}
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_22rem]">
         <Card>
           <CardHeader title="Fahrzeugakte" />
           <div className="p-5"><VehicleForm vehicle={v} customers={(customers ?? []).map((c) => ({ id: c.id, name: customerDisplayName(c) }))} /></div>

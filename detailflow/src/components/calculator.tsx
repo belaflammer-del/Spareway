@@ -64,7 +64,7 @@ export function Calculator(p: Props) {
   const payload = JSON.stringify({ target, customer_id: customerId, vehicle_id: vehicleId || null, calc, intro_text: intro, notes, scheduled_start: scheduled || null });
 
   return (
-    <form action={action} className="grid gap-6 lg:grid-cols-[1fr_24rem]">
+    <form action={action} className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_24rem]">
       <input type="hidden" name="payload" value={payload} />
       <div className="space-y-5">
         <Step n={1} title="Kunde & Fahrzeug">

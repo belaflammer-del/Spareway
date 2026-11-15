@@ -38,7 +38,7 @@ export default async function CustomerDetail({ params, searchParams }: { params:
       />
       {customer.merged_into && <div className="mb-4"><Notice tone="amber">Dieser Kunde wurde zusammengeführt. <Link className="underline" href={`/app/kunden/${customer.merged_into}`}>Zum Ziel-Kunden</Link></Notice></div>}
       {fehler && <div className="mb-4"><Notice tone="red">{fehler}</Notice></div>}
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-6">
           <Card>
             <CardHeader title="Fahrzeuge" action={<Link href={`/app/fahrzeuge/neu?kunde=${id}`} className="text-sm font-medium text-accent">+ Hinzufügen</Link>} />

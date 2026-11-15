@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, Car, ClipboardList, FileText, Plus, Receipt, UserPlus } from "lucide-react";
+import { CalendarClock, Car, ClipboardList, FileText, Receipt, UserPlus } from "lucide-react";
 import { Card, CardHeader, Notice, Stat, buttonClass } from "@/components/ui";
 import { OrderStatusBadge, QuoteStatusBadge } from "@/components/status";
 import { getContext } from "@/lib/auth";
@@ -71,7 +71,7 @@ export default async function Dashboard() {
       )}
       <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {quick.map((q) => (
-          <Link key={q.href} href={q.href} className={buttonClass("secondary", "md", "h-12 justify-start")}><Plus className="size-4 text-muted-foreground" /><q.icon className="size-4" />{q.label}</Link>
+          <Link key={q.href} href={q.href} className={buttonClass("secondary", "md", "h-12 justify-start px-3")}><q.icon className="size-4 shrink-0" /><span className="truncate">{q.label}</span></Link>
         ))}
       </div>
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -91,14 +91,14 @@ export default async function Dashboard() {
               <div key={i} className={`px-1 py-3 ${i === 0 ? "bg-muted/50" : ""}`}>
                 <p className="text-[11px] uppercase text-muted-foreground">{formatDate(d, { weekday: "short" })}</p>
                 <p className="text-sm font-medium">{formatDate(d, { day: "numeric" })}</p>
-                <p className={`mt-1 text-xs ${n ? "font-medium text-accent" : "text-muted-foreground"}`}>{n ? `${n} Termin${n > 1 ? "e" : ""}` : "–"}</p>
+                <p className={`mt-1 text-xs ${n ? "font-medium text-accent" : "text-muted-foreground"}`}>{n ? <>{n}<span className="hidden sm:inline"> Termin{n > 1 ? "e" : ""}</span></> : "–"}</p>
               </div>
             );
           })}
         </div>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader title="Heute" description={`${today.data?.length ?? 0} Termine`} action={<CalendarClock className="size-4 text-muted-foreground" />} />
           {today.data?.length ? <div className="divide-y divide-border">{(today.data as O[]).map((o) => orderRow(o, true))}</div> : <p className="px-5 py-6 text-sm text-muted-foreground">Heute stehen keine Termine an.</p>}
