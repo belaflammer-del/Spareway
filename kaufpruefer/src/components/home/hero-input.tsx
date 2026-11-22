@@ -31,7 +31,7 @@ export function HeroInput() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className="w-full max-w-xl md:mx-auto">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -62,10 +62,10 @@ export function HeroInput() {
           Jetzt prüfen <ArrowRight />
         </Button>
       </form>
-      <p className={`mt-2.5 min-h-5 text-center text-sm ${error ? "text-bad" : "text-muted"}`} aria-live="polite">
+      <p className={`mt-2.5 min-h-5 text-sm md:text-center ${error ? "text-bad" : "text-muted"}`} aria-live="polite">
         {error ?? "Kleinanzeigen · mobile.de · AutoScout24 · eBay · Vinted"}
       </p>
-      <button type="button" onClick={() => router.push("/check?mode=screenshots")} className="mx-auto mt-1 flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground">
+      <button type="button" onClick={() => router.push("/check?mode=screenshots")} className="mt-1 flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground md:mx-auto">
         <ImageUp className="size-4" /> oder Screenshots hochladen
       </button>
     </div>

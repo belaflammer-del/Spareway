@@ -1,8 +1,10 @@
-import { ArrowRight, Car, Eye, Gamepad2, Package, ScanSearch, Shield, Shirt, Smartphone, Watch, Zap } from "lucide-react";
+import { Car, Check, Gamepad2, Package, Shield, Shirt, Smartphone, Watch } from "lucide-react";
 import Link from "next/link";
 import { DemoCard } from "@/components/home/demo-card";
 import { FadeIn } from "@/components/home/fade-in";
+import { Hero3D } from "@/components/home/hero-3d";
 import { HeroInput } from "@/components/home/hero-input";
+import { Squiggle } from "@/components/home/squiggle";
 import { formatEur } from "@/lib/domain/labels";
 import type { Category } from "@/lib/domain/schemas";
 import { listDemos } from "@/lib/demo";
@@ -20,11 +22,8 @@ const CATS: { c: Category; label: string; icon: typeof Car }[] = [
   { c: "other", label: "Sonstiges", icon: Package },
 ];
 
-const STEPS = [
-  { icon: Zap, t: "Link einfügen" },
-  { icon: ScanSearch, t: "Wir prüfen" },
-  { icon: Eye, t: "Klares Urteil" },
-];
+const CHIPS = ["Preis checken", "Mängel finden", "Betrug erkennen"];
+const PERKS = ["Schnellcheck gratis", "Kein Abo", "Ergebnis in Sekunden", "Keine App nötig"];
 
 export default async function HomePage() {
   const vis = (await getStore().getConfig()).demoVisibility ?? {};
@@ -34,32 +33,41 @@ export default async function HomePage() {
 
   return (
     <div className="overflow-x-clip">
-      <section className="hero-glow">
-        <div className="mx-auto max-w-2xl px-4 pb-10 pt-10 text-center sm:pt-20">
+      <section className="hero-glow relative isolate">
+        <Hero3D />
+        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-2xl flex-col justify-center px-5 pb-10 pt-8 sm:min-h-0 sm:pt-24 sm:pb-16 md:text-center">
           <FadeIn>
-            <h1 className="text-[2.4rem] font-bold leading-[1.02] tracking-[-0.04em] text-balance sm:text-6xl">
+            <p className="text-sm font-medium text-accent">DEAL-NIVO – der KI-Check für Gebrauchtkäufe</p>
+            <h1 className="mt-4 text-[2.7rem] font-extrabold leading-[0.98] tracking-[-0.045em] text-balance sm:text-7xl">
               Prüfe deinen Deal, <span className="text-accent">bevor du kaufst.</span>
             </h1>
-            <p className="mx-auto mt-4 max-w-md text-muted text-pretty">Preis, Zustand, Risiken und Verkäufer – in einem klaren Urteil.</p>
+            <Squiggle className="mt-4 h-5 w-36 md:mx-auto" />
+            <p className="mt-5 max-w-md text-[17px] leading-relaxed text-muted text-pretty md:mx-auto">
+              Link einfügen – wir prüfen <span className="font-semibold text-foreground">Preis, Zustand, Risiken und Verkäufer</span> und sagen dir klar, ob sich der Kauf lohnt.
+            </p>
+            <ul className="mt-6 flex flex-wrap gap-2.5 md:justify-center">
+              {CHIPS.map((c) => (
+                <li key={c} className="flex items-center gap-2 rounded-2xl border-2 border-accent bg-background px-3.5 py-2 text-sm font-bold shadow-[3px_4px_0_0_var(--accent)]">
+                  <span className="size-2 rounded-full bg-accent" />
+                  {c}
+                </li>
+              ))}
+            </ul>
           </FadeIn>
           <div className="mt-8">
             <HeroInput />
           </div>
-          <ol className="mx-auto mt-8 flex max-w-sm items-center justify-between text-xs text-muted">
-            {STEPS.map((s, i) => (
-              <li key={s.t} className="flex items-center gap-1.5">
-                <span className="flex size-7 items-center justify-center rounded-full bg-surface-2 text-foreground">
-                  <s.icon className="size-3.5" />
-                </span>
-                {s.t}
-                {i < STEPS.length - 1 && <ArrowRight className="ml-1 size-3 opacity-50" />}
+          <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted md:mx-auto md:flex md:gap-6">
+            {PERKS.map((p) => (
+              <li key={p} className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-accent" strokeWidth={3} /> {p}
               </li>
             ))}
-          </ol>
+          </ul>
         </div>
       </section>
 
-      <section className="mx-auto max-w-2xl px-4">
+      <section className="mx-auto max-w-2xl px-4 pt-6">
         <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6" aria-label="Kategorien">
           {CATS.map(({ c, label, icon: Icon }) => (
             <li key={c} className="flex flex-col items-center gap-1.5 rounded-2xl bg-surface px-2 py-3 text-xs font-medium ring-1 ring-border">
