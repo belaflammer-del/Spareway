@@ -144,7 +144,7 @@ Legende: ✅ implementiert & getestet · 🟢 implementiert (Build/Typecheck ok,
 | Audit-Log (Löschungen, Statuswechsel, Preisänderungen, Mitgliedschaften) | ✅ | |
 | Security-Header, Rate Limiting (Login, Registrierung, Reset, öffentliche Links) | 🟢 | In-Memory → für mehrere Instanzen Redis nötig |
 | Tarife Starter/Professional/Business | 🟡 | Tabelle `plans` (Preise/Limits änderbar ohne Code); Benutzerlimit wird erzwungen |
-| **Umsatzbeteiligung:** Endkunden bezahlen Rechnungen online im Portal (Stripe Connect, Destination Charge); Plattform behält 0,5 % (konfigurierbar in `plans.revenue_share_bps`, Monats-Obergrenze `revenue_share_cap_cents`) | ✅ (Gebührenlogik, DB-Rechte, Doppelbuchungsschutz – Tests) / 🟢 (Stripe-Aufrufe) | **nicht gegen Stripe getestet** – vor Start im Stripe-Testmodus durchspielen |
+| **Umsatzbeteiligung:** Endkunden bezahlen Rechnungen online im Portal (Stripe Connect, Destination Charge); Plattform behält 0,5 % (konfigurierbar in `plans.revenue_share_bps`; optionale Monats-Obergrenze `revenue_share_cap_cents`, standardmäßig keine) | ✅ (Gebührenlogik, DB-Rechte, Doppelbuchungsschutz – Tests) / 🟢 (Stripe-Aufrufe) | **nicht gegen Stripe getestet** – vor Start im Stripe-Testmodus durchspielen |
 | Grundgebühr als Stripe-Abo (Checkout + Kundenportal), Webhook setzt Tarif/Status | 🟢 | benötigt Stripe-Preise je Tarif |
 | Angebote bearbeiten (Entwurf) | ⚪ | aktuell: neu kalkulieren |
 | Kalender Tag (Spalten je Box) / Woche / Monat, „Noch nicht eingeplant“ | 🟢 | Zeiten konsequent in Europe/Berlin (7 Unit-Tests) |
@@ -244,7 +244,7 @@ CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-
 
 ## Abrechnungsmodell & Stripe einrichten
 
-Modell: **Grundgebühr je Tarif + 0,5 % der online bezahlten Rechnungen, max. 150 €/Monat** (Werte in Tabelle `plans`, ohne Codeänderung anpassbar). Bar- und Überweisungszahlungen sind gebührenfrei.
+Modell: **Grundgebühr je Tarif + 0,5 % der online bezahlten Rechnungen, ohne Obergrenze** (Werte in Tabelle `plans`, ohne Codeänderung anpassbar). Bar- und Überweisungszahlungen sind gebührenfrei.
 
 1. Stripe-Konto der Plattform anlegen, **Connect** aktivieren (Express-Konten, Land DE).
 2. Je Tarif ein Produkt mit monatlichem Preis anlegen → IDs in `STRIPE_PRICE_STARTER/PROFESSIONAL/BUSINESS`.
