@@ -15,7 +15,12 @@ function num(name: string, fallback: number): number {
 }
 
 export const env = {
-  appUrl: str("NEXT_PUBLIC_APP_URL") ?? "http://localhost:3000",
+  // Öffentliche URL: explizit gesetzt, sonst von Render bzw. Vercel übernommen
+  appUrl:
+    str("NEXT_PUBLIC_APP_URL") ??
+    str("RENDER_EXTERNAL_URL") ??
+    (str("VERCEL_PROJECT_PRODUCTION_URL") ? `https://${str("VERCEL_PROJECT_PRODUCTION_URL")}` : undefined) ??
+    "http://localhost:3000",
   appSecret: str("APP_SECRET") ?? "dev-only-insecure-secret-change-me-please-0000",
   adminEmails: (str("ADMIN_EMAILS") ?? "")
     .split(",")

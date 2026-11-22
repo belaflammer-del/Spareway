@@ -1,0 +1,22 @@
+# Render Blueprint – Testbetrieb von Kaufklar (Demo-/Lokalmodus, ohne API-Schlüssel)
+# Daten liegen im Container und werden bei jedem Neustart/Deploy zurückgesetzt.
+services:
+  - type: web
+    name: kaufklar
+    runtime: node
+    plan: free
+    rootDir: kaufpruefer
+    buildCommand: npm ci && npm run build
+    startCommand: npm start -- -p $PORT
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: APP_SECRET
+        generateValue: true
+      - key: ALLOW_TEST_CREDITS
+        value: "true"
+      - key: ADMIN_EMAILS
+        sync: false
