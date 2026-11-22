@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ── Design-Tokens ───────────────────────────────────────── */
-/* Markenfarben: Schwarz + Orange */
+/* Markenfarben: Schwarz + Libellen-Gelb (Wasserwaage). Ampel-Farben bleiben semantisch. */
 :root {
   --background: oklch(0.985 0.002 60);
   --surface: oklch(1 0 0);
@@ -11,10 +11,10 @@
   --foreground: oklch(0.17 0.005 60);
   --muted: oklch(0.5 0.01 60);
   --border: oklch(0.91 0.005 60);
-  --ring: oklch(0.7 0.18 48);
-  --accent: oklch(0.68 0.19 45);
-  --accent-fg: oklch(0.15 0.01 60);
-  --accent-soft: oklch(0.95 0.04 55);
+  --ring: oklch(0.78 0.16 95);
+  --accent: oklch(0.82 0.17 95);
+  --accent-fg: oklch(0.17 0.02 95);
+  --accent-soft: oklch(0.96 0.06 98);
   --good: oklch(0.6 0.15 150);
   --good-soft: oklch(0.95 0.045 150);
   --warn: oklch(0.72 0.17 60);
@@ -35,13 +35,13 @@
   --foreground: oklch(0.97 0.003 60);
   --muted: oklch(0.68 0.01 60);
   --border: oklch(0.28 0.006 60);
-  --ring: oklch(0.75 0.18 50);
-  --accent: oklch(0.74 0.18 50);
-  --accent-fg: oklch(0.15 0.01 60);
-  --accent-soft: oklch(0.3 0.07 50);
+  --ring: oklch(0.88 0.17 98);
+  --accent: oklch(0.9 0.18 100);
+  --accent-fg: oklch(0.16 0.02 100);
+  --accent-soft: oklch(0.3 0.06 100);
   --good: oklch(0.76 0.16 150);
   --good-soft: oklch(0.3 0.06 150);
-  --warn: oklch(0.8 0.16 65);
+  --warn: oklch(0.76 0.16 60);
   --warn-soft: oklch(0.32 0.07 60);
   --bad: oklch(0.7 0.18 27);
   --bad-soft: oklch(0.3 0.07 25);

@@ -51,7 +51,7 @@ export function toTen(score: number | null): string {
 
 const BOX_TONE = {
   good: "bg-good text-white",
-  warn: "bg-accent text-accent-fg",
+  warn: "bg-warn text-[oklch(0.18_0.03_60)]",
   bad: "bg-bad text-white",
   neutral: "bg-surface-2 text-muted",
 } as const;

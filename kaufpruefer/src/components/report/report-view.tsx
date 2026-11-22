@@ -33,6 +33,7 @@ import {
 import { LISTING_FIELDS, type AnalysisReport, type FieldSource, type ListingFieldKey, type SubScore } from "@/lib/domain/schemas";
 import { cn } from "@/lib/utils";
 import { CopyBlock, EvidenceBadge, EvidenceImage, PriceGauge, SeverityBadge, SourceBadge } from "./parts";
+import { PriceLevel } from "./price-level";
 import { ScoreBox, scoreTone, toTen } from "./score-ring";
 
 type SectionId = "price" | "product" | "risks" | "seller" | "payment" | "checklist" | "messages" | "data" | "method";
@@ -44,7 +45,7 @@ function firstSentence(s: string): string {
   return (m ? m[0] : clean).trim();
 }
 
-const TONE_DOT = { good: "bg-good", warn: "bg-accent", bad: "bg-bad", neutral: "bg-border" } as const;
+const TONE_DOT = { good: "bg-good", warn: "bg-warn", bad: "bg-bad", neutral: "bg-border" } as const;
 
 function Tile({ title, icon: Icon, value, sub, tone, onClick }: { title: string; icon: typeof Banknote; value: string; sub?: string; tone: keyof typeof TONE_DOT; onClick: () => void }) {
   return (
@@ -88,7 +89,7 @@ function MiniScore({ label, sub }: { label: string; sub: SubScore }) {
   return (
     <div className="flex items-center justify-between rounded-xl bg-surface-2/70 px-3 py-2 text-sm">
       <span className="text-muted">{label}</span>
-      <span className={cn("tabular rounded-md px-2 py-0.5 font-semibold", tone === "good" && "bg-good text-white", tone === "warn" && "bg-accent text-accent-fg", tone === "bad" && "bg-bad text-white", tone === "neutral" && "text-muted")}>
+      <span className={cn("tabular rounded-md px-2 py-0.5 font-semibold", tone === "good" && "bg-good text-white", tone === "warn" && "bg-warn text-[oklch(0.18_0.03_60)]", tone === "bad" && "bg-bad text-white", tone === "neutral" && "text-muted")}>
         {toTen(sub.score)}
       </span>
     </div>
@@ -149,6 +150,10 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
           </div>
         </div>
         <p className="mt-4 text-[15px] leading-relaxed">{firstSentence(report.summary)}</p>
+        <div className="mt-5 rounded-2xl bg-surface-2/60 p-3.5">
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Preis-Niveau</p>
+          <PriceLevel market={market} />
+        </div>
         {report.mode === "rules_only" && <p className="mt-2 text-xs text-muted">Ohne KI-Bildanalyse erstellt.</p>}
       </div>
 
@@ -308,7 +313,7 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
             {seller.visibleReviewCount > 0 && (
               <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-surface-2">
                 <div className="bg-good" style={{ width: `${(seller.positive / seller.visibleReviewCount) * 100}%` }} />
-                <div className="bg-accent" style={{ width: `${(seller.neutral / seller.visibleReviewCount) * 100}%` }} />
+                <div className="bg-warn" style={{ width: `${(seller.neutral / seller.visibleReviewCount) * 100}%` }} />
                 <div className="bg-bad" style={{ width: `${(seller.negative / seller.visibleReviewCount) * 100}%` }} />
               </div>
             )}
@@ -331,7 +336,7 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
           <ul className="space-y-2">
             {report.payment.slice(0, 5).map((p) => (
               <li key={p.id} className="flex gap-2.5 text-sm">
-                <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", p.kind === "avoid" ? "bg-bad" : p.kind === "recommended" ? "bg-good" : "bg-accent")} />
+                <span className={cn("mt-1.5 size-2 shrink-0 rounded-full", p.kind === "avoid" ? "bg-bad" : p.kind === "recommended" ? "bg-good" : "bg-warn")} />
                 <span>
                   <span className="font-medium">{p.title}.</span> <span className="text-muted">{p.detail}</span>
                 </span>
@@ -436,7 +441,7 @@ function MiniBadge({ text, tone }: { text: string; tone: keyof typeof TONE_DOT }
       className={cn(
         "tabular rounded-md px-2 py-0.5 text-xs font-semibold",
         tone === "good" && "bg-good text-white",
-        tone === "warn" && "bg-accent text-accent-fg",
+        tone === "warn" && "bg-warn text-[oklch(0.18_0.03_60)]",
         tone === "bad" && "bg-bad text-white",
         tone === "neutral" && "bg-surface-2 text-muted",
       )}

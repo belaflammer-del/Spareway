@@ -1,16 +1,13 @@
 /**
- * 3D-Szene für den Startseiten-Hero: schwebende, thematisch passende
- * Objekte (Smartphone mit Mini-Bericht, Uhr, Autoschlüssel, Euro-Münze,
- * Lupe, Preisschild, Prüf-Siegel). Alles prozedural mit three.js erzeugt –
- * keine externen Modelle oder Bilder.
+ * Prozedural erzeugte 3D-Objekte (three.js) – keine externen Modelle/Bilder.
  */
 import * as THREE from "three";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
-const ORANGE = 0xff7a1a;
+export const ACCENT = 0xf0dc1c;
+export const ORANGE = 0xff8a1f;
 
-function canvasTexture(w: number, h: number, draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
+export function canvasTexture(w: number, h: number, draw: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
   const cv = document.createElement("canvas");
   cv.width = w;
   cv.height = h;
@@ -22,7 +19,7 @@ function canvasTexture(w: number, h: number, draw: (c: CanvasRenderingContext2D)
   return t;
 }
 
-function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   c.beginPath();
   c.moveTo(x + r, y);
   c.arcTo(x + w, y, x + w, y + h, r);
@@ -34,9 +31,9 @@ function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number,
 
 const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif";
 
-function materials() {
+export function materials() {
   return {
-    orange: new THREE.MeshPhysicalMaterial({ color: ORANGE, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.12 }),
+    orange: new THREE.MeshPhysicalMaterial({ color: ACCENT, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.12 }),
     black: new THREE.MeshPhysicalMaterial({ color: 0x151515, roughness: 0.32, metalness: 0.2, clearcoat: 0.9, clearcoatRoughness: 0.15 }),
     metal: new THREE.MeshStandardMaterial({ color: 0xdedede, metalness: 1, roughness: 0.18 }),
     gold: new THREE.MeshStandardMaterial({ color: 0xf2b54a, metalness: 1, roughness: 0.22 }),
@@ -44,16 +41,16 @@ function materials() {
     glass: new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 0.95, thickness: 0.3, roughness: 0.04, ior: 1.45, transparent: true, opacity: 0.9 }),
   };
 }
-type Mats = ReturnType<typeof materials>;
+export type Mats = ReturnType<typeof materials>;
 
-function phone(m: Mats) {
+export function phone(m: Mats) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(new RoundedBoxGeometry(1.0, 2.05, 0.13, 6, 0.15), m.black));
   // Bildschirm mit Mini-Bericht im DEAL-NIVO-Stil
   const tex = canvasTexture(440, 920, (c) => {
     c.fillStyle = "#0e0e0d";
     c.fillRect(0, 0, 440, 920);
-    c.fillStyle = "#ff7a1a";
+    c.fillStyle = "#f0dc1c";
     roundRect(c, 40, 110, 170, 170, 32);
     c.fill();
     c.fillStyle = "#1a1208";
@@ -72,7 +69,7 @@ function phone(m: Mats) {
     c.fillText("● Interessant", 235, 255);
     const rows: [string, string][] = [
       ["Preis", "#3fd58a"],
-      ["Zustand", "#ff7a1a"],
+      ["Zustand", "#ffa23a"],
       ["Risiken", "#3fd58a"],
       ["Verkäufer", "#3fd58a"],
     ];
@@ -89,7 +86,7 @@ function phone(m: Mats) {
       c.arc(365, y + 48, 12, 0, Math.PI * 2);
       c.fill();
     });
-    c.fillStyle = "#ff7a1a";
+    c.fillStyle = "#f0dc1c";
     roundRect(c, 40, 820, 360, 64, 20);
     c.fill();
   });
@@ -102,7 +99,7 @@ function phone(m: Mats) {
   return g;
 }
 
-function watch(m: Mats) {
+export function watch(m: Mats) {
   const g = new THREE.Group();
   const caseM = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.2, 64), m.metal);
   caseM.rotation.x = Math.PI / 2;
@@ -119,7 +116,7 @@ function watch(m: Mats) {
       c.save();
       c.translate(256, 256);
       c.rotate((i / 12) * Math.PI * 2);
-      c.fillStyle = i % 3 === 0 ? "#ff7a1a" : "#e8e4dc";
+      c.fillStyle = i % 3 === 0 ? "#f0dc1c" : "#e8e4dc";
       c.fillRect(-8, -230, 16, i % 3 === 0 ? 58 : 38);
       c.restore();
     }
@@ -151,7 +148,7 @@ function watch(m: Mats) {
   return g;
 }
 
-function carKey(m: Mats) {
+export function carKey(m: Mats) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(new RoundedBoxGeometry(0.7, 1.15, 0.28, 6, 0.2), m.black));
   [0.2, -0.1].forEach((y, i) => {
@@ -169,7 +166,7 @@ function carKey(m: Mats) {
   return g;
 }
 
-function coin(m: Mats) {
+export function coin(m: Mats) {
   const face = canvasTexture(512, 512, (c) => {
     const grd = c.createRadialGradient(200, 180, 40, 256, 256, 260);
     grd.addColorStop(0, "#ffd889");
@@ -195,7 +192,7 @@ function coin(m: Mats) {
   return g;
 }
 
-function magnifier(m: Mats) {
+export function magnifier(m: Mats) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.1, 24, 64), m.black));
   const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.05, 48), m.glass);
@@ -208,7 +205,7 @@ function magnifier(m: Mats) {
   return g;
 }
 
-function priceTag(m: Mats) {
+export function priceTag(m: Mats) {
   const s = new THREE.Shape();
   s.moveTo(-0.45, -0.32);
   s.lineTo(0.35, -0.32);
@@ -240,7 +237,7 @@ function priceTag(m: Mats) {
   return g;
 }
 
-function badge(m: Mats) {
+export function badge(m: Mats) {
   const s = new THREE.Shape();
   s.moveTo(0, 0.62);
   s.bezierCurveTo(0.25, 0.5, 0.45, 0.48, 0.52, 0.45);
@@ -265,163 +262,98 @@ function badge(m: Mats) {
   return g;
 }
 
-interface Placed {
-  obj: THREE.Group;
-  /** Zielposition in normierten Bildschirmkoordinaten (-1..1) */
-  nx: number;
-  ny: number;
-  z: number;
-  scale: number;
-  baseRot: THREE.Euler;
-  spin: number;
-  phase: number;
-  delay: number;
+
+export function tshirt(m: Mats) {
+  const s = new THREE.Shape();
+  s.moveTo(-0.22, 0.62);
+  s.quadraticCurveTo(0, 0.5, 0.22, 0.62);
+  s.lineTo(0.62, 0.48);
+  s.lineTo(0.8, 0.12);
+  s.lineTo(0.5, 0.02);
+  s.lineTo(0.45, -0.66);
+  s.lineTo(-0.45, -0.66);
+  s.lineTo(-0.5, 0.02);
+  s.lineTo(-0.8, 0.12);
+  s.lineTo(-0.62, 0.48);
+  s.lineTo(-0.22, 0.62);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.04, bevelSegments: 4 });
+  geo.center();
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(geo, m.white));
+  const stripe = new THREE.Mesh(new RoundedBoxGeometry(0.9, 0.12, 0.06, 2, 0.03), m.orange);
+  stripe.position.set(0, -0.12, 0.11);
+  g.add(stripe);
+  return g;
 }
 
-export interface HeroSceneHandle {
-  dispose(): void;
-}
-
-export function createHeroScene(container: HTMLElement, opts: { reducedMotion: boolean }): HeroSceneHandle {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
-  const mobile = window.matchMedia("(max-width: 767px)").matches;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.75 : 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
-  renderer.domElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none";
-  container.appendChild(renderer.domElement);
-
-  const scene = new THREE.Scene();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  const key = new THREE.DirectionalLight(0xfff1e0, 1.6);
-  key.position.set(4, 6, 8);
-  scene.add(key);
-  const rim = new THREE.PointLight(ORANGE, 30, 20);
-  rim.position.set(-5, -3, 3);
-  scene.add(rim);
-
-  const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
-  camera.position.set(0, 0, 10);
-
-  const m = materials();
-  // Desktop: Objekte rund um die Überschrift; Handy: an den Rändern, teils angeschnitten
-  const layout: [() => THREE.Group, number, number, number, number, number, number, number][] = mobile
-    ? [
-        [() => watch(m), 0.9, 0.74, -0.4, 0.52, 0.5, -0.3, 0.2],
-        [() => priceTag(m), 0.94, 0.02, -0.8, 0.48, -0.2, 0.6, -0.5],
-        [() => coin(m), -1.02, -0.22, -0.6, 0.42, 0.9, 0.5, -0.3],
-        [() => carKey(m), 0.95, -0.5, -0.5, 0.44, 0.2, -0.5, 0.4],
-        [() => badge(m), -0.98, -0.8, -0.3, 0.45, 0.2, 0.5, 0.15],
-      ]
-    : [
-        [() => phone(m), 0.66, -0.08, 0.6, 0.95, -0.15, -0.45, 0.08],
-        [() => watch(m), -0.72, 0.52, 0, 0.85, 0.5, 0.45, 0.15],
-        [() => coin(m), -0.62, -0.5, 0.4, 0.75, 0.9, 0.5, -0.3],
-        [() => carKey(m), 0.9, -0.78, -0.4, 0.7, 0.2, -0.6, 0.4],
-        [() => magnifier(m), 0.9, 0.62, -1.2, 0.7, 0.2, -0.4, -0.5],
-        [() => priceTag(m), -0.88, -0.02, -1, 0.8, -0.2, 0.6, -0.4],
-        [() => badge(m), -0.5, 0.84, -1.6, 0.6, 0.2, 0.5, 0.15],
-      ];
-
-  const placed: Placed[] = layout.map(([make, nx, ny, z, scale, rx, ry, rz], i) => {
-    const obj = make();
-    obj.scale.setScalar(scale);
-    scene.add(obj);
-    return { obj, nx, ny, z, scale, baseRot: new THREE.Euler(rx, ry, rz), spin: (i % 2 ? 1 : -1) * (0.12 + i * 0.02), phase: i * 1.3, delay: 0.15 + i * 0.12 };
+export function gamepad(m: Mats) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new RoundedBoxGeometry(1.5, 0.75, 0.3, 6, 0.3), m.black));
+  for (const x of [-0.55, 0.55]) {
+    const grip = new THREE.Mesh(new THREE.SphereGeometry(0.33, 32, 24), m.black);
+    grip.position.set(x, -0.25, 0);
+    grip.scale.set(1, 1.1, 0.75);
+    g.add(grip);
+  }
+  const dpadH = new THREE.Mesh(new RoundedBoxGeometry(0.28, 0.09, 0.06, 2, 0.03), m.white);
+  const dpadV = dpadH.clone();
+  dpadV.rotation.z = Math.PI / 2;
+  for (const d of [dpadH, dpadV]) {
+    d.position.set(-0.42, 0.05, 0.17);
+    g.add(d);
+  }
+  [[0.42, 0.14], [0.55, 0.02], [0.42, -0.1], [0.29, 0.02]].forEach(([x, y], i) => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.06, 20), i === 0 ? m.orange : m.white);
+    b.rotation.x = Math.PI / 2;
+    b.position.set(x, y, 0.17);
+    g.add(b);
   });
+  return g;
+}
 
-  let w = 1;
-  let h = 1;
-  let viewH = 1;
-  let viewW = 1;
-  function resize() {
-    w = container.clientWidth;
-    h = container.clientHeight;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    viewH = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    viewW = viewH * camera.aspect;
+export function parcel(m: Mats) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new RoundedBoxGeometry(1, 0.8, 0.8, 4, 0.06), new THREE.MeshStandardMaterial({ color: 0xc89a62, roughness: 0.85 })));
+  const tape = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.82, 0.82), m.orange);
+  g.add(tape);
+  return g;
+}
+
+/** Wasserwaage: Aluminium-Körper, schwarze Endkappen, Libelle mit Blase. */
+export function spiritLevel(m: Mats) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new RoundedBoxGeometry(5.2, 0.62, 0.42, 6, 0.08), new THREE.MeshStandardMaterial({ color: 0x2a2a28, metalness: 0.75, roughness: 0.32 }));
+  g.add(body);
+  for (const x of [-2.55, 2.55]) {
+    const cap = new THREE.Mesh(new RoundedBoxGeometry(0.32, 0.7, 0.5, 4, 0.1), m.black);
+    cap.position.x = x;
+    g.add(cap);
   }
-  resize();
-  const ro = new ResizeObserver(resize);
-  ro.observe(container);
-
-  const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
-  const onPointer = (e: PointerEvent) => {
-    pointer.tx = (e.clientX / window.innerWidth) * 2 - 1;
-    pointer.ty = (e.clientY / window.innerHeight) * 2 - 1;
-  };
-  window.addEventListener("pointermove", onPointer, { passive: true });
-
-  const easeOutBack = (x: number) => {
-    const c1 = 1.5;
-    const c3 = c1 + 1;
-    return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
-  };
-
-  const clock = new THREE.Clock();
-  let visible = true;
-  let raf = 0;
-
-  function frame() {
-    const t = opts.reducedMotion ? 10 : clock.getElapsedTime();
-    pointer.x += (pointer.tx - pointer.x) * 0.05;
-    pointer.y += (pointer.ty - pointer.y) * 0.05;
-    const scrollShift = Math.min(window.scrollY, h) / h;
-    for (const p of placed) {
-      const tx = (p.nx * viewW) / 2;
-      const ty = (p.ny * viewH) / 2;
-      const k = Math.min(1, Math.max(0, (t - p.delay) / 1.1));
-      const e = easeOutBack(k);
-      const startY = viewH / 2 + 2;
-      const floatY = Math.sin(t * 0.9 + p.phase) * 0.1;
-      // Parallax: weiter vorne liegende Objekte bewegen sich beim Scrollen stärker
-      const parallax = scrollShift * (1.2 + p.z * 0.4) * 1.6;
-      p.obj.position.set(tx + pointer.x * 0.15 * (1 + p.z * 0.2), startY + (ty - startY) * e + floatY + parallax, p.z);
-      p.obj.rotation.set(
-        p.baseRot.x + Math.sin(t * 0.6 + p.phase) * 0.12 + pointer.y * 0.15 + (1 - e) * 1.2,
-        p.baseRot.y + t * p.spin * 0.6 + pointer.x * 0.2,
-        p.baseRot.z + Math.cos(t * 0.5 + p.phase) * 0.06,
-      );
-      p.obj.visible = k > 0;
-    }
-    renderer.render(scene, camera);
+  // Fenster/Rahmen um die Libelle
+  const frame = new THREE.Mesh(new RoundedBoxGeometry(1.7, 0.5, 0.46, 4, 0.12), m.black);
+  g.add(frame);
+  const vialMat = new THREE.MeshPhysicalMaterial({ color: ACCENT, transmission: 0.35, roughness: 0.08, clearcoat: 1, emissive: ACCENT, emissiveIntensity: 0.18 });
+  const vial = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 1.2, 8, 24), vialMat);
+  vial.rotation.z = Math.PI / 2;
+  vial.position.z = 0.16;
+  g.add(vial);
+  const markMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+  for (const x of [-0.24, 0.24]) {
+    const mk = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.36, 0.02), markMat);
+    mk.position.set(x, 0, 0.34);
+    g.add(mk);
   }
-
-  function loop() {
-    raf = requestAnimationFrame(loop);
-    if (visible && !document.hidden) frame();
+  const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.14, 32, 24), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, clearcoat: 1, transmission: 0.2 }));
+  bubble.scale.set(1.5, 0.75, 0.75);
+  bubble.position.set(0, 0.03, 0.28);
+  bubble.name = "bubble";
+  g.add(bubble);
+  // Skala auf dem Körper
+  for (let i = -10; i <= 10; i++) {
+    if (Math.abs(i) < 4) continue;
+    const t = new THREE.Mesh(new THREE.BoxGeometry(0.02, i % 5 === 0 ? 0.22 : 0.12, 0.01), new THREE.MeshBasicMaterial({ color: 0xd8d4cc }));
+    t.position.set(i * 0.22, 0.12, 0.215);
+    g.add(t);
   }
-  const io = new IntersectionObserver(([en]) => (visible = en.isIntersecting));
-  io.observe(container);
-
-  if (opts.reducedMotion) {
-    frame();
-    window.addEventListener("scroll", frame, { passive: true });
-  } else loop();
-
-  return {
-    dispose() {
-      cancelAnimationFrame(raf);
-      io.disconnect();
-      ro.disconnect();
-      window.removeEventListener("pointermove", onPointer);
-      window.removeEventListener("scroll", frame);
-      scene.traverse((o) => {
-        const mesh = o as THREE.Mesh;
-        if (mesh.geometry) mesh.geometry.dispose();
-        const mats = Array.isArray(mesh.material) ? mesh.material : mesh.material ? [mesh.material] : [];
-        for (const mt of mats) {
-          (mt as THREE.MeshStandardMaterial).map?.dispose();
-          mt.dispose();
-        }
-      });
-      pmrem.dispose();
-      renderer.dispose();
-      renderer.domElement.remove();
-    },
-  };
+  return g;
 }
