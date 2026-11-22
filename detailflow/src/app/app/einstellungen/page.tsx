@@ -8,12 +8,17 @@ import { formatDate, formatEUR } from "@/lib/utils";
 import { isStripeConfigured } from "@/lib/env";
 import { removeMember, updateMemberRole } from "@/app/actions/company";
 import { toggleWorkstation } from "@/app/actions/operations";
+import { connectStripe, openBillingPortal, refreshStripeStatus, startSubscription } from "@/app/actions/billing";
+import { formatShare } from "@/lib/revenue-share";
+import { currentFeeMonth } from "@/lib/stripe";
 import { ChecklistTemplateForm, WorkstationForm } from "@/components/operations-settings";
 
 export const metadata = { title: "Einstellungen" };
 
-export default async function Settings() {
+export default async function Settings({ searchParams }: { searchParams: Promise<{ stripe?: string; zahlung?: string; abo?: string }> }) {
+  const sp = await searchParams;
   const ctx = await getContext();
+  if (sp.stripe === "zurueck" && ctx.isAdmin) await refreshStripeStatus();
   const [{ data: members }, { data: invites }, { data: plans }, { data: boxes }, { data: templates }] = await Promise.all([
     ctx.supabase.from("memberships").select("id, user_id, role, can_edit_prices, created_at").eq("company_id", ctx.companyId).order("created_at"),
     ctx.isAdmin ? ctx.supabase.from("invitations").select("id, email, role, expires_at, accepted_at").eq("company_id", ctx.companyId).is("accepted_at", null).order("created_at", { ascending: false }) : Promise.resolve({ data: [] as { id: string; email: string; role: string; expires_at: string }[] }),
@@ -22,6 +27,10 @@ export default async function Settings() {
     ctx.supabase.from("checklist_templates").select("id, name, items").eq("company_id", ctx.companyId).order("sort"),
   ]);
   const canManage = ctx.role !== "staff";
+  const co = ctx.company as unknown as { stripe_account_id: string | null; stripe_charges_enabled: boolean; subscription_status: string | null; stripe_customer_id: string | null };
+  const { data: fees } = ctx.isAdmin ? await ctx.supabase.from("platform_fees").select("gross_cents, fee_cents").eq("month", currentFeeMonth()) : { data: [] as { gross_cents: number; fee_cents: number }[] };
+  const feeSum = (fees ?? []).reduce((a, f) => a + f.fee_cents, 0) / 100;
+  const onlineSum = (fees ?? []).reduce((a, f) => a + f.gross_cents, 0) / 100;
   const ids = (members ?? []).map((m) => m.user_id);
   const { data: profiles } = ids.length ? await ctx.supabase.from("profiles").select("user_id, full_name").in("user_id", ids) : { data: [] };
   const plan = plans?.find((p) => p.id === ctx.company.plan);
@@ -87,6 +96,36 @@ export default async function Settings() {
             </div>
           )}
         </Card>
+        <Card id="zahlungen">
+          <CardHeader title="Online-Zahlungen & Gebühren" description="Kunden bezahlen Rechnungen direkt im Kundenportal – das Geld geht auf dein Konto." />
+          <div className="space-y-4 p-5 text-sm">
+            {sp.zahlung && <Notice tone="amber">{sp.zahlung}</Notice>}
+            {sp.abo === "ok" && <Notice tone="green">Danke! Dein Abo ist aktiv, sobald Stripe die Zahlung bestätigt.</Notice>}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-medium">Stripe-Konto</p>
+                <p className="text-muted-foreground">{co.stripe_charges_enabled ? "Verbunden – Online-Zahlung im Kundenportal ist aktiv." : co.stripe_account_id ? "Einrichtung begonnen, aber noch nicht abgeschlossen." : "Noch nicht verbunden."}</p>
+              </div>
+              {ctx.isAdmin && !co.stripe_charges_enabled && <form action={connectStripe}><button className={buttonClass("primary")}>{co.stripe_account_id ? "Einrichtung fortsetzen" : "Stripe verbinden"}</button></form>}
+              {co.stripe_charges_enabled && <Badge tone="green">Aktiv</Badge>}
+            </div>
+            <div className="rounded-xl bg-muted/60 p-4">
+              <p className="font-medium">So rechnen wir ab</p>
+              <p className="mt-1 text-muted-foreground">
+                Grundgebühr {formatEUR((plan?.price_monthly_cents ?? 0) / 100)} / Monat + {formatShare(plan?.revenue_share_bps ?? 0)} der online bezahlten Rechnungsbeträge
+                {plan?.revenue_share_cap_cents != null ? `, höchstens ${formatEUR(plan.revenue_share_cap_cents / 100)} pro Monat` : ""}. Die Gebühr wird bei der Zahlung automatisch einbehalten. Bar- und Überweisungszahlungen sind gebührenfrei.
+              </p>
+              {ctx.isAdmin && <p className="mt-2 tabular-nums">Diesen Monat: {formatEUR(onlineSum)} online bezahlt · Gebühren {formatEUR(feeSum)}</p>}
+            </div>
+            {ctx.isAdmin && (
+              <div className="flex flex-wrap gap-2">
+                {co.subscription_status === "active" || co.subscription_status === "trialing"
+                  ? <form action={openBillingPortal}><button className={buttonClass("secondary")}>Abo & Zahlungsmethode verwalten</button></form>
+                  : <form action={startSubscription}><input type="hidden" name="plan" value={ctx.company.plan} /><button className={buttonClass("secondary")}>Grundgebühr abonnieren ({plan?.name})</button></form>}
+              </div>
+            )}
+          </div>
+        </Card>
         <Card>
           <CardHeader title="Tarif" description={`Aktuell: ${plan?.name ?? ctx.company.plan}`} />
           <div className="grid gap-3 p-5 sm:grid-cols-3">
@@ -94,6 +133,7 @@ export default async function Settings() {
               <div key={p.id} className={`rounded-xl border p-4 ${p.id === ctx.company.plan ? "border-accent ring-1 ring-accent" : "border-border"}`}>
                 <p className="font-medium">{p.name}</p>
                 <p className="text-2xl font-semibold">{formatEUR(p.price_monthly_cents / 100)}<span className="text-sm font-normal text-muted-foreground"> / Monat</span></p>
+                <p className="text-xs text-muted-foreground">+ {formatShare(p.revenue_share_bps)} der Online-Zahlungen{p.revenue_share_cap_cents != null ? `, max. ${formatEUR(p.revenue_share_cap_cents / 100)}` : ""}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{p.max_users ? `bis ${p.max_users} Benutzer` : "unbegrenzte Benutzer"}</p>
               </div>
             ))}

@@ -63,7 +63,8 @@ detailflow/
 │  │  ├─ …0002_security_rpc.sql  RLS-Policies, Tarife, Audit-Log, Nummernkreise, RPCs, Storage-Policies
 │  │  ├─ …0003_catalog.sql       Leistungskatalog-Vorlage (136 Leistungen, 8 Pakete), create_company()
 │  │  ├─ …0004_operations.sql    Boxen + Belegungsschutz, Fotos, Checklisten, Auswertungs-Views
-│  │  └─ …0005_invoices_portal.sql Rechnungen (GoBD-Schutz, Storno, Hash), Kundenportal, Online-Anfrage, Nachrichten
+│  │  ├─ …0005_invoices_portal.sql Rechnungen (GoBD-Schutz, Storno, Hash), Kundenportal, Online-Anfrage, Nachrichten
+│  │  └─ …0006_revenue_share.sql  Umsatzbeteiligung: Tarifwerte, Stripe Connect, Plattformgebühren
 │  └─ seed.sql                   Beispieldaten (2 Betriebe, Kunden, Fahrzeuge, Angebote, Aufträge)
 ├─ src/
 │  ├─ middleware.ts              Auth-Schutz & Session-Refresh
@@ -143,7 +144,8 @@ Legende: ✅ implementiert & getestet · 🟢 implementiert (Build/Typecheck ok,
 | Audit-Log (Löschungen, Statuswechsel, Preisänderungen, Mitgliedschaften) | ✅ | |
 | Security-Header, Rate Limiting (Login, Registrierung, Reset, öffentliche Links) | 🟢 | In-Memory → für mehrere Instanzen Redis nötig |
 | Tarife Starter/Professional/Business | 🟡 | Tabelle `plans` (Preise/Limits änderbar ohne Code); Benutzerlimit wird erzwungen |
-| Stripe-Abonnements | 🟡 | Env-Variablen + Felder + Schutz vor Client-Änderung; Checkout/Webhook **nicht** implementiert |
+| **Umsatzbeteiligung:** Endkunden bezahlen Rechnungen online im Portal (Stripe Connect, Destination Charge); Plattform behält 0,5 % (konfigurierbar in `plans.revenue_share_bps`, Monats-Obergrenze `revenue_share_cap_cents`) | ✅ (Gebührenlogik, DB-Rechte, Doppelbuchungsschutz – Tests) / 🟢 (Stripe-Aufrufe) | **nicht gegen Stripe getestet** – vor Start im Stripe-Testmodus durchspielen |
+| Grundgebühr als Stripe-Abo (Checkout + Kundenportal), Webhook setzt Tarif/Status | 🟢 | benötigt Stripe-Preise je Tarif |
 | Angebote bearbeiten (Entwurf) | ⚪ | aktuell: neu kalkulieren |
 | Kalender Tag (Spalten je Box) / Woche / Monat, „Noch nicht eingeplant“ | 🟢 | Zeiten konsequent in Europe/Berlin (7 Unit-Tests) |
 | Arbeitsplätze/Boxen, Doppelbelegung in der DB ausgeschlossen (Exclusion Constraint) | ✅ | getestet |
@@ -216,7 +218,7 @@ keine fremden Angebote umwandeln, keine fremden Nummernkreise nutzen; Mitarbeite
 ihre Rolle nicht erhöhen; Tarifdaten sind clientseitig unveränderlich; anonyme Nutzer sehen nur per gültigem Token ein Angebot ohne
 interne Kalkulationsdaten.
 
-**Letzter Lauf (in dieser Entwicklungsumgebung):** 68/68 Tests bestanden (36 DB, 32 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
+**Letzter Lauf (in dieser Entwicklungsumgebung):** 75/75 Tests bestanden (39 DB, 36 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
 Die Oberfläche wurde **nicht** gegen eine laufende Supabase-Instanz durchgeklickt.
 
 CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-Service, Build).
@@ -239,6 +241,18 @@ CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-
 7. Mehrere Instanzen: `src/lib/rate-limit.ts` auf Redis/Upstash umstellen.
 
 ---
+
+## Abrechnungsmodell & Stripe einrichten
+
+Modell: **Grundgebühr je Tarif + 0,5 % der online bezahlten Rechnungen, max. 150 €/Monat** (Werte in Tabelle `plans`, ohne Codeänderung anpassbar). Bar- und Überweisungszahlungen sind gebührenfrei.
+
+1. Stripe-Konto der Plattform anlegen, **Connect** aktivieren (Express-Konten, Land DE).
+2. Je Tarif ein Produkt mit monatlichem Preis anlegen → IDs in `STRIPE_PRICE_STARTER/PROFESSIONAL/BUSINESS`.
+3. Webhook-Endpunkt `<APP_URL>/api/stripe/webhook` mit den Ereignissen `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.updated`, `customer.subscription.deleted`, `account.updated` (für Connect-Konten „Events on Connected accounts“ aktivieren) → Signing Secret in `STRIPE_WEBHOOK_SECRET`.
+4. `STRIPE_SECRET_KEY` und `SUPABASE_SERVICE_ROLE_KEY` setzen (beide nur serverseitig).
+5. Alles im **Testmodus** durchspielen: Betrieb verbindet Stripe → Rechnung finalisieren → im Kundenportal bezahlen (Testkarte 4242 …) → Zahlung und Gebühr erscheinen in der App.
+
+⚖️ Vor dem Start: Gebührenmodell in AGB/Vertrag aufnehmen, Rechnungsstellung der Plattformgebühren an die Betriebe (eigene Buchhaltung bzw. Stripe-Rechnungen) mit Steuerberatung klären; Rückerstattungen (Refund inkl. Gebühr) sind noch nicht in der App abgebildet.
 
 ## Sicherheit & Mandantentrennung
 

@@ -166,7 +166,7 @@ run("Mandantentrennung (RLS)", () => {
   });
 
   it("Tarifdaten können nicht vom Client geändert werden", async () => {
-    await expect(db.as(ownerA, "update companies set plan = 'business' where id = $1", [companyA])).rejects.toThrow(/Tarifdaten/);
+    await expect(db.as(ownerA, "update companies set plan = 'business' where id = $1", [companyA])).rejects.toThrow(/Tarif- und Zahlungsdaten/);
   });
 
   it("Audit-Log ist für Mitarbeiter und fremde Firmen nicht lesbar", async () => {
@@ -410,5 +410,32 @@ run("Phase 4: Rechnungen, Portal, Online-Anfrage, Nachrichten", () => {
     expect(tok2).toBe(tok);
     await expect(d.as(null, "select public.submit_booking_request('autocare', $1::jsonb)", [JSON.stringify({ name: "X Y", email: "x@y.de" })])).rejects.toThrow(/nicht gefunden/);
     await expect(d.as(null, "select public.submit_booking_request('premium-koeln', $1::jsonb)", [JSON.stringify({ name: "X", email: "kaputt" })])).rejects.toThrow();
+  });
+});
+
+run("Umsatzbeteiligung (Stripe Connect)", () => {
+  let d: Db;
+  beforeAll(async () => { d = new Db(); await d.connect(); });
+  afterAll(async () => d?.end());
+
+  it("Stripe-Konto und Freischaltung kann der Betrieb nicht selbst setzen", async () => {
+    await expect(d.as(ownerA, "update companies set stripe_charges_enabled = true where id = $1", [companyA])).rejects.toThrow(/Zahlungsdaten/);
+    await expect(d.as(ownerA, "update companies set stripe_account_id = 'acct_x' where id = $1", [companyA])).rejects.toThrow(/Zahlungsdaten/);
+  });
+
+  it("Plattformgebühren: nur serverseitig schreibbar, nur Inhaber der eigenen Firma lesen", async () => {
+    await expect(d.as(ownerA, "insert into platform_fees(company_id, payment_external_id, gross_cents, fee_cents, month) values ($1, 'x', 100, 1, current_date)", [companyA])).rejects.toThrow(/row-level security/);
+    await d.admin("insert into platform_fees(company_id, payment_external_id, gross_cents, fee_cents, month) values ($1, 'cs_test_1', 20000, 100, date_trunc('month', now() at time zone 'Europe/Berlin')::date)", [companyA]);
+    expect((await d.as(ownerA, "select count(*)::int as n from platform_fees"))[0].n).toBe(1);
+    expect((await d.as(staffA, "select count(*)::int as n from platform_fees"))[0].n).toBe(0);
+    expect((await d.as(ownerB, "select count(*)::int as n from platform_fees"))[0].n).toBe(0);
+    expect((await d.admin("select public.platform_fees_this_month($1) as n", [companyA])).rows[0].n).toBe(100);
+    await expect(d.as(ownerA, "select public.platform_fees_this_month($1)", [companyA])).rejects.toThrow(/permission denied/);
+  });
+
+  it("Online-Zahlungen werden bei wiederholtem Webhook nicht doppelt gebucht", async () => {
+    const inv = (await d.admin("select id from invoices where company_id = $1 and kind = 'invoice' limit 1", [companyA])).rows[0].id;
+    await d.admin("update invoices set status = 'finalized' where id = $1", [inv]).catch(() => {});
+    await expect(d.admin("insert into invoice_payments(company_id, invoice_id, amount, external_id) values ($1, $2, 1, 'pi_dup'), ($1, $2, 1, 'pi_dup')", [companyA, inv])).rejects.toThrow();
   });
 });
