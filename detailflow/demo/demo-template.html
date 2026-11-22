@@ -1,0 +1,1113 @@
+<title>DetailFlow Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: feste Seitenleiste (Desktop) / untere Navigation (Handy), Inhalt in Karten – wie die echte App */
+:root {
+  --bg: #fafafa; --fg: #18181b; --card: #ffffff; --muted: #f4f4f5; --muted-fg: #71717a; --border: #e4e4e7;
+  --accent: #0f766e; --accent-fg: #ffffff; --accent-soft: #ccfbf1; --danger: #dc2626;
+  --blue-bg: #eff6ff; --blue-fg: #1d4ed8; --green-bg: #ecfdf5; --green-fg: #047857; --amber-bg: #fffbeb; --amber-fg: #b45309;
+  --red-bg: #fef2f2; --red-fg: #b91c1c; --violet-bg: #f5f3ff; --violet-fg: #6d28d9;
+  --doc-bg: #ffffff; --doc-fg: #18181b; --doc-muted: #71717a; --doc-line: #e4e4e7;
+  --ev-a: #14b8a6; --ev-a-bg: #ccfbf1; --ev-a-fg: #042f2e; --ev-b: #38bdf8; --ev-b-bg: #e0f2fe; --ev-b-fg: #082f49; --ev-c: #f59e0b; --ev-c-bg: #fef3c7; --ev-c-fg: #451a03;
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b0b0d; --fg: #f4f4f5; --card: #141417; --muted: #1c1c20; --muted-fg: #a1a1aa; --border: #27272a;
+  --accent: #2dd4bf; --accent-fg: #042f2e; --accent-soft: #134e4a; --danger: #f87171;
+  --blue-bg: #172554; --blue-fg: #93c5fd; --green-bg: #052e24; --green-fg: #6ee7b7; --amber-bg: #3b2506; --amber-fg: #fcd34d;
+  --red-bg: #3f1111; --red-fg: #fca5a5; --violet-bg: #2e1065; --violet-fg: #c4b5fd; --ev-a: #14b8a6; --ev-a-bg: #042f2e; --ev-a-fg: #ccfbf1; --ev-b: #0ea5e9; --ev-b-bg: #082f49; --ev-b-fg: #e0f2fe; --ev-c: #f59e0b; --ev-c-bg: #451a03; --ev-c-fg: #fef3c7; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0b0b0d; --fg: #f4f4f5; --card: #141417; --muted: #1c1c20; --muted-fg: #a1a1aa; --border: #27272a;
+  --accent: #2dd4bf; --accent-fg: #042f2e; --accent-soft: #134e4a; --danger: #f87171;
+  --blue-bg: #172554; --blue-fg: #93c5fd; --green-bg: #052e24; --green-fg: #6ee7b7; --amber-bg: #3b2506; --amber-fg: #fcd34d;
+  --red-bg: #3f1111; --red-fg: #fca5a5; --violet-bg: #2e1065; --violet-fg: #c4b5fd; --ev-a: #14b8a6; --ev-a-bg: #042f2e; --ev-a-fg: #ccfbf1; --ev-b: #0ea5e9; --ev-b-bg: #082f49; --ev-b-fg: #e0f2fe; --ev-c: #f59e0b; --ev-c-bg: #451a03; --ev-c-fg: #fef3c7; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: inherit; text-decoration: none; }
+.tnum { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted-fg); }
+.small { font-size: 12px; }
+
+/* Shell */
+.side { position: fixed; inset: 0 auto 0 0; width: 232px; background: var(--card); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding-left: env(safe-area-inset-left, 0px); z-index: 20; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: -0.01em; }
+.logo i { width: 28px; height: 28px; border-radius: 8px; background: var(--fg); color: var(--bg); display: grid; place-items: center; }
+.side .head { padding: 16px; }
+.side .company { padding: 0 16px 12px; font-size: 12px; font-weight: 500; color: var(--muted-fg); }
+.nav { flex: 1; padding: 0 8px; display: flex; flex-direction: column; gap: 2px; }
+.nav a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; color: var(--muted-fg); }
+.nav a:hover { background: var(--muted); color: var(--fg); }
+.nav a.on { background: var(--muted); color: var(--fg); font-weight: 500; }
+.nav svg, .bnav svg, .side .foot svg { width: 17px; height: 17px; flex-shrink: 0; }
+.side .foot { border-top: 1px solid var(--border); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.side .foot button { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 0; background: none; border-radius: 8px; color: var(--muted-fg); cursor: pointer; text-align: left; }
+.side .foot button:hover { background: var(--muted); color: var(--fg); }
+.mtop { display: none; }
+.bnav { display: none; }
+main { padding-left: 232px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 48px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+.demo-bar { background: var(--accent-soft); color: var(--fg); font-size: 12px; padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.demo-bar button { border: 0; background: none; text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0; }
+
+@media (max-width: 1023px) {
+  .side { display: none; }
+  .side.open { display: flex; width: 280px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 15; }
+  main { padding-left: 0; padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .mtop { display: flex; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; height: 54px; align-items: center; justify-content: space-between; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--bg); border-bottom: 1px solid var(--border); }
+  .mtop button { border: 0; background: none; padding: 6px; cursor: pointer; }
+  .bnav { display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; inset: auto 0 0 0; z-index: 10; background: var(--card); border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+  .bnav a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; font-size: 11px; color: var(--muted-fg); }
+  .bnav a.on { color: var(--fg); }
+  .wrap { padding-block: 20px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+
+/* Bausteine */
+.ph { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+.ph h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; text-wrap: balance; }
+.ph p { margin: 4px 0 0; color: var(--muted-fg); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); min-width: 0; }
+.ch { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.ch h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.ch p { margin: 2px 0 0; font-size: 13px; color: var(--muted-fg); }
+.pad { padding: 20px; }
+.list > * { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--border); min-width: 0; }
+.list > *:first-child { border-top: 0; }
+.list > a:hover, .list > button:hover { background: var(--muted); }
+.list > button { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; background: none; text-align: left; cursor: pointer; }
+.t { min-width: 0; }
+.t b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t span { display: block; font-size: 12px; color: var(--muted-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty { padding: 24px 20px; color: var(--muted-fg); font-size: 13px; }
+.grid2 { display: grid; grid-template-columns: minmax(0,1fr); gap: 20px; }
+.grid4 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+@media (min-width: 1024px) { .grid2 { grid-template-columns: repeat(2, minmax(0,1fr)); } .grid4 { grid-template-columns: repeat(4, minmax(0,1fr)); } .side-layout { grid-template-columns: minmax(0,1fr) 360px !important; } }
+.side-layout { display: grid; grid-template-columns: minmax(0,1fr); gap: 20px; align-items: start; }
+.stat { padding: 16px; }
+.stat p { margin: 0; font-size: 12px; color: var(--muted-fg); font-weight: 500; }
+.stat strong { display: block; margin-top: 4px; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid transparent; background: var(--fg); color: var(--bg); font-weight: 500; cursor: pointer; white-space: nowrap; transition: transform .1s, opacity .15s; }
+.btn:active { transform: scale(.98); }
+.btn:hover { opacity: .9; }
+.btn.sec { background: var(--card); color: var(--fg); border-color: var(--border); box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.btn.sec:hover { background: var(--muted); opacity: 1; }
+.btn.ghost { background: none; color: var(--fg); }
+.btn.ghost:hover { background: var(--muted); }
+.btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.btn.block { width: 100%; }
+.btn:focus-visible, .nav a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn svg { width: 16px; height: 16px; }
+.quick { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-bottom: 20px; }
+@media (min-width: 640px) { .quick { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+.quick .btn { height: 48px; justify-content: flex-start; padding: 0 14px; }
+.quick .btn span { overflow: hidden; text-overflow: ellipsis; }
+.badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 500; white-space: nowrap; background: var(--muted); color: var(--muted-fg); }
+.b-blue { background: var(--blue-bg); color: var(--blue-fg); } .b-green { background: var(--green-bg); color: var(--green-fg); }
+.b-amber { background: var(--amber-bg); color: var(--amber-fg); } .b-red { background: var(--red-bg); color: var(--red-fg); }
+.b-violet { background: var(--violet-bg); color: var(--violet-fg); } .b-teal { background: var(--accent-soft); color: var(--accent); }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 500; }
+.field .hint { font-size: 12px; color: var(--muted-fg); }
+.inp { width: 100%; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); padding: 0 12px; }
+textarea.inp { height: auto; min-height: 72px; padding: 8px 12px; }
+.inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.fgrid { display: grid; grid-template-columns: minmax(0,1fr); gap: 14px; }
+@media (min-width: 640px) { .fgrid { grid-template-columns: repeat(2, minmax(0,1fr)); } .fgrid .full { grid-column: 1 / -1; } }
+.seg { display: inline-grid; grid-auto-flow: column; gap: 4px; background: var(--muted); padding: 4px; border-radius: 10px; }
+.seg button { border: 0; background: none; padding: 6px 12px; border-radius: 7px; color: var(--muted-fg); cursor: pointer; }
+.seg button.on { background: var(--card); color: var(--fg); font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.seg.full { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-flow: row; }
+.step h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 15px; }
+.step h2 i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: var(--fg); color: var(--bg); display: grid; place-items: center; font-size: 12px; }
+.steps { display: flex; flex-direction: column; gap: 16px; }
+.picks { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; }
+@media (min-width: 640px) { .picks { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+.pick { border: 1px solid var(--border); background: var(--card); border-radius: 12px; padding: 10px 12px; text-align: left; cursor: pointer; }
+.pick:hover { border-color: color-mix(in srgb, var(--fg) 25%, transparent); }
+.pick.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent-soft) 45%, var(--card)); }
+.pick b { display: block; font-weight: 500; }
+.pick span { font-size: 12px; color: var(--muted-fg); }
+.acc { border: 1px solid var(--border); border-radius: 12px; }
+.acc + .acc { margin-top: 8px; }
+.acc > button { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 0; background: none; cursor: pointer; font-weight: 500; }
+.acc .body { border-top: 1px solid var(--border); padding: 6px; display: grid; grid-template-columns: minmax(0,1fr); }
+@media (min-width: 640px) { .acc .body { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+.chk { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.chk:hover { background: var(--muted); }
+.chk.dis { opacity: .5; cursor: default; }
+.chk span:first-child { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.count { background: var(--fg); color: var(--bg); border-radius: 999px; padding: 0 7px; font-size: 11px; }
+.sum { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); overflow: hidden; }
+@media (max-width: 1023px) { .sum { top: calc(70px + env(safe-area-inset-top, 0px)); } }
+.sum ul { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
+.sum li { padding: 9px 20px; border-top: 1px solid var(--border); font-size: 13px; }
+.sum li:first-child { border-top: 0; }
+.kv { display: flex; justify-content: space-between; gap: 12px; }
+.tot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 5px; }
+.tot .big { font-size: 16px; font-weight: 600; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px; }
+.intern { background: var(--muted); padding: 12px 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted-fg); display: flex; flex-direction: column; gap: 3px; }
+.warn { padding: 10px 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--amber-fg); display: flex; flex-direction: column; gap: 4px; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); text-align: center; }
+.week > div { padding: 12px 2px; border-left: 1px solid var(--border); }
+.week > div:first-child { border-left: 0; background: var(--muted); border-bottom-left-radius: 16px; }
+.week small { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted-fg); }
+.week b { display: block; font-weight: 500; }
+.week em { display: block; font-style: normal; font-size: 12px; margin-top: 2px; color: var(--muted-fg); }
+.week em.has { color: var(--accent); font-weight: 500; }
+.board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; }
+.col { width: 250px; flex-shrink: 0; }
+.col header { display: flex; justify-content: space-between; padding: 0 4px 8px; font-weight: 500; }
+.col .lane { background: var(--muted); border-radius: 14px; padding: 8px; min-height: 90px; display: flex; flex-direction: column; gap: 8px; }
+.kcard { display: block; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.kcard:hover { border-color: color-mix(in srgb, var(--fg) 25%, transparent); }
+.kcard b { display: block; font-weight: 500; font-size: 13px; }
+.kcard p { margin: 4px 0 0; font-size: 12px; }
+.kcard .kv { margin-top: 8px; font-size: 12px; color: var(--muted-fg); }
+.search { position: relative; margin-bottom: 14px; }
+.search .inp { padding-left: 36px; }
+.search svg { position: absolute; left: 12px; top: 12px; width: 16px; height: 16px; color: var(--muted-fg); }
+.notice { border-radius: 12px; padding: 10px 14px; font-size: 13px; background: var(--blue-bg); color: var(--blue-fg); margin-bottom: 16px; }
+.notice.amber { background: var(--amber-bg); color: var(--amber-fg); }
+.notice.green { background: var(--green-bg); color: var(--green-fg); }
+.price-in { width: 96px; height: 32px; text-align: right; border-radius: 8px; border: 1px solid var(--border); background: var(--card); padding: 0 8px; }
+.svc-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 8px 20px; border-top: 1px solid var(--border); }
+.svc-row.off { opacity: .45; }
+.toggle { width: 38px; height: 22px; border-radius: 999px; border: 0; background: var(--border); position: relative; cursor: pointer; flex-shrink: 0; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--card); transition: left .15s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.toggle.on { background: var(--accent); }
+.toggle.on::after { left: 19px; }
+.items-check button { display: flex; gap: 12px; align-items: center; width: 100%; padding: 12px 20px; border: 0; border-top: 1px solid var(--border); background: none; cursor: pointer; text-align: left; }
+.items-check button:first-child { border-top: 0; }
+.items-check button:hover { background: var(--muted); }
+.dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted-fg); flex-shrink: 0; display: grid; place-items: center; }
+.dot.done { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); }
+.done-t { text-decoration: line-through; color: var(--muted-fg); }
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
+@media (min-width: 640px) { .modal-bg { align-items: center; } }
+.modal { background: var(--card); width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 18px 18px 0 0; padding: 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 640px) { .modal { border-radius: 18px; } }
+.modal h2 { margin: 0 0 16px; font-size: 18px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; z-index: 50; font-size: 13px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+@media (min-width: 1024px) { .toast { bottom: 24px; } }
+.doc-wrap { overflow-x: auto; }
+.doc { background: var(--doc-bg); color: var(--doc-fg); border: 1px solid var(--border); border-radius: 16px; padding: 32px; max-width: 800px; margin: 0 auto; font-size: 13px; min-width: 0; }
+.doc .dm { color: var(--doc-muted); }
+.doc table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+.doc th { text-align: left; font-size: 11px; font-weight: 500; color: var(--doc-muted); border-bottom: 1px solid var(--doc-line); padding: 8px 6px 8px 0; }
+.doc td { border-bottom: 1px solid var(--doc-line); padding: 8px 6px 8px 0; vertical-align: top; }
+.doc .r { text-align: right; }
+.doc-head { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.doc-meta { display: grid; grid-template-columns: auto auto; gap: 2px 14px; font-size: 12px; text-align: right; align-self: end; }
+@media (max-width: 640px) { .doc { padding: 18px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+.fade { animation: fade .18s ease-out both; }
+@keyframes fade { from { opacity: .4; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+.cal-grid { display: grid; grid-template-columns: 46px repeat(7, minmax(0,1fr)); position: relative; }
+.cal-h { text-align: center; padding: 8px 2px; font-weight: 500; }
+.cal-h small { display: block; font-size: 11px; text-transform: uppercase; color: var(--muted-fg); font-weight: 400; }
+.cal-h.today { color: var(--accent); }
+.cal-hours { position: relative; }
+.cal-hours span { position: absolute; right: 6px; transform: translateY(-50%); font-size: 11px; color: var(--muted-fg); font-variant-numeric: tabular-nums; }
+.cal-col { position: relative; border-left: 1px solid var(--border); }
+.cal-col.today { background: color-mix(in srgb, var(--accent-soft) 25%, transparent); }
+.cal-line { position: absolute; left: 0; right: 0; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.ev { position: absolute; left: 3px; right: 3px; border-radius: 6px; border-left: 3px solid; padding: 3px 6px; font-size: 11px; line-height: 1.25; overflow: hidden; background: var(--muted); border-color: var(--muted-fg); }
+.ev:hover { filter: brightness(.96); }
+.ev b, .ev span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev span { font-weight: 500; } .ev .op { font-weight: 400; opacity: .8; }
+.ev-a, .lg.ev-a { background: var(--ev-a-bg); border-color: var(--ev-a); color: var(--ev-a-fg); }
+.ev-b, .lg.ev-b { background: var(--ev-b-bg); border-color: var(--ev-b); color: var(--ev-b-fg); }
+.ev-c, .lg.ev-c { background: var(--ev-c-bg); border-color: var(--ev-c); color: var(--ev-c-fg); }
+.lg { width: 12px; height: 12px; border-radius: 3px; border-left: 3px solid; display: inline-block; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .gl { stroke: var(--border); }
+.chart .ax { fill: var(--muted-fg); font-size: 11px; }
+.chart .hit { fill: transparent; }
+.chart .bar:hover .hit { fill: var(--muted); }
+.chart .mk { fill: color-mix(in srgb, var(--accent) 55%, transparent); }
+.chart .bar:hover .mk, .chart .bar.last .mk { fill: var(--accent); }
+.chart .val { fill: var(--fg); font-size: 11px; font-weight: 500; opacity: 0; }
+.chart .bar:hover .val, .chart .bar.last .val { opacity: 1; }
+.rb { height: 8px; border-radius: 99px; background: var(--muted); margin: 4px 0 2px; }
+.rb i { display: block; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--accent) 70%, transparent); }
+</style>
+
+<div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+<script>
+const CATALOG = __CATALOG__;
+</script>
+<script>
+// ---------- Fachliche Konstanten (aus src/lib/domain.ts) ----------
+const VC = ["kleinwagen","kompaktwagen","limousine","kombi","suv","gelaendewagen","coupe","cabrio","sportwagen","supersportwagen","van","transporter","wohnmobil","motorrad"];
+const VCL = { kleinwagen:"Kleinwagen", kompaktwagen:"Kompaktwagen", limousine:"Limousine", kombi:"Kombi", suv:"SUV", gelaendewagen:"Geländewagen", coupe:"Coupé", cabrio:"Cabrio", sportwagen:"Sportwagen", supersportwagen:"Supersportwagen", van:"Van", transporter:"Transporter", wohnmobil:"Wohnmobil", motorrad:"Motorrad" };
+const SOIL = ["leicht","normal","stark","extrem"];
+const SOILL = { leicht:"Leicht", normal:"Normal", stark:"Stark", extrem:"Extrem" };
+const CFG = { hourlyRate: 60, internalHourlyCost: 30,
+  vehicleClassFactors: { kleinwagen:0.9, kompaktwagen:1, limousine:1.1, kombi:1.15, suv:1.25, gelaendewagen:1.3, coupe:1.05, cabrio:1.1, sportwagen:1.2, supersportwagen:1.5, van:1.3, transporter:1.4, wohnmobil:2, motorrad:0.7 },
+  soilingFactors: { leicht:0.9, normal:1, stark:1.3, extrem:1.6 } };
+const TAX = { default_tax_rate: 19, small_business: false };
+const OS = ["anfrage","angebot_erstellt","bestaetigt","geplant","fahrzeug_angenommen","in_bearbeitung","qualitaetskontrolle","fertig","abholbereit","abgeschlossen","storniert"];
+const OSL = { anfrage:"Anfrage", angebot_erstellt:"Angebot erstellt", bestaetigt:"Bestätigt", geplant:"Geplant", fahrzeug_angenommen:"Fahrzeug angenommen", in_bearbeitung:"In Bearbeitung", qualitaetskontrolle:"Qualitätskontrolle", fertig:"Fertig", abholbereit:"Abholbereit", abgeschlossen:"Abgeschlossen", storniert:"Storniert" };
+const OST = { anfrage:"", angebot_erstellt:"", bestaetigt:"b-blue", geplant:"b-blue", fahrzeug_angenommen:"b-violet", in_bearbeitung:"b-amber", qualitaetskontrolle:"b-amber", fertig:"b-teal", abholbereit:"b-green", abgeschlossen:"", storniert:"b-red" };
+const NEXT = { anfrage:"bestaetigt", angebot_erstellt:"bestaetigt", bestaetigt:"geplant", geplant:"fahrzeug_angenommen", fahrzeug_angenommen:"in_bearbeitung", in_bearbeitung:"qualitaetskontrolle", qualitaetskontrolle:"fertig", fertig:"abholbereit", abholbereit:"abgeschlossen" };
+const BOARD = ["anfrage","bestaetigt","geplant","fahrzeug_angenommen","in_bearbeitung","qualitaetskontrolle","fertig","abholbereit"];
+const QSL = { draft:"Entwurf", sent:"Versendet", accepted:"Angenommen", rejected:"Abgelehnt", expired:"Abgelaufen" };
+const QST = { draft:"", sent:"b-blue", accepted:"b-green", rejected:"b-red", expired:"b-amber" };
+
+// ---------- Preislogik (Port von src/lib/pricing.ts) ----------
+const c = (eur) => Math.round(eur * 100), e = (ct) => Math.round(ct) / 100;
+function priceService(s, inp) {
+  const base = s.pricing_type === "hourly" ? c(((s.hourly_rate ?? CFG.hourlyRate) * s.duration_minutes) / 60) : c(s.base_price);
+  let cls = 0, cf = 1;
+  if (s.applies_vehicle_class) { cf = CFG.vehicleClassFactors[inp.vehicleClass] ?? 1; cls = Math.round(base * (cf - 1)); }
+  let soil = 0, sf = 1;
+  if (s.applies_soiling) { sf = CFG.soilingFactors[inp.soiling] ?? 1; soil = Math.round((base + cls) * (sf - 1)); }
+  return { cents: Math.max(0, base + cls + soil), minutes: Math.round(s.duration_minutes * cf * sf), material: c(s.material_cost), breakdown: { base: e(base), cls: e(cls), soil: e(soil) } };
+}
+function calculate(inp) {
+  const svc = new Map(S.services.map((s) => [s.id, s])), pk = new Map(S.packages.map((p) => [p.id, p]));
+  const covered = new Set(), lines = [], warnings = [];
+  for (const pid of [...new Set(inp.packageIds)]) {
+    const p = pk.get(pid); if (!p) continue;
+    const mem = p.service_ids.map((id) => svc.get(id)).filter(Boolean);
+    const fresh = mem.filter((s) => !covered.has(s.id));
+    if (mem.length - fresh.length > 0) warnings.push(`„${p.name}“: ${mem.length - fresh.length} Leistung(en) stecken schon in einem anderen Paket und werden nicht doppelt berechnet.`);
+    let sum = 0, min = 0, mat = 0;
+    for (const s of fresh) { const r = priceService(s, inp); sum += r.cents; min += r.minutes; mat += r.material; covered.add(s.id); }
+    const ct = Math.round(sum * (1 - p.discount_percent / 100));
+    lines.push({ kind: "package", title: `Paket: ${p.name}`, includes: fresh.map((s) => s.name), totalNet: e(ct), taxRate: 19, minutes: min, material: e(mat) });
+  }
+  for (const sid of [...new Set(inp.serviceIds)]) {
+    const s = svc.get(sid); if (!s) continue;
+    if (covered.has(sid)) { warnings.push(`„${s.name}“ ist schon im Paket enthalten.`); continue; }
+    covered.add(sid);
+    const r = priceService(s, inp);
+    if (r.cents === 0) warnings.push(`Für „${s.name}“ ist noch kein Preis hinterlegt.`);
+    lines.push({ kind: "service", serviceId: s.id, title: s.name, totalNet: e(r.cents), taxRate: 19, minutes: r.minutes, material: e(r.material), breakdown: r.breakdown });
+  }
+  const eff = Math.max(0, Math.round(inp.effort || 0));
+  if (eff > 0) lines.push({ kind: "effort", title: `Sonderaufwand (${fmtMin(eff)})`, totalNet: e(c((CFG.hourlyRate * eff) / 60)), taxRate: 19, minutes: eff, material: 0 });
+  for (const x of inp.extras || []) if (x.title.trim()) lines.push({ kind: "extra", title: x.title.trim(), totalNet: e(c(x.priceNet || 0)), taxRate: 19, minutes: 0, material: 0 });
+  const sub = lines.reduce((a, l) => a + c(l.totalNet), 0);
+  let disc = Math.min(100, Math.max(0, inp.discount || 0));
+  let net = Math.round(sub * (1 - disc / 100)), manual = false;
+  if (inp.override !== null && inp.override !== "" && Number.isFinite(+inp.override) && +inp.override >= 0) { net = c(+inp.override); manual = true; disc = sub ? Math.round((1 - net / sub) * 10000) / 100 : 0; }
+  const tax = Math.round(net * 0.19);
+  const minutes = lines.reduce((a, l) => a + l.minutes, 0), mat = lines.reduce((a, l) => a + c(l.material), 0), labor = c((CFG.internalHourlyCost * minutes) / 60);
+  return { lines, subtotal: e(sub), discount: disc, discountAmount: e(sub - net), net: e(net), tax: e(tax), gross: e(net + tax), minutes, material: e(mat), labor: e(labor), profit: e(net - mat - labor), margin: net ? Math.round(((net - mat - labor) / net) * 1000) / 10 : 0, manual, warnings };
+}
+
+// ---------- Format ----------
+const EUR = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+const eur = (v) => EUR.format(+v || 0);
+const fmtMin = (m) => { const h = Math.floor(m / 60), r = m % 60; return h === 0 ? `${r} Min.` : r === 0 ? `${h} Std.` : `${h} Std. ${r} Min.`; };
+const fmtDate = (d, o = { dateStyle: "medium" }) => new Intl.DateTimeFormat("de-DE", o).format(new Date(d));
+const fmtTime = (d) => fmtDate(d, { hour: "2-digit", minute: "2-digit" });
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const at = (dayOff, h, m = 0) => { const d = today(); d.setDate(d.getDate() + dayOff); d.setHours(h, m); return d.toISOString(); };
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+// ---------- Beispieldaten ----------
+function seed() {
+  const customers = [
+    { id: "c1", type: "private", name: "Lena Schmitz", email: "lena.schmitz@example.com", phone: "0176 1234567", street: "Venloer Str. 210", city: "50823 Köln", notes: "Bevorzugt Termine am Vormittag." },
+    { id: "c2", type: "private", name: "Jonas Becker", email: "jonas.becker@example.com", phone: "0151 2345678", street: "Aachener Str. 45", city: "50674 Köln", notes: "" },
+    { id: "c3", type: "business", name: "Autohaus Rheinblick GmbH", contact: "Frau Neumann", email: "service@rheinblick.example", phone: "0221 555000", street: "Rheinallee 1", city: "50996 Köln", notes: "Rahmenvertrag: 10 % auf Verkaufsaufbereitungen." },
+    { id: "c4", type: "private", name: "Aylin Yilmaz", email: "aylin.y@example.com", phone: "0157 9876543", street: "Neusser Str. 88", city: "50670 Köln", notes: "Hund (Golden Retriever) – viele Haare." },
+    { id: "c5", type: "private", name: "Thomas Hoffmann", email: "", phone: "0173 4455667", street: "Bonner Str. 12", city: "50677 Köln", notes: "" },
+    { id: "c6", type: "business", name: "Taxi Köln-Mitte eG", contact: "Herr Arslan", email: "flotte@taxi-mitte.example", phone: "0221 1940", street: "Ehrenstr. 5", city: "50672 Köln", notes: "Flotte mit 14 Fahrzeugen." },
+  ];
+  const vehicles = [
+    { id: "v1", customer_id: "c1", make: "BMW", model: "M3 Competition", plate: "K-LS 330", vc: "limousine", color: "Isle of Man Grün", year: 2022, damages: "Kleiner Steinschlag Motorhaube" },
+    { id: "v2", customer_id: "c2", make: "Porsche", model: "911 Carrera S", plate: "K-JB 911", vc: "sportwagen", color: "GT-Silber", year: 2021, damages: "" },
+    { id: "v3", customer_id: "c3", make: "Mercedes-Benz", model: "GLC 300e", plate: "K-RB 1001", vc: "suv", color: "Obsidianschwarz", year: 2023, damages: "" },
+    { id: "v4", customer_id: "c4", make: "VW", model: "Golf GTI", plate: "K-AY 2024", vc: "kompaktwagen", color: "Kings Red", year: 2020, damages: "Kratzer Stoßstange hinten links" },
+    { id: "v5", customer_id: "c5", make: "Volvo", model: "XC90 B5", plate: "K-TH 90", vc: "suv", color: "Kristallweiß", year: 2019, damages: "" },
+    { id: "v6", customer_id: "c6", make: "Toyota", model: "Camry Hybrid", plate: "K-TX 123", vc: "limousine", color: "Hellelfenbein", year: 2022, damages: "" },
+    { id: "v7", customer_id: "c3", make: "Audi", model: "RS6 Avant", plate: "K-RB 600", vc: "kombi", color: "Nardograu", year: 2024, damages: "" },
+  ];
+  const mk = (id, n, cid, vid, st, title, sched, total, items) => ({ id, number: `AU-2026-${String(n).padStart(4, "0")}`, customer_id: cid, vehicle_id: vid, status: st, title, start: sched, net: total, gross: Math.round(total * 119) / 100, items: items.map((t, i) => ({ id: uid(), title: t[0], net: t[1], done: !!t[2] })), history: [{ s: st, at: new Date().toISOString() }], notes: "" });
+  const orders = [
+    mk("o1", 1, "c1", "v1", "in_bearbeitung", "Innenraumaufbereitung", at(0, 10), 270, [["Innenraum saugen", 32, 1], ["Sprühextraktion", 98, 1], ["Lederreinigung", 65], ["Lederpflege", 43], ["Kunststoffpflege innen", 32]]),
+    mk("o2", 2, "c2", "v2", "geplant", "Keramik Premium", at(0, 14), 1541.37, [["Paket: Keramik Premium", 1541.37]]),
+    mk("o3", 3, "c3", "v3", "abholbereit", "Komplettaufbereitung", at(-1, 9), 630, [["Paket: Komplettaufbereitung", 630, 1]]),
+    mk("o4", 4, "c4", "v4", "fahrzeug_angenommen", "Tierhaarentfernung + Sprühextraktion", at(0, 8, 30), 179.4, [["Tierhaarentfernung", 63.7], ["Sprühextraktion", 115.7]]),
+    mk("o5", 5, "c5", "v5", "bestaetigt", "Leasingrückgabe", at(2, 9), 330, [["Paket: Leasingrückgabe", 330]]),
+    mk("o6", 6, "c6", "v6", "qualitaetskontrolle", "Basic Außen + Innen", at(0, 7, 30), 150, [["Paket: Basic Außen", 86, 1], ["Paket: Basic Innen", 64, 1]]),
+    mk("o7", 7, "c3", "v7", "anfrage", "Zweistufige Politur", null, 0, []),
+    mk("o8", 8, "c2", "v2", "geplant", "Felgenversiegelung", at(1, 11), 72, [["Felgenversiegelung", 72]]),
+    mk("o9", 9, "c1", "v1", "geplant", "Handwäsche", at(3, 15), 43, [["Handwäsche", 43]]),
+  ];
+  const BOXES = ["Box 1", "Box 2", "Waschplatz"];
+  const BOXMAP = { o1: "Box 1", o2: "Box 1", o3: "Waschplatz", o4: "Box 2", o5: "Box 1", o6: "Waschplatz", o8: "Box 2", o9: "Box 1" };
+  orders.forEach((o) => { o.box = o.start ? BOXMAP[o.id] || null : null; o.end = o.start ? new Date(new Date(o.start).getTime() + (o.items.length > 2 ? 240 : 150) * 60000).toISOString() : null; });
+  const quotes = [
+    { id: "q1", number: "AN-2026-0001", customer_id: "c2", vehicle_id: "v2", status: "sent", created: at(-3, 10), calc: { vehicleClass: "sportwagen", soiling: "normal", serviceIds: [], packageIds: [CATALOG.packages.find((p) => p.name === "Keramik Premium").id], effort: 0, extras: [], discount: 0, override: null }, intro: "" },
+    { id: "q2", number: "AN-2026-0002", customer_id: "c4", vehicle_id: "v4", status: "draft", created: at(-1, 16), calc: { vehicleClass: "kompaktwagen", soiling: "stark", serviceIds: ["Sprühextraktion", "Tierhaarentfernung"].map((n) => CATALOG.services.find((s) => s.name === n).id), packageIds: [], effort: 0, extras: [], discount: 0, override: null }, intro: "" },
+  ];
+  return { services: CATALOG.services.map((s) => ({ ...s, active: true })), packages: CATALOG.packages, customers, vehicles, orders, quotes, counters: { quote: 2, order: 9 } };
+}
+
+// ======================================================================
+// Erweiterung: Rechnungen, E-Rechnung, QR-Zahlung, Nachrichten, Gutscheine,
+// Pflege-Abos, Gebühren, Empfehlungen – und die Kundensicht (Portal, Buchung, Gutschein-Shop)
+// ======================================================================
+const FEE_BPS = 50; // 0,5 %
+const r2 = (n) => Math.round(n * 100) / 100;
+const invNet = (i) => r2(i.items.reduce((a, x) => a + x.net, 0));
+const invGross = (i) => r2(invNet(i) * 1.19);
+const invOpen = (i) => r2(invGross(i) - i.paid);
+const isoDay = (d) => new Date(d).toISOString().slice(0, 10);
+const addD = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString(); };
+const ISL = { draft: "Entwurf", finalized: "Offen", paid: "Bezahlt", cancelled: "Storniert" };
+const IST = { draft: "", finalized: "b-amber", paid: "b-green", cancelled: "b-red" };
+const code8 = () => (Math.random().toString(16).slice(2, 6) + "-" + Math.random().toString(16).slice(2, 6)).toUpperCase();
+
+function seedExtra(S) {
+  S.invoices = [
+    { id: "i1", number: "RE-2026-0041", kind: "invoice", customer_id: "c3", order_id: "o3", status: "paid", issue: addD(-20), due: addD(-6), items: [{ title: "Paket: Komplettaufbereitung", net: 630 }], paid: 749.7, payments: [{ amount: 749.7, method: "Online (Stripe)", at: addD(-15) }], reminders: 0 },
+    { id: "i2", number: "RE-2026-0042", kind: "invoice", customer_id: "c5", order_id: null, status: "finalized", issue: addD(-25), due: addD(-11), items: [{ title: "Paket: Leasingrückgabe", net: 330 }, { title: "Anfahrt (12 km, Hin- und Rückweg)", net: 14.4 }], paid: 0, payments: [], reminders: 1 },
+    { id: "i3", number: "RE-2026-0043", kind: "invoice", customer_id: "c4", order_id: "o4", status: "finalized", issue: addD(-2), due: addD(12), items: [{ title: "Tierhaarentfernung", net: 63.7 }, { title: "Sprühextraktion", net: 115.7 }], paid: 50, payments: [{ amount: 50, method: "Anzahlung (online)", at: addD(-9) }], reminders: 0 },
+  ];
+  S.messages = [
+    { id: uid(), customer_id: "c4", dir: "in", ch: "portal", body: "Hallo, kann ich den Golf morgen schon um 16 Uhr abholen?", at: addD(-0.1), read: false },
+    { id: uid(), customer_id: "c2", dir: "in", ch: "portal", body: "Neue Online-Anfrage für „Keramik Premium“\nFahrzeug: Porsche 911\nWunschtermin: nächste Woche", at: addD(-4), read: true },
+    { id: uid(), customer_id: "c2", dir: "out", ch: "portal", body: "Hallo Herr Becker, vielen Dank! Das Angebot finden Sie in Ihrem Kundenbereich.", at: addD(-3.9), read: true },
+    { id: uid(), customer_id: "c5", dir: "out", ch: "email", body: "Hallo Herr Hoffmann, sicher ist es Ihnen entgangen: Die Rechnung RE-2026-0042 über 409,54 € ist noch offen …", at: addD(-8), read: true },
+  ];
+  S.vouchers = [
+    { code: "7F2A-91C4", initial: 100, balance: 100, buyer: "Sandra Klein", recipient: "Thomas", source: "online", at: addD(-12) },
+    { code: "B3E0-44D1", initial: 50, balance: 20, buyer: "", recipient: "", source: "vor Ort", at: addD(-40) },
+  ];
+  S.carePlans = [
+    { id: "cp1", name: "Pflege-Abo Basic", desc: "• 1× im Monat Handwäsche\n• Felgen & Scheiben", price: 39, active: true, subs: 11 },
+    { id: "cp2", name: "Pflege-Abo Premium", desc: "• 2× im Monat Handwäsche\n• alle 3 Monate Innenraum\n• jährliche Versiegelung", price: 89, active: true, subs: 6 },
+  ];
+  S.fees = [{ gross: 749.7, fee: 3.75, label: "Rechnung RE-2026-0041" }, { gross: 50, fee: 0.25, label: "Anzahlung" }, { gross: 100, fee: 0.5, label: "Gutschein online" }, { gross: 17 * 55, fee: r2(17 * 55 * 0.005), label: "Pflege-Abos" }];
+  S.counters.invoice = 43;
+  S.settings = { stripe: true, deposit: 50, travel: 0.6, review: "https://g.page/r/premium-detailing-koeln/review", vouchers: true, referrals: 2, rewarded: 1 };
+  S.customers.forEach((c) => (c.portal = "p" + c.id));
+  return S;
+}
+
+// ---------- Rechnungen ----------
+function invDoc(i) {
+  const cu = cust(i.customer_id), net = invNet(i), tax = r2(net * 0.19);
+  return `<div class="doc-wrap"><article class="doc">
+    ${i.status === "draft" ? '<p style="float:right;border:2px solid #f59e0b;color:#d97706;padding:2px 10px;border-radius:4px;font-weight:700;letter-spacing:.1em;transform:rotate(6deg)">ENTWURF</p>' : ""}
+    <div class="doc-head"><b style="font-size:18px">Premium Detailing Köln</b><div class="dm" style="text-align:right;font-size:12px">Industriestraße 42<br>50735 Köln<br>0221 123456-0</div></div>
+    <div class="doc-head" style="margin-top:24px"><div><b>${esc(cu.name)}</b><br>${esc(cu.street)}<br>${esc(cu.city)}</div>
+      <div class="doc-meta"><span class="dm">Rechnungsnr.</span><span>${i.number || "wird vergeben"}</span><span class="dm">Datum</span><span>${i.issue ? fmtDate(i.issue) : "–"}</span><span class="dm">Leistungsdatum</span><span>${fmtDate(i.issue || new Date())}</span>${i.due ? `<span class="dm">Fällig am</span><span>${fmtDate(i.due)}</span>` : ""}</div></div>
+    <h2 style="margin:24px 0 8px;font-size:20px">${i.kind === "cancellation" ? "Stornorechnung" : "Rechnung"} ${i.number || ""}</h2>
+    <table><thead><tr><th>Pos.</th><th>Leistung</th><th class="r">Gesamt</th></tr></thead><tbody>${i.items.map((x, n) => `<tr><td class="dm">${n + 1}</td><td>${esc(x.title)}</td><td class="r tnum">${eur(x.net)}</td></tr>`).join("")}</tbody></table>
+    <div style="margin-left:auto;max-width:260px;margin-top:14px;display:flex;flex-direction:column;gap:4px">
+      <div class="kv"><span>Summe netto</span><span class="tnum">${eur(net)}</span></div><div class="kv"><span>USt. 19 %</span><span class="tnum">${eur(tax)}</span></div>
+      <div class="kv" style="font-weight:600;border-top:1px solid var(--doc-line);padding-top:6px"><span>Rechnungsbetrag</span><span class="tnum">${eur(net + tax)}</span></div></div>
+    <p style="margin-top:20px">Zahlbar innerhalb von 14 Tagen ohne Abzug.</p>
+    <p class="dm" style="font-size:10px;border-top:1px solid var(--doc-line);padding-top:8px;margin-top:20px">Steuernummer 217/5123/4567 · Commerzbank Köln · IBAN DE89 3704 0044 0532 0130 00</p>
+  </article></div>`;
+}
+function xrechnung(i) {
+  const cu = cust(i.customer_id), net = invNet(i), tax = r2(net * 0.19);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<ubl:Invoice xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" …>
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0</cbc:CustomizationID>
+  <cbc:ID>${i.number}</cbc:ID>
+  <cbc:IssueDate>${isoDay(i.issue)}</cbc:IssueDate>
+  <cbc:DueDate>${isoDay(i.due)}</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cac:AccountingSupplierParty> … Premium Detailing Köln … </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty> … ${esc(cu.name)} … </cac:AccountingCustomerParty>
+  <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">${tax.toFixed(2)}</cbc:TaxAmount> … </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="EUR">${net.toFixed(2)}</cbc:LineExtensionAmount>
+    <cbc:PayableAmount currencyID="EUR">${(net + tax).toFixed(2)}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  ${i.items.map((x, n) => `<cac:InvoiceLine><cbc:ID>${n + 1}</cbc:ID> … <cbc:Name>${esc(x.title)}</cbc:Name> …</cac:InvoiceLine>`).join("\n  ")}
+</ubl:Invoice>`;
+}
+function viewInvoices() {
+  const today = isoDay(new Date());
+  const open = S.invoices.filter((i) => i.status === "finalized");
+  const over = open.filter((i) => isoDay(i.due) < today);
+  return `<div class="ph"><div><h1>Rechnungen</h1><p>Aus Aufträgen erstellen, finalisieren, als E-Rechnung exportieren.</p></div></div>
+  <div class="grid4" style="margin-bottom:20px"><div class="card stat"><p>Offene Rechnungen</p><strong>${eur(open.reduce((a, i) => a + invOpen(i), 0))}</strong><span class="small muted">${open.length} Rechnung(en)</span></div>
+    <div class="card stat"><p>Überfällig</p><strong>${over.length}</strong><span class="small muted">werden automatisch gemahnt</span></div>
+    <div class="card stat"><p>Online bezahlt (Monat)</p><strong>${eur(S.fees.reduce((a, f) => a + f.gross, 0))}</strong></div>
+    <div class="card stat"><p>Export</p><strong style="font-size:15px;margin-top:8px">DATEV · Excel</strong><span class="small muted">für den Steuerberater</span></div></div>
+  <div class="card list">${[...S.invoices].reverse().map((i) => { const late = i.status === "finalized" && isoDay(i.due) < today; return `<a href="#rechnung--${i.id}"><div class="t"><b>${esc(cust(i.customer_id).name)}</b><span>${i.kind === "cancellation" ? "Storno " : ""}${i.number || "Entwurf"} · ${i.issue ? fmtDate(i.issue) : "–"}${i.status === "finalized" ? " · fällig " + fmtDate(i.due) : ""}</span></div><div class="row"><span class="tnum">${eur(invGross(i))}</span>${badge(late ? "Überfällig" : ISL[i.status], late ? "b-red" : IST[i.status])}</div></a>`; }).join("")}</div>`;
+}
+function viewInvoice(id) {
+  const i = S.invoices.find((x) => x.id === id); if (!i) return notFound();
+  const st = i.status;
+  const side = st === "draft" ? `<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><b>Entwurf</b><span class="muted small">Beim Finalisieren wird die fortlaufende Nummer vergeben und die Rechnung unveränderbar festgeschrieben.</span><button class="btn" data-a="invFinalize" data-id="${i.id}">Rechnung finalisieren</button></div>`
+    : `<div class="card"><div class="ch"><div><h2>Zahlungen</h2><p>${st === "paid" ? "Vollständig bezahlt" : st === "cancelled" ? "Storniert" : "Offen: " + eur(invOpen(i))}</p></div></div>
+      ${i.payments.map((p) => `<div class="kv small" style="padding:8px 20px;border-top:1px solid var(--border)"><span>${fmtDate(p.at)} · ${esc(p.method)}</span><span class="tnum">${eur(p.amount)}</span></div>`).join("")}
+      ${i.reminders ? `<p class="small muted" style="padding:8px 20px;border-top:1px solid var(--border)">${["", "Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][i.reminders]} wurde automatisch per E-Mail versendet.</p>` : ""}
+      ${st === "finalized" ? `<div class="pad" style="border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px">
+        <button class="btn block" data-a="invQr" data-id="${i.id}">▦ Vor Ort bezahlen (QR-Code)</button>
+        <button class="btn sec block" data-a="invPay" data-id="${i.id}" data-m="Bar">Barzahlung erfassen</button>
+        <div class="row" style="flex-wrap:nowrap"><input class="inp" id="vcode" placeholder="Gutscheincode XXXX-XXXX" style="text-transform:uppercase"><button class="btn sec" data-a="invVoucher" data-id="${i.id}">Einlösen</button></div>
+        ${i.reminders < 3 ? `<button class="btn ghost sm" data-a="invDun" data-id="${i.id}">${["Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][i.reminders]} jetzt senden</button>` : ""}
+      </div>` : ""}</div>`;
+  return `<div class="ph"><div><h1>${i.kind === "cancellation" ? "Stornorechnung" : "Rechnung"} ${i.number || "(Entwurf)"}</h1><p>${esc(cust(i.customer_id).name)} · ${eur(invGross(i))}</p></div>${badge(ISL[st], IST[st])}</div>
+  ${st !== "draft" ? `<div class="card pad row" style="margin-bottom:16px"><button class="btn" data-a="invXml" data-id="${i.id}">⬇ E-Rechnung (XRechnung)</button>${st !== "cancelled" && i.kind === "invoice" ? `<button class="btn ghost" data-a="invCancel" data-id="${i.id}">Stornieren</button>` : ""}<span class="small muted">Finalisiert · unveränderbar · Prüfsumme 7ece9c5d…</span></div>` : ""}
+  <div class="side-layout"><div style="min-width:0">${invDoc(i)}</div>${side}</div>`;
+}
+function createInvoiceFromOrder(o) {
+  let inv = S.invoices.find((x) => x.order_id === o.id && x.status !== "cancelled");
+  if (inv) return inv;
+  inv = { id: uid(), number: null, kind: "invoice", customer_id: o.customer_id, order_id: o.id, status: "draft", issue: null, due: null, items: o.items.map((x) => ({ title: x.title, net: x.net })), paid: 0, payments: [], reminders: 0 };
+  if (!inv.items.length) inv.items = [{ title: o.title || "Fahrzeugaufbereitung", net: o.net }];
+  S.invoices.push(inv); save(); return inv;
+}
+function pay(i, amount, method, online) {
+  i.paid = r2(i.paid + amount); i.payments.push({ amount, method, at: new Date().toISOString() });
+  if (invOpen(i) <= 0.001) i.status = "paid";
+  if (online) S.fees.push({ gross: amount, fee: r2(amount * FEE_BPS / 10000), label: `Rechnung ${i.number}` });
+  save();
+}
+
+// ---------- Nachrichten ----------
+function viewInbox() {
+  const threads = new Map();
+  for (const m of [...S.messages].sort((a, b) => b.at.localeCompare(a.at))) { const t = threads.get(m.customer_id) || { last: m, unread: 0 }; if (m.dir === "in" && !m.read) t.unread++; threads.set(m.customer_id, t); }
+  return `<div class="ph"><div><h1>Nachrichten</h1><p>Anfragen und Unterhaltungen – Kunden schreiben über ihr Portal, du antwortest hier, per E-Mail oder WhatsApp.</p></div></div>
+  <div class="card list">${[...threads.entries()].map(([cid, t]) => `<a href="#nachricht--${cid}"><div class="t"><b style="${t.unread ? "font-weight:700" : ""}">${esc(cust(cid).name)}</b><span>${t.last.dir === "out" ? "Du: " : ""}${esc(t.last.body.split("\n")[0])}</span></div><div style="text-align:right"><span class="small muted">${fmtDate(t.last.at, { dateStyle: "short", timeStyle: "short" })}</span>${t.unread ? `<br><span class="badge b-teal">${t.unread} neu</span>` : ""}</div></a>`).join("")}</div>`;
+}
+const TPL = {
+  termin: (c, v) => `Hallo ${c.name},\nwir bestätigen Ihren Termin für Ihren ${v}. Bitte bringen Sie den Schlüssel mit.\n\nViele Grüße\nPremium Detailing Köln`,
+  fertig: (c, v) => `Hallo ${c.name},\nIhr ${v} ist fertig und kann abgeholt werden. Vorher/Nachher-Fotos finden Sie in Ihrem Kundenbereich.\n\nViele Grüße\nPremium Detailing Köln`,
+  pflege: (c) => `Hallo ${c.name},\ndamit die Versiegelung lange hält:\n• 7 Tage keine Waschanlage\n• Vogelkot zeitnah entfernen\n• Handwäsche mit pH-neutralem Shampoo\n\nViele Grüße\nPremium Detailing Köln`,
+  bewertung: (c, v) => `Hallo ${c.name},\nvielen Dank für Ihren Auftrag! Wenn Sie zufrieden waren, freuen wir uns sehr über eine Google-Bewertung:\n${S.settings.review}\n\nViele Grüße\nPremium Detailing Köln`,
+};
+function viewThread(cid) {
+  const c = cust(cid); if (!c) return notFound();
+  S.messages.filter((m) => m.customer_id === cid).forEach((m) => (m.read = true)); save();
+  const v = vname(S.vehicles.find((x) => x.customer_id === cid));
+  return `<div class="ph"><div><h1>${esc(c.name)}</h1><p>${esc([c.phone, c.email].filter(Boolean).join(" · "))}</p></div><a class="btn sec sm" href="#portal--${cid}">Kundenportal ansehen</a></div>
+  <div class="card"><div class="pad" style="display:flex;flex-direction:column;gap:10px;max-height:50vh;overflow-y:auto">
+    ${S.messages.filter((m) => m.customer_id === cid).sort((a, b) => a.at.localeCompare(b.at)).map((m) => `<div style="display:flex;justify-content:${m.dir === "out" ? "flex-end" : "flex-start"}"><div style="max-width:85%;border-radius:16px;padding:10px 14px;font-size:13px;white-space:pre-line;${m.dir === "out" ? "background:var(--fg);color:var(--bg)" : "background:var(--muted)"}">${esc(m.body)}<div style="font-size:11px;opacity:.6;margin-top:4px">${fmtDate(m.at, { dateStyle: "short", timeStyle: "short" })} · ${{ portal: "Portal", email: "E-Mail", whatsapp: "WhatsApp" }[m.ch] || m.ch}</div></div></div>`).join("") || '<p class="muted small" style="text-align:center">Noch keine Nachrichten.</p>'}
+  </div>
+  <div class="pad" style="border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px">
+    <select class="inp" id="tplsel" data-cust="${cid}" data-veh="${esc(v)}" style="width:auto"><option value="">Vorlage einfügen …</option><option value="termin">Terminbestätigung</option><option value="fertig">Fahrzeug abholbereit</option><option value="pflege">Pflegehinweise nach Versiegelung</option><option value="bewertung">Bitte um Bewertung</option></select>
+    <textarea class="inp" id="msgbody" placeholder="Nachricht an den Kunden …"></textarea>
+    <div class="row"><select class="inp" id="msgch" style="width:auto"><option value="whatsapp">Per WhatsApp</option><option value="portal">Im Kundenportal</option><option value="email">Per E-Mail</option></select><button class="btn" data-a="sendMsg" data-id="${cid}">Senden</button></div>
+  </div></div>`;
+}
+
+// ---------- Gutscheine ----------
+function viewVouchers() {
+  return `<div class="ph"><div><h1>Gutscheine</h1><p>Online und vor Ort verkaufen, bei der Rechnung einlösen.</p></div><a class="btn sec" href="#shop">Gutschein-Shop ansehen</a></div>
+  <div class="grid4" style="margin-bottom:20px"><div class="card stat"><p>Verkauft</p><strong>${eur(S.vouchers.reduce((a, v) => a + v.initial, 0))}</strong></div><div class="card stat"><p>Offenes Guthaben</p><strong>${eur(S.vouchers.reduce((a, v) => a + v.balance, 0))}</strong></div></div>
+  <div class="card pad" style="margin-bottom:20px"><b>Gutschein vor Ort verkaufen</b><div class="row" style="margin-top:10px"><input class="inp" id="vamt" placeholder="Betrag €" inputmode="decimal" style="width:120px"><input class="inp" id="vrec" placeholder="Für (optional)" style="flex:1;min-width:140px"><button class="btn" data-a="sellVoucher">Gutschein anlegen</button></div></div>
+  <div class="card list">${[...S.vouchers].reverse().map((v) => `<div><div class="t"><b style="font-family:ui-monospace,monospace">${v.code}</b><span>${[v.recipient && "für " + v.recipient, v.buyer && "von " + v.buyer, fmtDate(v.at), v.source].filter(Boolean).join(" · ")}</span></div><div class="row"><span class="tnum">${eur(v.balance)} / ${eur(v.initial)}</span>${badge(v.balance ? "Aktiv" : "Eingelöst", v.balance ? "b-green" : "")}</div></div>`).join("")}</div>`;
+}
+
+// ---------- Einstellungen (Auszug) ----------
+function viewSettings() {
+  const st = S.settings, fees = S.fees.reduce((a, f) => a + f.fee, 0), gross = S.fees.reduce((a, f) => a + f.gross, 0);
+  return `<div class="ph"><div><h1>Einstellungen</h1><p>Auszug: Zahlungen, Umsatzwachstum und Empfehlungen.</p></div></div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+  <div class="card"><div class="ch"><div><h2>Online-Zahlungen & Gebühren</h2><p>Kunden zahlen im Portal, per QR-Code oder bei der Buchung – das Geld geht direkt auf dein Konto.</p></div>${badge("Stripe verbunden", "b-green")}</div>
+    <div class="pad"><div style="background:var(--muted);border-radius:12px;padding:14px"><b>So rechnen wir ab</b><p class="muted small" style="margin:4px 0 0">Grundgebühr 29 € / Monat + 0,5 % der online bezahlten Beträge. Bar und Überweisung sind gebührenfrei.</p><p class="tnum" style="margin:8px 0 0">Diesen Monat: ${eur(gross)} online bezahlt · Gebühren <b>${eur(fees)}</b></p></div></div></div>
+  <div class="card"><div class="ch"><div><h2>Mehr Kunden & Umsatz</h2></div></div><div class="pad fgrid">
+    <div class="field full"><label>Google-Bewertungslink</label><input class="inp" value="${esc(st.review)}" readonly><span class="hint">1–3 Tage nach Abschluss wird automatisch um eine Bewertung gebeten.</span></div>
+    <div class="field"><label>Anzahlung bei Online-Anfrage</label><input class="inp" value="${st.deposit},00 €" readonly></div>
+    <div class="field"><label>Anfahrt mobiler Service</label><input class="inp" value="${String(st.travel).replace(".", ",")} € / km" readonly></div>
+  </div></div>
+  <div class="card"><div class="ch"><div><h2>Pflege-Abos für deine Kunden</h2><p>Monatliche, wiederkehrende Einnahmen.</p></div><a class="btn sec sm" href="#buchen">Auf Buchungsseite ansehen</a></div><div class="list">${S.carePlans.map((p) => `<div><div class="t"><b>${esc(p.name)}</b><span>${eur(p.price)} / Monat</span></div>${badge(p.subs + " aktive Abos", "b-teal")}</div>`).join("")}</div></div>
+  <div class="card"><div class="ch"><div><h2>Empfehlen & sparen</h2><p>Für jeden geworbenen Betrieb 1 Monat gratis. Der neue Betrieb testet 30 Tage kostenlos.</p></div></div><div class="pad row"><code style="background:var(--muted);padding:6px 10px;border-radius:8px;font-size:12px;word-break:break-all">detailflow.de/registrieren?ref=A7K2Q9XM</code><span class="small muted">Geworben: ${st.referrals} · belohnt: ${st.rewarded}</span></div></div>
+  <div class="card pad"><b>Weitere Einstellungen in der echten App</b><p class="muted small" style="margin:4px 0 0">Firmendaten, Öffnungszeiten, Team & Rollen, Boxen, Checklisten-Vorlagen, Mahnfristen, DATEV-Konten, Buchungsseite, Tarif.</p></div>
+  </div>`;
+}
+
+// ---------- Kundensicht ----------
+const STEPS = [["Angefragt", ["anfrage", "angebot_erstellt"]], ["Bestätigt", ["bestaetigt", "geplant"]], ["In Arbeit", ["fahrzeug_angenommen", "in_bearbeitung", "qualitaetskontrolle"]], ["Abholbereit", ["fertig", "abholbereit"]], ["Fertig", ["abgeschlossen"]]];
+function customerShell(title, sub, body) {
+  return `<div style="min-height:100dvh;background:var(--muted)"><div class="demo-bar" style="justify-content:space-between"><span><b>Kundensicht</b> – so sieht es der Kunde (ohne App, per Link).</span><a href="#uebersicht" style="text-decoration:underline">← Zurück zur Betriebsansicht</a></div>
+  <div style="max-width:620px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:18px" class="fade">
+  <header><p class="muted small" style="margin:0">Premium Detailing Köln</p><h1 style="margin:2px 0 0;font-size:24px;letter-spacing:-.02em">${title}</h1>${sub ? `<p class="muted" style="margin:4px 0 0">${sub}</p>` : ""}</header>${body}</div></div>`;
+}
+function viewPortal(cid) {
+  const c = cust(cid) || S.customers[3];
+  const orders = S.orders.filter((o) => o.customer_id === c.id && o.status !== "storniert");
+  const invs = S.invoices.filter((i) => i.customer_id === c.id && i.status !== "draft");
+  const ocard = (o) => { const step = STEPS.findIndex(([, s]) => s.includes(o.status)); return `<div class="card pad"><div class="kv"><div><b>${esc(vname(veh(o.vehicle_id)))}</b><div class="small muted">${esc(o.title)}</div></div>${obadge(o.status)}</div>${o.start ? `<p class="small" style="margin:10px 0 0">📅 Termin: ${fmtDate(o.start, { dateStyle: "medium", timeStyle: "short" })} Uhr</p>` : ""}
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:12px">${STEPS.map(([l], n) => `<div style="text-align:center"><div style="height:6px;border-radius:9px;background:${n <= step ? "var(--accent)" : "var(--border)"}"></div><span style="font-size:10px;${n === step ? "font-weight:600" : "color:var(--muted-fg)"}">${l}</span></div>`).join("")}</div></div>`; };
+  return customerShell(`Hallo ${esc(c.name)}`, "Hier sehen Sie den Stand Ihrer Aufträge und Rechnungen.", `
+    ${orders.map(ocard).join("")}
+    ${invs.length ? `<div class="card"><div class="ch"><h2>Rechnungen</h2></div><div class="list">${invs.map((i) => `<div><div class="t"><b style="white-space:normal">${i.number}</b><span>${fmtDate(i.issue)}</span></div><div class="row"><span class="tnum">${eur(invGross(i))}</span>${i.status === "finalized" ? `<button class="btn sm" data-a="portalPay" data-id="${i.id}">Jetzt bezahlen</button>` : badge(ISL[i.status], IST[i.status])}</div></div>`).join("")}</div></div>` : ""}
+    <div class="card"><div class="ch"><h2>Nachrichten</h2></div><div class="pad" style="display:flex;flex-direction:column;gap:8px">
+      ${S.messages.filter((m) => m.customer_id === c.id && m.ch !== "notiz").sort((a, b) => a.at.localeCompare(b.at)).map((m) => `<div style="display:flex;justify-content:${m.dir === "in" ? "flex-end" : "flex-start"}"><div style="max-width:85%;border-radius:16px;padding:9px 13px;font-size:13px;white-space:pre-line;${m.dir === "in" ? "background:var(--fg);color:var(--bg)" : "background:var(--card);border:1px solid var(--border)"}">${esc(m.body)}</div></div>`).join("")}
+      <textarea class="inp" id="pmsg" placeholder="Ihre Nachricht …"></textarea><button class="btn" data-a="portalSend" data-id="${c.id}">Senden</button>
+      <span class="small muted">Tipp: Nach dem Senden in der Betriebsansicht unter „Nachrichten“ nachsehen.</span></div></div>`);
+}
+function viewBooking() {
+  return customerShell("Termin anfragen", "Fahrzeugaufbereitung in Köln – wir melden uns mit Angebot und Terminvorschlag.", `
+    <form class="card pad" data-f="booking" style="display:flex;flex-direction:column;gap:12px">
+      <div class="fgrid"><div class="field"><label>Name *</label><input class="inp" id="b-name" required></div><div class="field"><label>Telefon</label><input class="inp" id="b-phone" type="tel"></div>
+      <div class="field full"><label>E-Mail *</label><input class="inp" id="b-email" type="email" required></div>
+      <div class="field"><label>Hersteller</label><input class="inp" id="b-make" placeholder="z. B. BMW"></div><div class="field"><label>Modell</label><input class="inp" id="b-model" placeholder="z. B. X5"></div>
+      <div class="field full"><label>Gewünschte Leistung</label><select class="inp" id="b-pkg"><option value="">Beratung</option>${S.packages.map((p) => `<option>${esc(p.name)}</option>`).join("")}</select></div>
+      <div class="field full"><label>Wunschtermin</label><input class="inp" id="b-wish" placeholder="z. B. nächste Woche vormittags"></div></div>
+      <p class="small muted" style="margin:0">Zur Reservierung bitten wir um eine Anzahlung von <b>${S.settings.deposit},00 €</b>. Sie wird mit der Rechnung verrechnet.</p>
+      <button class="btn block">Anfrage senden & ${S.settings.deposit} € anzahlen</button></form>
+    <div class="card pad"><b>Pflege-Abos</b><p class="small muted" style="margin:2px 0 10px">Regelmäßig glänzend – monatlich kündbar.</p>${S.carePlans.map((p) => `<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:8px"><div class="kv"><b>${esc(p.name)}</b><b class="tnum">${eur(p.price)}<span class="small muted" style="font-weight:400"> / Monat</span></b></div><p class="small muted" style="white-space:pre-line;margin:4px 0 8px">${esc(p.desc)}</p><button class="btn sm" data-a="careSub" data-id="${p.id}">Abonnieren</button></div>`).join("")}</div>
+    <p style="text-align:center"><a href="#shop" style="color:var(--accent)">🎁 Gutschein verschenken</a></p>`);
+}
+function viewShop() {
+  return customerShell("Gutschein verschenken", "Das perfekte Geschenk für alle, die ihr Auto lieben.", `
+    <form class="card pad" data-f="shop" style="display:flex;flex-direction:column;gap:12px">
+      <div class="field"><label>Betrag</label><div class="seg" style="display:grid;grid-template-columns:repeat(3,1fr)">${[25, 50, 100, 150, 250, 500].map((a) => `<button type="button" class="${(UI.shopAmt || 50) === a ? "on" : ""}" data-a="shopAmt" data-v="${a}">${a} €</button>`).join("")}</div></div>
+      <div class="field"><label>Ihr Name *</label><input class="inp" id="s-name" required></div>
+      <div class="field"><label>Ihre E-Mail *</label><input class="inp" id="s-email" type="email" required></div>
+      <div class="field"><label>Für wen? (optional)</label><input class="inp" id="s-rec"></div>
+      <button class="btn block">Weiter zur Zahlung</button><span class="small muted" style="text-align:center">Sichere Zahlung · gültig 3 Jahre</span></form>`);
+}
+function qrModal() {
+  if (!UI.qr) return "";
+  const i = S.invoices.find((x) => x.id === UI.qr);
+  let svg = "";
+  try { const q = qrcode(0, "M"); q.addData(`https://checkout.stripe.com/c/pay/demo_${i.number}`); q.make(); svg = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch { svg = "<p>QR-Code</p>"; }
+  return `<div class="modal-bg" data-a="closeQr"><div class="modal fade" style="text-align:center"><h2>Vor Ort bezahlen</h2><p class="muted small">Rechnung ${i.number} · offen ${eur(invOpen(i))}</p>
+    <div style="background:#fff;border-radius:14px;padding:12px;max-width:260px;margin:12px auto">${svg}</div>
+    <p class="small muted">Kunde scannt mit der Handykamera und zahlt mit Karte, Apple Pay oder Google Pay.</p>
+    <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-a="qrPaid" data-id="${i.id}">Zahlung simulieren</button><button class="btn ghost" data-a="closeQr">Schließen</button></div></div></div>`;
+}
+function xmlModal() {
+  if (!UI.xml) return "";
+  const i = S.invoices.find((x) => x.id === UI.xml);
+  return `<div class="modal-bg" data-a="closeXml"><div class="modal fade" style="max-width:720px"><h2>E-Rechnung ${i.number}.xml</h2><p class="small muted">XRechnung 3.0 (UBL) – wird in der echten App als Datei heruntergeladen und kann direkt an Geschäftskunden oder die Buchhaltung gehen. Hier gekürzte Vorschau:</p>
+    <pre style="background:var(--muted);border-radius:10px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre">${esc(xrechnung(i))}</pre><button class="btn" data-a="closeXml">Schließen</button></div></div>`;
+}
+
+
+// ---------- Zustand ----------
+const KEY = "detailflow-demo-v4";
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)) || seedExtra(seed()); } catch { S = seedExtra(seed()); }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+const quoteCalc = (q) => calculate(q.calc);
+const cust = (id) => S.customers.find((x) => x.id === id);
+const veh = (id) => S.vehicles.find((x) => x.id === id);
+const vname = (v) => (v ? `${v.make} ${v.model}` : "Ohne Fahrzeug");
+
+let UI = { calWeek: 0, calc: null, openCat: null, svcSearch: "", custSearch: "", vehSearch: "", modal: null, toast: null, menu: false, boardView: "board", calcTarget: "quote" };
+function newCalc(pre = {}) {
+  const v = pre.vehicle_id ? veh(pre.vehicle_id) : null;
+  return { customer_id: pre.customer_id || (v && v.customer_id) || "", vehicle_id: pre.vehicle_id || "", vehicleClass: v ? v.vc : "kompaktwagen", soiling: "normal", serviceIds: [], packageIds: [], effort: 0, extras: [], discount: 0, override: null, intro: "", start: "", target: pre.target || "quote" };
+}
+
+// ---------- Icons ----------
+const I = {
+  home: '<path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
+  clip: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h4"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.5 3.2-5.5 6.5-5.5s5.9 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2 .6 3.2 2.5 3.5 5.5"/>',
+  car: '<path d="M5 16H3v-4l2-5h11l3 5h2v4h-2"/><circle cx="7.5" cy="16.5" r="2"/><circle cx="16.5" cy="16.5" r="2"/><path d="M9.5 16.5h5M5 12h14"/>',
+  spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  check: '<path d="m5 12 5 5 9-10"/>',
+  msg: '<path d="M4 5h16v11H9l-5 4z"/>',
+  euro: '<path d="M17 6.5A7 7 0 1 0 17 17.5M4 10h9M4 14h9"/>',
+  gift: '<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s6 1 6 1 6 2 6-1-4-3-6 1"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+};
+const ic = (n, cls = "") => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+const LOGO = `<span class="logo"><i><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 15c3-6 6-9 9-9s6 3 9 9"/><path d="M7 15h10"/></svg></i>DetailFlow</span>`;
+const badge = (txt, cls) => `<span class="badge ${cls}">${esc(txt)}</span>`;
+const obadge = (s) => badge(OSL[s], OST[s]);
+const qbadge = (s) => badge(QSL[s], QST[s]);
+
+// ---------- Routing ----------
+const NAV = [["uebersicht", "Übersicht", "home"], ["kalender", "Kalender", "cal"], ["auftraege", "Aufträge", "clip"], ["nachrichten", "Nachrichten", "msg"], ["kunden", "Kunden", "users"], ["angebote", "Angebote", "file"], ["rechnungen", "Rechnungen", "euro"], ["gutscheine", "Gutscheine", "gift"], ["fahrzeuge", "Fahrzeuge", "car"], ["leistungen", "Leistungen & Preise", "spark"], ["auswertungen", "Auswertungen", "chart"], ["einstellungen", "Einstellungen", "gear"]];
+const CUSTOMER_NAV = [["portal--c4", "Kundenportal"], ["buchen", "Buchungsseite"], ["shop", "Gutschein-Shop"]];
+function route() { const h = (location.hash || "").slice(1); const [view, id] = h.split("--"); return { view: view || "uebersicht", id }; }
+const go = (v, id) => { location.hash = id ? `${v}--${id}` : v; };
+
+// ---------- Views ----------
+function viewDashboard() {
+  const t0 = today(), t1 = new Date(t0); t1.setDate(t1.getDate() + 1);
+  const sameDay = (iso, d) => { if (!iso) return false; const x = new Date(iso); return x >= d && x < new Date(d.getTime() + 864e5); };
+  const todays = S.orders.filter((o) => sameDay(o.start, t0) && o.status !== "storniert").sort((a, b) => a.start.localeCompare(b.start));
+  const running = S.orders.filter((o) => ["fahrzeug_angenommen", "in_bearbeitung", "qualitaetskontrolle", "fertig"].includes(o.status));
+  const ready = S.orders.filter((o) => o.status === "abholbereit");
+  const openQ = S.quotes.filter((q) => ["draft", "sent"].includes(q.status));
+  const done = S.orders.filter((o) => o.status === "abgeschlossen");
+  const rev = 14862.4 + done.reduce((a, o) => a + o.gross, 0), cnt = 38 + done.length;
+  const row = (o, t) => `<a href="#auftrag--${o.id}"><div class="t"><b>${t && o.start ? `<span class="muted tnum">${fmtTime(o.start)}</span>&nbsp; ` : ""}${esc(vname(veh(o.vehicle_id)))} – ${esc(o.title)}</b><span>${esc(cust(o.customer_id).name)}</span></div>${obadge(o.status)}</a>`;
+  const days = [...Array(7)].map((_, i) => { const d = new Date(t0); d.setDate(d.getDate() + i); const n = S.orders.filter((o) => sameDay(o.start, d) && o.status !== "storniert").length; return `<div><small>${fmtDate(d, { weekday: "short" })}</small><b>${d.getDate()}</b><em class="${n ? "has" : ""}">${n || "–"}</em></div>`; }).join("");
+  return `
+  <div style="margin-bottom:20px"><p class="muted" style="margin:0">${fmtDate(new Date(), { weekday: "long", day: "numeric", month: "long" })}</p><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-0.02em">Guten Tag, Markus</h1></div>
+  <div class="quick">
+    <button class="btn sec" data-a="newCustomer">${ic("users")}<span>Neuer Kunde</span></button>
+    <button class="btn sec" data-a="newVehicle">${ic("car")}<span>Neues Fahrzeug</span></button>
+    <a class="btn sec" href="#kalkulator" data-a="calcQuote">${ic("file")}<span>Neues Angebot</span></a>
+    <a class="btn sec" href="#kalkulator" data-a="calcOrder">${ic("clip")}<span>Neuer Auftrag</span></a>
+  </div>
+  <div class="grid4" style="margin-bottom:20px">
+    <div class="card stat"><p>Umsatz diesen Monat</p><strong>${eur(rev)}</strong><span class="small muted">abgeschlossene Aufträge, brutto</span></div>
+    <div class="card stat"><p>Aufträge diesen Monat</p><strong>${cnt}</strong></div>
+    <div class="card stat"><p>Ø Auftragswert</p><strong>${eur(rev / cnt)}</strong></div>
+    <div class="card stat"><p>Offene Anfragen</p><strong>${S.orders.filter((o) => o.status === "anfrage").length}</strong></div>
+  </div>
+  <div class="card" style="margin-bottom:20px"><div class="ch"><h2>Diese Woche</h2><span class="small muted">Termine pro Tag</span></div><div class="week">${days}</div></div>
+  <div class="grid2">
+    <div class="card"><div class="ch"><div><h2>Heute</h2><p>${todays.length} Termine</p></div>${ic("cal")}</div><div class="list">${todays.map((o) => row(o, true)).join("") || '<p class="empty">Heute stehen keine Termine an.</p>'}</div></div>
+    <div class="card"><div class="ch"><h2>In Bearbeitung</h2><a href="#auftraege" style="color:var(--accent)">Alle</a></div><div class="list">${running.map((o) => row(o)).join("") || '<p class="empty">Keine laufenden Aufträge.</p>'}</div></div>
+    <div class="card"><div class="ch"><div><h2>Abholbereit</h2><p>Kunden informieren</p></div></div><div class="list">${ready.map((o) => row(o)).join("") || '<p class="empty">Keine Fahrzeuge zur Abholung.</p>'}</div></div>
+    <div class="card"><div class="ch"><div><h2>Offene Angebote</h2><p>Entwürfe und noch nicht beantwortete</p></div><a href="#angebote" style="color:var(--accent)">Alle</a></div><div class="list">${openQ.map((q) => `<a href="#angebot--${q.id}"><div class="t"><b>${esc(cust(q.customer_id).name)}</b><span>${q.number}</span></div><div class="row"><span class="tnum">${eur(quoteCalc(q).gross)}</span>${qbadge(q.status)}</div></a>`).join("") || '<p class="empty">Keine offenen Angebote.</p>'}</div></div>
+  </div>`;
+}
+
+function viewOrders() {
+  const active = S.orders.filter((o) => !["abgeschlossen", "storniert"].includes(o.status));
+  const card = (o) => `<a class="kcard" href="#auftrag--${o.id}"><b>${esc(vname(veh(o.vehicle_id)))}</b><span class="small muted">${esc(cust(o.customer_id).name)}</span><p>${esc(o.title)}</p><div class="kv"><span>${o.start ? fmtDate(o.start, { weekday: "short", hour: "2-digit", minute: "2-digit" }) : o.number}</span><span class="tnum">${o.gross ? eur(o.gross) : "–"}</span></div></a>`;
+  const board = `<div class="board">${BOARD.map((s) => { const col = active.filter((o) => o.status === s || (s === "anfrage" && o.status === "angebot_erstellt")); return `<div class="col"><header><span>${OSL[s]}</span><span class="muted">${col.length}</span></header><div class="lane">${col.map(card).join("")}</div></div>`; }).join("")}</div>`;
+  const all = [...S.orders].sort((a, b) => (b.start || "").localeCompare(a.start || ""));
+  const list = `<div class="card list">${all.map((o) => `<a href="#auftrag--${o.id}"><div class="t"><b>${esc(vname(veh(o.vehicle_id)))} · <span style="display:inline;font-weight:400" class="muted">${esc(cust(o.customer_id).name)}</span></b><span>${o.number} · ${esc(o.title)}${o.start ? " · " + fmtDate(o.start, { dateStyle: "medium", timeStyle: "short" }) : ""}</span></div><div class="row"><span class="tnum">${eur(o.gross)}</span>${obadge(o.status)}</div></a>`).join("")}</div>`;
+  return `<div class="ph"><div><h1>Aufträge</h1><p>Tippe auf einen Auftrag, um ihn weiterzuschalten.</p></div><div class="row"><div class="seg"><button class="${UI.boardView === "board" ? "on" : ""}" data-a="boardView" data-v="board">Board</button><button class="${UI.boardView === "list" ? "on" : ""}" data-a="boardView" data-v="list">Liste</button></div><a class="btn" href="#kalkulator" data-a="calcOrder">${ic("plus")}Neuer Auftrag</a></div></div>${UI.boardView === "board" ? board : list}`;
+}
+
+function viewOrder(id) {
+  const o = S.orders.find((x) => x.id === id); if (!o) return notFound();
+  const v = veh(o.vehicle_id), cu = cust(o.customer_id), nx = NEXT[o.status];
+  const done = o.items.filter((i) => i.done).length;
+  return `<div class="ph"><div><h1>${esc(vname(v))}</h1><p>${o.number} · ${esc(cu.name)}${o.start ? " · " + fmtDate(o.start, { dateStyle: "medium", timeStyle: "short" }) : ""}</p></div>${obadge(o.status)}</div>
+  <div class="card pad row" style="justify-content:space-between;margin-bottom:20px">
+    ${nx ? `<button class="btn" data-a="orderNext" data-id="${o.id}">Weiter: ${OSL[nx]}</button>` : `<span class="muted">${o.status === "abgeschlossen" ? "Auftrag abgeschlossen." : "Auftrag storniert."}</span>`}
+    <div class="row"><select class="inp" style="width:auto" id="ostatus" data-id="${o.id}">${OS.map((s) => `<option value="${s}" ${s === o.status ? "selected" : ""}>${OSL[s]}</option>`).join("")}</select><button class="btn sec" data-a="orderSet" data-id="${o.id}">Status setzen</button></div>
+  </div>
+  <div class="side-layout">
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <div class="card"><div class="ch"><div><h2>Leistungen</h2><p>${done} von ${o.items.length} erledigt – zum Abhaken antippen</p></div></div>
+        <div class="items-check">${o.items.map((it) => `<button data-a="toggleItem" data-id="${o.id}" data-item="${it.id}"><span class="dot ${it.done ? "done" : ""}">${it.done ? ic("check").replace('class=""', 'width="12" height="12"') : ""}</span><span style="flex:1" class="${it.done ? "done-t" : ""}">${esc(it.title)}</span><span class="tnum muted">${eur(it.net)}</span></button>`).join("") || '<p class="empty">Noch keine Leistungen – Anfrage zuerst kalkulieren.</p>'}</div>
+        <div class="tot"><div class="kv"><span>Netto</span><span class="tnum">${eur(o.net)}</span></div><div class="kv big"><span>Endpreis brutto</span><span class="tnum">${eur(o.gross)}</span></div></div>
+      </div>
+      <div class="card pad"><div class="field"><label for="onotes">Interne Notizen</label><textarea class="inp" id="onotes" data-id="${o.id}" placeholder="z. B. Schlüssel liegt im Kasten 3">${esc(o.notes)}</textarea></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <div class="card pad"><b>Kunde</b><a href="#kunde--${cu.id}" style="display:block;color:var(--accent);margin-top:4px">${esc(cu.name)}</a><span class="muted small">${esc(cu.phone || "")}</span>
+        <div class="row" style="margin-top:10px"><a class="btn sec sm" href="#nachricht--${cu.id}">Kunde benachrichtigen</a>${o.items.length ? `<button class="btn sm" data-a="orderInvoice" data-id="${o.id}">${S.invoices.some((i) => i.order_id === o.id && i.status !== "cancelled") ? "Zur Rechnung" : "Rechnung erstellen"}</button>` : ""}</div>
+        <div style="margin-top:14px"><b>Fahrzeug</b><span style="display:block;margin-top:4px">${esc(vname(v))} · ${esc(v.plate)}</span>${v.damages ? `<span class="small" style="color:var(--amber-fg)">Vorschäden: ${esc(v.damages)}</span>` : ""}</div></div>
+      <div class="card"><div class="ch"><h2>Verlauf</h2></div><div class="pad" style="display:flex;flex-direction:column;gap:6px">${[...o.history].reverse().map((h) => `<div class="kv small"><span>${OSL[h.s]}</span><span class="muted">${fmtDate(h.at, { dateStyle: "short", timeStyle: "short" })}</span></div>`).join("")}</div></div>
+    </div>
+  </div>`;
+}
+
+function viewQuotes() {
+  return `<div class="ph"><div><h1>Angebote</h1></div><a class="btn" href="#kalkulator" data-a="calcQuote">${ic("plus")}Neues Angebot</a></div>
+  <div class="card list">${[...S.quotes].reverse().map((q) => { const v = veh(q.vehicle_id); return `<a href="#angebot--${q.id}"><div class="t"><b>${esc(cust(q.customer_id).name)}${v ? ` <span style="display:inline;font-weight:400" class="muted">· ${esc(vname(v))}</span>` : ""}</b><span>${q.number} · ${fmtDate(q.created)}</span></div><div class="row"><span class="tnum">${eur(quoteCalc(q).gross)}</span>${qbadge(q.status)}</div></a>`; }).join("")}</div>`;
+}
+
+function viewQuote(id) {
+  const q = S.quotes.find((x) => x.id === id); if (!q) return notFound();
+  const r = quoteCalc(q), cu = cust(q.customer_id), v = veh(q.vehicle_id);
+  const order = S.orders.find((o) => o.quote_id === q.id);
+  const valid = new Date(q.created); valid.setDate(valid.getDate() + 30);
+  const btn = (to, label, cls = "sec") => `<button class="btn ${cls}" data-a="quoteStatus" data-id="${q.id}" data-to="${to}">${label}</button>`;
+  const actions = q.status === "draft" ? btn("sent", "Als versendet markieren", "") : q.status === "sent" ? btn("accepted", "Kunde hat angenommen", "") + btn("rejected", "Abgelehnt") : q.status === "accepted" ? (order ? `<a class="btn" href="#auftrag--${order.id}">Zum Auftrag ${order.number}</a>` : `<button class="btn" data-a="convert" data-id="${q.id}">In Auftrag umwandeln</button>`) : btn("draft", "Zurück zu Entwurf");
+  const itemsSum = r.lines.reduce((a, l) => a + l.totalNet, 0);
+  return `<div class="ph"><div><h1>Angebot ${q.number}</h1><p>${esc(cu.name)} · ${eur(r.gross)}</p></div>${qbadge(q.status)}</div>
+  <div class="card pad row" style="margin-bottom:16px">${actions}</div>
+  ${q.status === "sent" ? `<div class="notice">In der echten App bekommt der Kunde einen sicheren Link und kann das Angebot online annehmen oder ablehnen.</div>` : ""}
+  ${q.status === "draft" ? `<div class="notice amber">Entwurf: Nach dem Versenden werden die Positionen festgeschrieben und können nicht mehr unbemerkt geändert werden.</div>` : ""}
+  <div class="doc-wrap"><article class="doc">
+    <div class="doc-head"><b style="font-size:18px">Premium Detailing Köln</b><div class="dm" style="text-align:right;font-size:12px">Industriestraße 42<br>50735 Köln<br>0221 123456-0<br>info@premium-detailing.de</div></div>
+    <div class="doc-head" style="margin-top:28px"><div><p class="dm" style="font-size:10px;margin:0">Premium Detailing Köln · Industriestraße 42 · 50735 Köln</p><p style="margin:8px 0 0"><b>${esc(cu.name)}</b><br>${cu.contact ? `z. Hd. ${esc(cu.contact)}<br>` : ""}${esc(cu.street)}<br>${esc(cu.city)}</p></div>
+      <div class="doc-meta"><span class="dm">Angebotsnummer</span><span>${q.number}</span><span class="dm">Datum</span><span>${fmtDate(q.created)}</span><span class="dm">Gültig bis</span><span>${fmtDate(valid)}</span>${v ? `<span class="dm">Fahrzeug</span><span>${esc(vname(v))} · ${esc(v.plate)}</span>` : ""}</div></div>
+    <h2 style="margin:28px 0 8px;font-size:20px">Angebot ${q.number}</h2>
+    <p style="white-space:pre-line">${esc(q.intro || "Vielen Dank für Ihre Anfrage. Gerne bieten wir Ihnen folgende Leistungen an:")}</p>
+    <table><thead><tr><th>Pos.</th><th>Leistung</th><th class="r">Menge</th><th class="r">Gesamt</th></tr></thead><tbody>
+      ${r.lines.map((l, i) => `<tr><td class="dm">${i + 1}</td><td><b style="font-weight:500">${esc(l.title)}</b>${l.includes ? `<div class="dm" style="font-size:12px">Enthält: ${esc(l.includes.join(", "))}</div>` : ""}</td><td class="r">1</td><td class="r tnum">${eur(l.totalNet)}</td></tr>`).join("")}
+    </tbody></table>
+    <div style="margin-left:auto;max-width:260px;margin-top:14px;display:flex;flex-direction:column;gap:4px">
+      <div class="kv"><span>Summe netto</span><span class="tnum">${eur(itemsSum)}</span></div>
+      ${r.discountAmount ? `<div class="kv"><span>Nachlass</span><span class="tnum">−${eur(r.discountAmount)}</span></div>` : ""}
+      <div class="kv"><span>USt. 19 %</span><span class="tnum">${eur(r.tax)}</span></div>
+      <div class="kv" style="font-weight:600;border-top:1px solid var(--doc-line);padding-top:6px"><span>Gesamtbetrag</span><span class="tnum">${eur(r.gross)}</span></div>
+    </div>
+    <p class="dm" style="font-size:12px;margin-top:28px">Die Preise verstehen sich inklusive der gesetzlichen Mehrwertsteuer. Der tatsächliche Aufwand kann je nach Fahrzeugzustand abweichen; größere Abweichungen werden vorab abgestimmt.</p>
+    <p class="dm" style="font-size:10px;border-top:1px solid var(--doc-line);padding-top:8px;margin-top:24px">Premium Detailing Köln · Steuernummer 217/5123/4567</p>
+  </article></div>
+  <p class="small muted" style="text-align:center;margin-top:12px">In der echten App lässt sich das Angebot als PDF speichern oder drucken.</p>`;
+}
+
+function viewCalc() {
+  if (!UI.calc) UI.calc = newCalc({ target: UI.calcTarget });
+  const k = UI.calc, r = calculate(k);
+  const cv = S.vehicles.filter((v) => !k.customer_id || v.customer_id === k.customer_id);
+  const covered = new Set(k.packageIds.flatMap((id) => S.packages.find((p) => p.id === id)?.service_ids || []));
+  const term = UI.svcSearch.trim().toLowerCase();
+  const groups = new Map();
+  for (const s of S.services) if (s.active && (!term || s.name.toLowerCase().includes(term))) groups.set(s.category, [...(groups.get(s.category) || []), s]);
+  const acc = [...groups.entries()].map(([cat, list]) => {
+    const open = !!term || UI.openCat === cat, n = list.filter((s) => k.serviceIds.includes(s.id)).length;
+    return `<div class="acc"><button data-a="openCat" data-cat="${esc(cat)}"><span>${esc(cat)}</span><span class="row">${n ? `<span class="count">${n}</span>` : ""}<span class="muted">${open ? "▴" : "▾"}</span></span></button>${open ? `<div class="body">${list.map((s) => { const inP = covered.has(s.id); return `<label class="chk ${inP ? "dis" : ""}"><span><input type="checkbox" data-a="svc" data-id="${s.id}" ${k.serviceIds.includes(s.id) || inP ? "checked" : ""} ${inP ? "disabled" : ""}>${esc(s.name)}</span><span class="small muted tnum">${inP ? "im Paket" : eur(s.base_price)}</span></label>`; }).join("")}</div>` : ""}</div>`;
+  }).join("");
+  return `<div class="ph"><div><h1>${k.target === "order" ? "Neuer Auftrag" : "Neues Angebot"}</h1><p>Wähle Fahrzeug und Leistungen – der Preis wird sofort nach deinen Preisregeln berechnet.</p></div></div>
+  <div class="side-layout">
+    <div class="steps">
+      <div class="card pad step"><h2><i>1</i>Kunde & Fahrzeug</h2><div class="fgrid">
+        <div class="field"><label for="k-c">Kunde</label><select class="inp" id="k-c" data-k="customer"><option value="">Kunde auswählen …</option>${S.customers.map((x) => `<option value="${x.id}" ${x.id === k.customer_id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></div>
+        <div class="field"><label for="k-v">Fahrzeug</label><select class="inp" id="k-v" data-k="vehicle"><option value="">${cv.length ? "Fahrzeug auswählen …" : "– ohne Fahrzeug –"}</option>${cv.map((v) => `<option value="${v.id}" ${v.id === k.vehicle_id ? "selected" : ""}>${esc(vname(v))} (${esc(v.plate)})</option>`).join("")}</select></div>
+      </div><p class="small" style="margin:8px 0 0"><button class="btn ghost sm" style="color:var(--accent);padding:0" data-a="newCustomer">+ Neuer Kunde</button></p></div>
+      <div class="card pad step"><h2><i>2</i>Fahrzeuggröße & Verschmutzung</h2><div class="fgrid">
+        <div class="field"><label for="k-vc">Fahrzeugklasse</label><select class="inp" id="k-vc" data-k="vc">${VC.map((x) => `<option value="${x}" ${x === k.vehicleClass ? "selected" : ""}>${VCL[x]} (${Math.round(CFG.vehicleClassFactors[x] * 100)} %)</option>`).join("")}</select></div>
+        <div class="field"><label>Verschmutzungsgrad</label><div class="seg full">${SOIL.map((s) => `<button class="${k.soiling === s ? "on" : ""}" data-a="soil" data-v="${s}">${SOILL[s]}</button>`).join("")}</div></div>
+      </div></div>
+      <div class="card pad step"><h2><i>3</i>Pakete</h2><div class="picks">${S.packages.map((p) => `<button class="pick ${k.packageIds.includes(p.id) ? "on" : ""}" data-a="pkg" data-id="${p.id}"><b>${esc(p.name)}</b><span>${p.service_ids.length} Leistungen${p.discount_percent ? ` · ${p.discount_percent} % Paketrabatt` : ""}</span></button>`).join("")}</div></div>
+      <div class="card pad step"><h2><i>4</i>Einzelleistungen</h2><div class="search">${ic("search")}<input class="inp" id="k-s" data-k="svcSearch" placeholder="Leistung suchen, z. B. „Tierhaar“ …" value="${esc(UI.svcSearch)}"></div>${acc}</div>
+      <div class="card pad step"><h2><i>5</i>Sonderaufwand & Rabatt</h2><div class="fgrid">
+        <div class="field"><label for="k-e">Sonderaufwand (Minuten)</label><input class="inp" id="k-e" inputmode="numeric" data-k="effort" value="${k.effort || ""}" placeholder="0"><span class="hint">Wird mit ${eur(CFG.hourlyRate)}/Std. berechnet</span></div>
+        <div class="field"><label for="k-d">Rabatt (%)</label><input class="inp" id="k-d" inputmode="decimal" data-k="discount" value="${k.discount || ""}" placeholder="0"></div>
+        <div class="field"><label for="k-o">Endpreis manuell (€ netto)</label><input class="inp" id="k-o" inputmode="decimal" data-k="override" value="${k.override ?? ""}" placeholder="automatisch"><span class="hint">Überschreibt die Berechnung</span></div>
+        <div class="field"><label>Was möchtest du erstellen?</label><div class="seg"><button class="${k.target === "quote" ? "on" : ""}" data-a="target" data-v="quote">Angebot</button><button class="${k.target === "order" ? "on" : ""}" data-a="target" data-v="order">Direkt Auftrag</button></div></div>
+      </div></div>
+    </div>
+    <div class="card sum" id="sum">${sumPanel(k, r)}</div>
+  </div>`;
+}
+function sumPanel(k, r) {
+  return `<div class="ch"><div><h2>Zusammenfassung</h2><p>${VCL[k.vehicleClass]} · Verschmutzung ${SOILL[k.soiling].toLowerCase()}</p></div></div>
+  ${r.lines.length ? `<ul>${r.lines.map((l) => `<li><div class="kv"><span>${esc(l.title)}</span><span class="tnum">${eur(l.totalNet)}</span></div>${l.breakdown && (l.breakdown.cls || l.breakdown.soil) ? `<div class="small muted">Basis ${eur(l.breakdown.base)}${l.breakdown.cls ? ` · Größe ${l.breakdown.cls > 0 ? "+" : ""}${eur(l.breakdown.cls)}` : ""}${l.breakdown.soil ? ` · Verschm. ${l.breakdown.soil > 0 ? "+" : ""}${eur(l.breakdown.soil)}` : ""}</div>` : ""}${l.includes ? `<div class="small muted">${esc(l.includes.join(", "))}</div>` : ""}</li>`).join("")}</ul>` : `<p class="empty" style="text-align:center">Wähle Pakete oder Leistungen aus – der Preis erscheint sofort.</p>`}
+  <div class="tot"><div class="kv"><span>Zwischensumme netto</span><span class="tnum">${eur(r.subtotal)}</span></div>${r.discountAmount ? `<div class="kv"><span>${r.manual ? "Manuelle Anpassung" : `Rabatt ${r.discount} %`}</span><span class="tnum">−${eur(r.discountAmount)}</span></div>` : ""}<div class="kv"><span>USt. 19 %</span><span class="tnum">${eur(r.tax)}</span></div><div class="kv big"><span>Gesamt</span><span class="tnum">${eur(r.gross)}</span></div></div>
+  <div class="intern"><b style="color:var(--fg)">Intern (nicht im Angebot)</b><div class="kv"><span>Geschätzte Dauer</span><span>${fmtMin(r.minutes)}</span></div><div class="kv"><span>Materialkosten</span><span class="tnum">${eur(r.material)}</span></div><div class="kv"><span>Arbeitskosten</span><span class="tnum">${eur(r.labor)}</span></div><div class="kv"><span>Geschätzter Gewinn</span><span class="tnum">${eur(r.profit)} (${r.margin} %)</span></div></div>
+  ${r.warnings.length ? `<div class="warn">${r.warnings.map((w) => `<span>⚠ ${esc(w)}</span>`).join("")}</div>` : ""}
+  <div class="pad" style="border-top:1px solid var(--border)"><button class="btn block" data-a="saveCalc" ${!k.customer_id || !r.lines.length ? "disabled style=\"opacity:.45\"" : ""}>${k.target === "order" ? "Auftrag anlegen" : "Angebot erstellen"}</button>${!k.customer_id ? '<p class="small muted" style="text-align:center;margin:8px 0 0">Bitte zuerst einen Kunden auswählen.</p>' : ""}</div>`;
+}
+
+function viewCustomers() {
+  const t = UI.custSearch.trim().toLowerCase();
+  const list = S.customers.filter((x) => !t || [x.name, x.email, x.phone, x.city].join(" ").toLowerCase().includes(t));
+  return `<div class="ph"><div><h1>Kunden</h1><p>Alle Privat- und Geschäftskunden deines Betriebs.</p></div><button class="btn" data-a="newCustomer">${ic("plus")}Neuer Kunde</button></div>
+  <div class="search">${ic("search")}<input class="inp" id="c-s" data-k="custSearch" placeholder="Name, E-Mail, Telefon oder Ort suchen …" value="${esc(UI.custSearch)}"></div>
+  <div class="card list">${list.map((x) => `<a href="#kunde--${x.id}"><div class="t"><b>${esc(x.name)}</b><span>${esc([x.phone, x.email, x.city].filter(Boolean).join(" · "))}</span></div><div class="row">${x.type === "business" ? badge("Geschäftlich", "b-violet") : ""}${badge(S.vehicles.filter((v) => v.customer_id === x.id).length + " Fahrzeug(e)", "")}</div></a>`).join("") || '<p class="empty">Keine Treffer.</p>'}</div>`;
+}
+
+function viewCustomer(id) {
+  const x = cust(id); if (!x) return notFound();
+  const vs = S.vehicles.filter((v) => v.customer_id === id), os = S.orders.filter((o) => o.customer_id === id), qs = S.quotes.filter((q) => q.customer_id === id);
+  return `<div class="ph"><div><h1>${esc(x.name)}</h1><p>${os.length} Aufträge · ${eur(os.reduce((a, o) => a + o.gross, 0))} Auftragswert</p></div><div class="row"><button class="btn sec" data-a="newVehicle" data-cust="${id}">${ic("car")}Fahrzeug</button><a class="btn" href="#kalkulator" data-a="calcFor" data-cust="${id}">${ic("plus")}Angebot</a></div></div>
+  <div class="side-layout">
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <div class="card"><div class="ch"><h2>Fahrzeuge</h2></div><div class="list">${vs.map((v) => `<a href="#fahrzeug--${v.id}"><div class="t"><b>${esc(vname(v))}</b><span>${esc(v.plate)} · ${VCL[v.vc]}</span></div></a>`).join("") || '<p class="empty">Noch kein Fahrzeug.</p>'}</div></div>
+      <div class="card"><div class="ch"><div><h2>Historie</h2><p>Angebote und Aufträge</p></div></div><div class="list">${os.map((o) => `<a href="#auftrag--${o.id}"><div class="t"><b>Auftrag ${o.number} · ${esc(o.title)}</b><span>${o.start ? fmtDate(o.start) : ""}</span></div><div class="row"><span class="tnum">${eur(o.gross)}</span>${obadge(o.status)}</div></a>`).join("")}${qs.map((q) => `<a href="#angebot--${q.id}"><div class="t"><b>Angebot ${q.number}</b><span>${fmtDate(q.created)}</span></div><div class="row"><span class="tnum">${eur(quoteCalc(q).gross)}</span>${qbadge(q.status)}</div></a>`).join("")}${!os.length && !qs.length ? '<p class="empty">Noch keine Angebote oder Aufträge.</p>' : ""}</div></div>
+    </div>
+    <div class="card pad" style="display:flex;flex-direction:column;gap:10px">
+      <b>Kontakt</b>${x.contact ? `<span>z. Hd. ${esc(x.contact)}</span>` : ""}<span>${esc(x.phone || "–")}</span><span>${esc(x.email || "–")}</span><span class="muted">${esc(x.street)}, ${esc(x.city)}</span>
+      ${x.notes ? `<b style="margin-top:6px">Notizen</b><span class="muted">${esc(x.notes)}</span>` : ""}
+    </div>
+  </div>`;
+}
+
+function viewVehicles() {
+  const t = UI.vehSearch.trim().toLowerCase();
+  const list = S.vehicles.filter((v) => !t || [v.make, v.model, v.plate].join(" ").toLowerCase().includes(t));
+  return `<div class="ph"><div><h1>Fahrzeuge</h1><p>Digitale Fahrzeugakten mit Zustand, Vorschäden und Pflegehistorie.</p></div><button class="btn" data-a="newVehicle">${ic("plus")}Neues Fahrzeug</button></div>
+  <div class="search">${ic("search")}<input class="inp" id="v-s" data-k="vehSearch" placeholder="Hersteller, Modell oder Kennzeichen …" value="${esc(UI.vehSearch)}"></div>
+  <div class="card list">${list.map((v) => `<a href="#fahrzeug--${v.id}"><div class="t"><b>${esc(vname(v))} <span style="display:inline;font-weight:400" class="muted">(${v.year || "–"})</span></b><span>${esc(cust(v.customer_id)?.name || "Ohne Kunde")} · ${esc(v.color || "")}</span></div><div class="row"><span class="badge" style="font-family:ui-monospace,monospace">${esc(v.plate)}</span>${badge(VCL[v.vc], "")}</div></a>`).join("") || '<p class="empty">Keine Treffer.</p>'}</div>`;
+}
+
+function viewVehicle(id) {
+  const v = veh(id); if (!v) return notFound();
+  const os = S.orders.filter((o) => o.vehicle_id === id);
+  return `<div class="ph"><div><h1>${esc(vname(v))}</h1><p>${esc(v.plate)} · ${VCL[v.vc]} · ${esc(cust(v.customer_id)?.name || "")}</p></div><a class="btn" href="#kalkulator" data-a="calcFor" data-cust="${v.customer_id}" data-veh="${v.id}">${ic("plus")}Angebot für dieses Fahrzeug</a></div>
+  <div class="side-layout">
+    <div class="card pad"><div class="fgrid">
+      ${[["Hersteller", v.make], ["Modell", v.model], ["Baujahr", v.year], ["Farbe", v.color], ["Fahrzeugklasse", VCL[v.vc]], ["Kennzeichen", v.plate]].map(([l, val]) => `<div class="field"><label>${l}</label><span class="muted">${esc(val ?? "–")}</span></div>`).join("")}
+      <div class="field full"><label>Bekannte Vorschäden</label><span class="muted">${esc(v.damages || "keine dokumentiert")}</span></div>
+    </div></div>
+    <div class="card"><div class="ch"><div><h2>Pflegehistorie</h2><p>Frühere Aufbereitungen</p></div></div><div class="list">${os.map((o) => `<a href="#auftrag--${o.id}"><div class="t"><b>${o.start ? fmtDate(o.start) : o.number}</b><span>${esc(o.items.map((i) => i.title).join(", ") || o.title)}</span></div>${obadge(o.status)}</a>`).join("") || '<p class="empty">Noch keine Aufbereitungen.</p>'}</div></div>
+  </div>`;
+}
+
+function viewServices() {
+  const groups = new Map();
+  for (const s of S.services) groups.set(s.category, [...(groups.get(s.category) || []), s]);
+  return `<div class="ph"><div><h1>Leistungen & Preise</h1><p>${S.services.filter((s) => s.active).length} aktive von ${S.services.length} Leistungen. Nettopreise für ein Kompaktfahrzeug mit normaler Verschmutzung.</p></div><a class="btn sec" href="#kalkulator" data-a="calcQuote">Im Kalkulator testen</a></div>
+  <div class="notice">Ändere einen Preis oder schalte eine Leistung ab – der Kalkulator rechnet sofort mit den neuen Werten. Zuschläge für größere Fahrzeuge und stärkere Verschmutzung kommen automatisch dazu.</div>
+  <div style="display:flex;flex-direction:column;gap:16px">${[...groups.entries()].map(([cat, list]) => `<div class="card" style="overflow:hidden"><div class="ch"><div><h2>${esc(cat)}</h2><p>${list.length} Leistungen</p></div></div>${list.map((s) => `<div class="svc-row ${s.active ? "" : "off"}"><div class="t"><b style="font-size:13px">${esc(s.name)}</b><span>${fmtMin(s.duration_minutes)}</span></div><div class="row" style="flex-wrap:nowrap"><input class="price-in tnum" inputmode="decimal" data-price="${s.id}" value="${String(s.base_price).replace(".", ",")}" aria-label="Preis ${esc(s.name)}"><span class="muted">€</span><button class="toggle ${s.active ? "on" : ""}" data-a="toggleSvc" data-id="${s.id}" aria-label="${s.active ? "Deaktivieren" : "Aktivieren"}"></button></div></div>`).join("")}</div>`).join("")}</div>`;
+}
+
+
+const BOXES = ["Box 1", "Box 2", "Waschplatz"];
+const BOXCLS = { "Box 1": "ev-a", "Box 2": "ev-b", "Waschplatz": "ev-c" };
+// Überlappende Termine nebeneinander legen (wie src/lib/calendar-layout.ts)
+function lanes(items) {
+  const sorted = [...items].sort((a, b) => a.start - b.start || b.end - a.end), out = [];
+  let group = [], ends = [], gEnd = -Infinity;
+  const flush = () => { group.forEach((g) => (g.n = ends.length)); out.push(...group); group = []; ends = []; };
+  for (const it of sorted) {
+    if (it.start >= gEnd && group.length) flush();
+    let lane = ends.findIndex((e) => e <= it.start);
+    if (lane === -1) { lane = ends.length; ends.push(it.end); } else ends[lane] = it.end;
+    group.push({ ...it, lane, n: 1 }); gEnd = group.length === 1 ? it.end : Math.max(gEnd, it.end);
+  }
+  if (group.length) flush();
+  return out;
+}
+function viewCalendar() {
+  const t0 = today(); const wd = t0.getDay() || 7;
+  const mon = new Date(t0); mon.setDate(mon.getDate() - wd + 1 + UI.calWeek * 7);
+  const days = [...Array(7)].map((_, i) => { const d = new Date(mon); d.setDate(d.getDate() + i); return d; });
+  const H0 = 7, H1 = 20, PX = 46;
+  const cols = days.map((d) => {
+    const next = new Date(d.getTime() + 864e5);
+    const evs = S.orders.filter((o) => o.start && o.status !== "storniert" && new Date(o.start) >= d && new Date(o.start) < next);
+    const isToday = d.getTime() === t0.getTime();
+    const placed = lanes(evs.map((o) => {
+      const s = new Date(o.start), e = new Date(o.end || o.start);
+      const sh = Math.max(H0, s.getHours() + s.getMinutes() / 60), eh = Math.min(H1, e.getHours() + e.getMinutes() / 60);
+      return { o, sh, h: Math.max(22, (eh - sh) * PX - 2), start: sh, end: eh };
+    }));
+    return `<div class="cal-col ${isToday ? "today" : ""}">${[...Array(H1 - H0)].map((_, i) => `<div class="cal-line" style="top:${i * PX}px"></div>`).join("")}${placed.map(({ o, sh, h, lane, n }) => {
+      return `<a class="ev ${BOXCLS[o.box] || ""}" href="#auftrag--${o.id}" style="top:${(sh - H0) * PX}px;height:${h}px;left:calc(${(lane / n) * 100}% + 3px);width:calc(${100 / n}% - 6px);right:auto"><b class="tnum">${fmtTime(o.start)}</b><span>${esc(vname(veh(o.vehicle_id)))}</span>${h > 60 ? `<span class="op">${esc(o.title)}</span>` : ""}</a>`;
+    }).join("")}</div>`;
+  }).join("");
+  const head = days.map((d) => `<div class="cal-h ${d.getTime() === t0.getTime() ? "today" : ""}"><small>${fmtDate(d, { weekday: "short" })}</small>${d.getDate()}</div>`).join("");
+  const unplanned = S.orders.filter((o) => !o.start && ["anfrage", "bestaetigt"].includes(o.status));
+  return `<div class="ph"><div><h1>Kalender</h1><p>Termine deines Teams, farbig nach Box. Eine Box kann nicht doppelt belegt werden.</p></div><a class="btn" href="#kalkulator" data-a="calcOrder">${ic("plus")}Neuer Termin</a></div>
+  <div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="row"><button class="btn sec sm" data-a="calWeek" data-v="-1" aria-label="Vorherige Woche">‹</button><button class="btn sec sm" data-a="calWeek" data-v="0">Heute</button><button class="btn sec sm" data-a="calWeek" data-v="1" aria-label="Nächste Woche">›</button><b style="margin-left:6px">${fmtDate(days[0], { day: "numeric", month: "short" })} – ${fmtDate(days[6], { day: "numeric", month: "short", year: "numeric" })}</b></div><div class="seg"><button>Tag</button><button class="on">Woche</button><button>Monat</button></div></div>
+  <div class="card" style="overflow:hidden"><div style="overflow-x:auto" id="calscroll"><div style="min-width:760px">
+    <div class="cal-grid" style="border-bottom:1px solid var(--border)"><div></div>${head}</div>
+    <div class="cal-grid" style="height:${(H1 - H0) * PX}px"><div class="cal-hours">${[...Array(H1 - H0)].map((_, i) => i ? `<span style="top:${i * PX}px">${H0 + i}:00</span>` : "").join("")}</div>${cols}</div>
+  </div></div></div>
+  <div class="row small muted" style="margin-top:10px;gap:14px">${BOXES.map((b) => `<span class="row" style="gap:6px"><i class="lg ${BOXCLS[b]}"></i>${b}</span>`).join("")}</div>
+  ${unplanned.length ? `<div class="card" style="margin-top:20px"><div class="ch"><div><h2>Noch nicht eingeplant</h2><p>Bestätigte Aufträge und Anfragen ohne Termin</p></div></div><div class="list">${unplanned.map((o) => `<a href="#auftrag--${o.id}"><div class="t"><b>${esc(vname(veh(o.vehicle_id)))}</b><span>${esc(o.title)}</span></div>${obadge(o.status)}</a>`).join("")}</div></div>` : ""}`;
+}
+
+function viewAnalytics() {
+  const now = new Date();
+  const hist = [9820, 11240, 12910, 10480, 13650, 15120, 16480, 14230, 13760, 15890, 17340];
+  const done = S.orders.filter((o) => o.status === "abgeschlossen").reduce((a, o) => a + o.net, 0);
+  const months = [...Array(12)].map((_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 15); return { label: fmtDate(d, { month: "short" }), value: i < 11 ? hist[i] : 12489 + done }; });
+  const total = months.reduce((a, m) => a + m.value, 0), orders = 412;
+  const W = 720, H = 220, pl = 52, pb = 26, pt = 18, max = 20000, bw = (W - pl) / 12, y = (v) => pt + (H - pt - pb) * (1 - v / max);
+  const bars = months.map((m, i) => { const x = pl + i * bw + bw * 0.18, w = bw * 0.64, top = y(m.value), last = i === 11;
+    return `<g class="bar ${last ? "last" : ""}"><title>${m.label}: ${eur(m.value)}</title><rect x="${pl + i * bw}" y="${pt}" width="${bw}" height="${H - pt - pb}" class="hit"/><rect x="${x}" y="${top}" width="${w}" height="${y(0) - top}" rx="4" class="mk"/><text x="${x + w / 2}" y="${top - 6}" text-anchor="middle" class="val">${(m.value / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 })} T€</text><text x="${x + w / 2}" y="${H - 8}" text-anchor="middle" class="ax">${m.label}</text></g>`; }).join("");
+  const grid = [0, 5000, 10000, 15000, 20000].map((t) => `<line x1="${pl}" x2="${W}" y1="${y(t)}" y2="${y(t)}" class="gl"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" class="ax">${t / 1000} T€</text>`).join("");
+  const top = [["Paket · Komplettaufbereitung", 28430, 47], ["Paket · Keramik Premium", 24680, 16], ["Zweistufige Politur", 15715, 35], ["Paket · Verkaufsaufbereitung", 13260, 39], ["Sprühextraktion", 9790, 110], ["Paket · Leasingrückgabe", 8910, 27], ["Mehrschicht-Keramikversiegelung", 7990, 10], ["Tierhaarentfernung", 6370, 130]];
+  const tmax = top[0][1];
+  const stat = (l, v, h) => `<div class="card stat"><p>${l}</p><strong>${v}</strong>${h ? `<span class="small muted">${h}</span>` : ""}</div>`;
+  return `<div class="ph"><div><h1>Auswertungen</h1><p>Abgeschlossene Aufträge der letzten 12 Monate, Beträge netto.</p></div></div>
+  <div class="grid4" style="margin-bottom:20px">${stat("Umsatz (12 Monate)", eur(total), orders + " Aufträge")}${stat("Ø Auftragswert", eur(total / orders))}${stat("Geschätzter Gewinn", eur(total * 0.46), "nach Material & internen Stundenkosten")}${stat("Angebotsannahmequote", "68 %", S.quotes.filter((q) => q.status === "sent").length + " Angebote offen")}${stat("Wiederkehrende Kunden", "41 %", "73 von 178 Kunden")}${stat("Arbeitszeit (12 Monate)", "1.284 Std.")}${stat("Materialkosten (12 Monate)", eur(total * 0.07))}${stat("Auslastung diesen Monat", "72 %", "geplant / Öffnungszeit × Boxen")}</div>
+  <div class="side-layout">
+    <div class="card"><div class="ch"><div><h2>Umsatz pro Monat</h2><p>netto, abgeschlossene Aufträge – Balken antippen für Werte</p></div></div><div style="padding:16px 12px 8px"><svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Umsatz pro Monat">${grid}${bars}</svg></div></div>
+    <div class="card"><div class="ch"><div><h2>Umsatz nach Leistung</h2><p>Top 8, inkl. Pakete</p></div></div><div class="pad" style="display:flex;flex-direction:column;gap:12px">${top.map(([l, v, n]) => `<div title="${l}: ${eur(v)}"><div class="kv small"><span>${l}</span><span class="tnum">${eur(v)}</span></div><div class="rb"><i style="width:${(v / tmax) * 100}%"></i></div><span class="small muted">${n}× gebucht</span></div>`).join("")}</div></div>
+  </div>
+  <p class="small muted" style="margin-top:12px">Demo-Zahlen. In der echten App werden sie aus deinen abgeschlossenen Aufträgen berechnet.</p>`;
+}
+
+function notFound() { return `<div class="card pad"><b>Nicht gefunden.</b> <a href="#uebersicht" style="color:var(--accent)">Zur Übersicht</a></div>`; }
+
+// ---------- Modal: Kunde / Fahrzeug ----------
+function modalHtml() {
+  if (!UI.modal) return "";
+  if (UI.modal.type === "customer") return `<div class="modal-bg" data-a="closeModal"><form class="modal fade" id="m-form" data-m="customer"><h2>Neuer Kunde</h2><div class="fgrid">
+    <div class="field full"><label>Kundenart</label><div class="seg"><button type="button" class="${UI.modal.ctype !== "business" ? "on" : ""}" data-a="ctype" data-v="private">Privatkunde</button><button type="button" class="${UI.modal.ctype === "business" ? "on" : ""}" data-a="ctype" data-v="business">Geschäftskunde</button></div></div>
+    <div class="field full"><label for="m-name">${UI.modal.ctype === "business" ? "Firmenname" : "Vor- und Nachname"} *</label><input class="inp" id="m-name" required></div>
+    <div class="field"><label for="m-phone">Telefon</label><input class="inp" id="m-phone" type="tel"></div>
+    <div class="field"><label for="m-email">E-Mail</label><input class="inp" id="m-email" type="email"></div>
+    <div class="field"><label for="m-street">Straße</label><input class="inp" id="m-street"></div>
+    <div class="field"><label for="m-city">PLZ und Ort</label><input class="inp" id="m-city"></div>
+    </div><div class="row" style="margin-top:18px"><button class="btn" type="submit">Kunde anlegen</button><button class="btn ghost" type="button" data-a="closeModal">Abbrechen</button></div></form></div>`;
+  return `<div class="modal-bg" data-a="closeModal"><form class="modal fade" id="m-form" data-m="vehicle"><h2>Neues Fahrzeug</h2><div class="fgrid">
+    <div class="field full"><label for="m-cust">Kunde</label><select class="inp" id="m-cust">${S.customers.map((x) => `<option value="${x.id}" ${x.id === UI.modal.cust ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></div>
+    <div class="field"><label for="m-make">Hersteller *</label><input class="inp" id="m-make" required placeholder="z. B. BMW"></div>
+    <div class="field"><label for="m-model">Modell *</label><input class="inp" id="m-model" required placeholder="z. B. X5"></div>
+    <div class="field"><label for="m-vc">Fahrzeugklasse</label><select class="inp" id="m-vc">${VC.map((x) => `<option value="${x}" ${x === "kompaktwagen" ? "selected" : ""}>${VCL[x]}</option>`).join("")}</select><span class="hint">Grundlage für die Preisberechnung</span></div>
+    <div class="field"><label for="m-plate">Kennzeichen</label><input class="inp" id="m-plate" placeholder="K-AB 1234"></div>
+    <div class="field"><label for="m-color">Farbe</label><input class="inp" id="m-color"></div>
+    <div class="field"><label for="m-year">Baujahr</label><input class="inp" id="m-year" inputmode="numeric"></div>
+    </div><div class="row" style="margin-top:18px"><button class="btn" type="submit">Fahrzeug anlegen</button><button class="btn ghost" type="button" data-a="closeModal">Abbrechen</button></div></form></div>`;
+}
+
+
+// ---------- Render ----------
+const app = document.getElementById("app");
+function isDark() { const t = document.documentElement.getAttribute("data-theme"); return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; }
+function render() {
+  const { view, id } = route();
+  const navKey = { auftrag: "auftraege", angebot: "angebote", kunde: "kunden", fahrzeug: "fahrzeuge", rechnung: "rechnungen", nachricht: "nachrichten", kalkulator: UI.calc?.target === "order" ? "auftraege" : "angebote" }[view] || view;
+  if (["portal", "buchen", "shop"].includes(view)) {
+    app.innerHTML = ({ portal: () => viewPortal(id || "c4"), buchen: viewBooking, shop: viewShop })[view]() + (UI.toast ? `<div class="toast">${esc(UI.toast)}</div>` : "");
+    return;
+  }
+  const unread = S.messages.filter((m) => m.dir === "in" && !m.read).length;
+  const views = { rechnungen: viewInvoices, rechnung: () => viewInvoice(id), nachrichten: viewInbox, nachricht: () => viewThread(id), gutscheine: viewVouchers, einstellungen: viewSettings, kalender: viewCalendar, auswertungen: viewAnalytics, uebersicht: viewDashboard, auftraege: viewOrders, auftrag: () => viewOrder(id), angebote: viewQuotes, angebot: () => viewQuote(id), kalkulator: viewCalc, kunden: viewCustomers, kunde: () => viewCustomer(id), fahrzeuge: viewVehicles, fahrzeug: () => viewVehicle(id), leistungen: viewServices };
+  const body = (views[view] || viewDashboard)();
+  const focusId = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
+  app.innerHTML = `
+  <aside class="side ${UI.menu ? "open" : ""}"><div class="head">${LOGO}</div><div class="company">Premium Detailing Köln</div>
+    <nav class="nav">${NAV.map(([k, l, i]) => `<a href="#${k}" class="${navKey === k ? "on" : ""}">${ic(i)}${l}${k === "nachrichten" && unread ? `<span class="badge b-teal" style="margin-left:auto">${unread}</span>` : ""}</a>`).join("")}
+      <p class="small muted" style="padding:14px 12px 4px;text-transform:uppercase;letter-spacing:.06em;font-size:10px">Kundensicht</p>${CUSTOMER_NAV.map(([k, l]) => `<a href="#${k}">↗ ${l}</a>`).join("")}</nav>
+    <div class="foot"><button data-a="theme">${ic(isDark() ? "sun" : "moon")}${isDark() ? "Helles Design" : "Dunkles Design"}</button><button data-a="reset">${ic("spark")}Demo zurücksetzen</button><span class="small muted" style="padding:4px 12px">markus@premium-detailing.de</span></div></aside>
+  ${UI.menu ? '<div class="scrim" data-a="menu"></div>' : ""}
+  <main>
+    <div class="mtop">${LOGO}<button data-a="menu" aria-label="Menü">${ic("menu").replace('class=""', 'width="22" height="22"')}</button></div>
+    <div class="demo-bar"><span><b>Demo mit Beispieldaten.</b> Alles ist klickbar; Änderungen bleiben nur in diesem Browser. <a href="#portal--c4" style="text-decoration:underline">Kundensicht ansehen</a></span><button data-a="reset">Zurücksetzen</button></div>
+    <div class="wrap fade">${body}</div>
+  </main>
+  <nav class="bnav">${[NAV[0], NAV[1], NAV[2], NAV[3]].map(([k, l, i]) => `<a href="#${k}" class="${navKey === k ? "on" : ""}">${ic(i)}${l}</a>`).join("")}</nav>
+  ${modalHtml()}${qrModal()}${xmlModal()}
+  ${UI.toast ? `<div class="toast">${esc(UI.toast)}</div>` : ""}`;
+  const cs = document.getElementById("calscroll"), tc = cs && cs.querySelector(".cal-col.today");
+  if (cs && tc && cs.scrollWidth > cs.clientWidth) cs.scrollLeft = tc.offsetLeft - 46;
+  if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (selStart != null) el.setSelectionRange(selStart, selStart); } catch {} } }
+}
+let toastT;
+function toast(msg) { UI.toast = msg; render(); clearTimeout(toastT); toastT = setTimeout(() => { UI.toast = null; render(); }, 2200); }
+function refreshSum() { const el = document.getElementById("sum"); if (el && UI.calc) el.innerHTML = sumPanel(UI.calc, calculate(UI.calc)); }
+
+// ---------- Aktionen ----------
+function setOrderStatus(o, s) { if (o.status === s) return; o.status = s; o.history.push({ s, at: new Date().toISOString() }); save(); toast(`Status: ${OSL[s]}`); }
+app.addEventListener("click", (ev) => {
+  const el = ev.target.closest("[data-a]"); if (!el) return;
+  const a = el.dataset.a;
+  if (a === "closeModal" && ev.target !== el) return; // Klick im Modal nicht schließen
+  if (["calcQuote", "calcOrder", "calcFor"].includes(a)) { UI.calc = newCalc({ target: a === "calcOrder" ? "order" : "quote", customer_id: el.dataset.cust, vehicle_id: el.dataset.veh }); UI.svcSearch = ""; UI.openCat = null; if (location.hash === "#kalkulator") render(); return; }
+  if (a !== "svc") ev.preventDefault();
+  const k = UI.calc;
+  switch (a) {
+    case "menu": UI.menu = !UI.menu; render(); break;
+    case "theme": document.documentElement.setAttribute("data-theme", isDark() ? "light" : "dark"); render(); break;
+    case "reset": S = seedExtra(seed()); UI.calc = null; save(); toast("Demo zurückgesetzt"); break;
+    case "calWeek": UI.calWeek = el.dataset.v === "0" ? 0 : UI.calWeek + Number(el.dataset.v); render(); break;
+    case "boardView": UI.boardView = el.dataset.v; render(); break;
+    case "orderNext": { const o = S.orders.find((x) => x.id === el.dataset.id); setOrderStatus(o, NEXT[o.status]); break; }
+    case "orderSet": { const o = S.orders.find((x) => x.id === el.dataset.id); setOrderStatus(o, document.getElementById("ostatus").value); break; }
+    case "toggleItem": { const o = S.orders.find((x) => x.id === el.dataset.id); const it = o.items.find((i) => i.id === el.dataset.item); it.done = !it.done; save(); render(); break; }
+    case "quoteStatus": { const q = S.quotes.find((x) => x.id === el.dataset.id); q.status = el.dataset.to; save(); toast(`Angebot: ${QSL[q.status]}`); break; }
+    case "convert": {
+      const q = S.quotes.find((x) => x.id === el.dataset.id), r = quoteCalc(q);
+      const o = { id: uid(), quote_id: q.id, number: `AU-2026-${String(++S.counters.order).padStart(4, "0")}`, customer_id: q.customer_id, vehicle_id: q.vehicle_id, status: "bestaetigt", title: r.lines.slice(0, 2).map((l) => l.title.replace("Paket: ", "")).join(", "), start: null, net: r.net, gross: r.gross, items: r.lines.map((l) => ({ id: uid(), title: l.title, net: l.totalNet, done: false })), history: [{ s: "bestaetigt", at: new Date().toISOString() }], notes: "" };
+      S.orders.push(o); save(); go("auftrag", o.id); break;
+    }
+    case "openCat": UI.openCat = UI.openCat === el.dataset.cat ? null : el.dataset.cat; render(); break;
+    case "soil": k.soiling = el.dataset.v; render(); break;
+    case "pkg": k.packageIds = k.packageIds.includes(el.dataset.id) ? k.packageIds.filter((x) => x !== el.dataset.id) : [...k.packageIds, el.dataset.id]; render(); break;
+    case "target": k.target = el.dataset.v; render(); break;
+    case "saveCalc": {
+      const r = calculate(k); if (!k.customer_id || !r.lines.length) return;
+      if (k.target === "order") {
+        const o = { id: uid(), number: `AU-2026-${String(++S.counters.order).padStart(4, "0")}`, customer_id: k.customer_id, vehicle_id: k.vehicle_id, status: "bestaetigt", title: r.lines.slice(0, 2).map((l) => l.title.replace("Paket: ", "")).join(", "), start: null, net: r.net, gross: r.gross, items: r.lines.map((l) => ({ id: uid(), title: l.title, net: l.totalNet, done: false })), history: [{ s: "bestaetigt", at: new Date().toISOString() }], notes: "" };
+        S.orders.push(o); UI.calc = null; save(); go("auftrag", o.id);
+      } else {
+        const q = { id: uid(), number: `AN-2026-${String(++S.counters.quote).padStart(4, "0")}`, customer_id: k.customer_id, vehicle_id: k.vehicle_id, status: "draft", created: new Date().toISOString(), calc: { vehicleClass: k.vehicleClass, soiling: k.soiling, serviceIds: [...k.serviceIds], packageIds: [...k.packageIds], effort: k.effort, extras: [], discount: k.discount, override: k.override }, intro: "" };
+        S.quotes.push(q); UI.calc = null; save(); go("angebot", q.id);
+      }
+      break;
+    }
+    case "toggleSvc": { const s = S.services.find((x) => x.id === el.dataset.id); s.active = !s.active; save(); render(); break; }
+    case "newCustomer": UI.modal = { type: "customer", ctype: "private" }; render(); setTimeout(() => document.getElementById("m-name")?.focus(), 0); break;
+    case "newVehicle": UI.modal = { type: "vehicle", cust: el.dataset.cust || (UI.calc?.customer_id) || S.customers[0].id }; render(); break;
+    case "ctype": { const name = document.getElementById("m-name")?.value; UI.modal.ctype = el.dataset.v; render(); document.getElementById("m-name").value = name || ""; break; }
+    case "closeModal": UI.modal = null; render(); break;
+  }
+});
+app.addEventListener("change", (ev) => {
+  const el = ev.target;
+  if (el.dataset.a === "svc") { const k = UI.calc, id = el.dataset.id; k.serviceIds = el.checked ? [...k.serviceIds, id] : k.serviceIds.filter((x) => x !== id); render(); return; }
+  if (el.dataset.k === "customer") { UI.calc.customer_id = el.value; UI.calc.vehicle_id = ""; render(); return; }
+  if (el.dataset.k === "vehicle") { const v = veh(el.value); UI.calc.vehicle_id = el.value; if (v) { UI.calc.vehicleClass = v.vc; UI.calc.customer_id = v.customer_id; } render(); return; }
+  if (el.dataset.k === "vc") { UI.calc.vehicleClass = el.value; render(); return; }
+  if (el.dataset.price) { const s = S.services.find((x) => x.id === el.dataset.price); const n = Number(String(el.value).replace(",", ".")); if (Number.isFinite(n) && n >= 0) { s.base_price = n; save(); toast(`${s.name}: ${eur(n)}`); } else { el.value = String(s.base_price).replace(".", ","); } }
+});
+app.addEventListener("input", (ev) => {
+  const el = ev.target, k = el.dataset.k;
+  if (k === "svcSearch") { UI.svcSearch = el.value; render(); }
+  else if (k === "custSearch") { UI.custSearch = el.value; render(); }
+  else if (k === "vehSearch") { UI.vehSearch = el.value; render(); }
+  else if (k === "effort") { UI.calc.effort = Math.max(0, parseInt(el.value) || 0); refreshSum(); }
+  else if (k === "discount") { UI.calc.discount = Math.min(100, Math.max(0, Number(el.value.replace(",", ".")) || 0)); refreshSum(); }
+  else if (k === "override") { UI.calc.override = el.value.trim() === "" ? null : Number(el.value.replace(",", ".")); refreshSum(); }
+  else if (el.id === "onotes") { const o = S.orders.find((x) => x.id === el.dataset.id); o.notes = el.value; save(); }
+});
+app.addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const f = ev.target, val = (id) => document.getElementById(id)?.value.trim() || "";
+  if (f.dataset.m === "customer") {
+    const name = val("m-name"); if (!name) return;
+    const x = { id: uid(), type: UI.modal.ctype, name, phone: val("m-phone"), email: val("m-email"), street: val("m-street"), city: val("m-city"), notes: "" };
+    S.customers.push(x); UI.modal = null; save();
+    if (UI.calc && location.hash === "#kalkulator") { UI.calc.customer_id = x.id; UI.calc.vehicle_id = ""; toast("Kunde angelegt"); } else go("kunde", x.id);
+  } else {
+    const make = val("m-make"), model = val("m-model"); if (!make || !model) return;
+    const v = { id: uid(), customer_id: val("m-cust"), make, model, plate: val("m-plate") || "–", vc: val("m-vc"), color: val("m-color"), year: parseInt(val("m-year")) || null, damages: "" };
+    S.vehicles.push(v); UI.modal = null; save();
+    if (UI.calc && location.hash === "#kalkulator") { UI.calc.customer_id = v.customer_id; UI.calc.vehicle_id = v.id; UI.calc.vehicleClass = v.vc; toast("Fahrzeug angelegt"); } else go("fahrzeug", v.id);
+  }
+});
+app.addEventListener("click", (ev) => {
+  const el = ev.target.closest("[data-a]"); if (!el) return;
+  const a = el.dataset.a, id = el.dataset.id;
+  const inv = () => S.invoices.find((x) => x.id === id);
+  switch (a) {
+    case "orderInvoice": { const o = S.orders.find((x) => x.id === id); go("rechnung", createInvoiceFromOrder(o).id); break; }
+    case "invFinalize": { const i = inv(); i.number = `RE-2026-${String(++S.counters.invoice).padStart(4, "0")}`; i.status = "finalized"; i.issue = new Date().toISOString(); i.due = addD(14); save(); toast(`Finalisiert: ${i.number}`); break; }
+    case "invPay": { const i = inv(); pay(i, invOpen(i), el.dataset.m, false); toast("Barzahlung erfasst – gebührenfrei"); break; }
+    case "invQr": UI.qr = id; render(); break;
+    case "closeQr": if (ev.target === el || el.tagName === "BUTTON") { UI.qr = null; render(); } break;
+    case "qrPaid": { const i = inv(); pay(i, invOpen(i), "Online (QR vor Ort)", true); UI.qr = null; toast("Bezahlt ✓ – 0,5 % Gebühr automatisch einbehalten"); break; }
+    case "invXml": UI.xml = id; render(); break;
+    case "closeXml": if (ev.target === el || el.tagName === "BUTTON") { UI.xml = null; render(); } break;
+    case "invCancel": { const i = inv(); i.status = "cancelled"; S.invoices.push({ ...i, id: uid(), kind: "cancellation", number: `RE-2026-${String(++S.counters.invoice).padStart(4, "0")}`, status: "finalized", issue: new Date().toISOString(), items: i.items.map((x) => ({ title: x.title, net: -x.net })), paid: 0, payments: [], reminders: 3 }); save(); toast("Stornorechnung erstellt"); break; }
+    case "invDun": { const i = inv(); i.reminders++; S.messages.push({ id: uid(), customer_id: i.customer_id, dir: "out", ch: "email", body: `${["", "Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][i.reminders]} zu Rechnung ${i.number} über ${eur(invOpen(i))} …`, at: new Date().toISOString(), read: true }); save(); toast("Per E-Mail gesendet"); break; }
+    case "invVoucher": { const i = inv(); const c = (document.getElementById("vcode").value || "").trim().toUpperCase(); const v = S.vouchers.find((x) => x.code === c); if (!v || !v.balance) { toast("Gutschein ungültig oder eingelöst"); break; } const amt = Math.min(v.balance, invOpen(i)); v.balance = r2(v.balance - amt); pay(i, amt, `Gutschein ${v.code}`, false); toast(`${eur(amt)} angerechnet`); break; }
+    case "sendMsg": { const body = document.getElementById("msgbody").value.trim(); if (!body) return; const ch = document.getElementById("msgch").value; const c = cust(id);
+      S.messages.push({ id: uid(), customer_id: id, dir: "out", ch, body, at: new Date().toISOString(), read: true }); save();
+      if (ch === "whatsapp") { const p = (c.phone || "").replace(/[^\d]/g, "").replace(/^0/, "49"); window.open(`https://wa.me/${p}?text=${encodeURIComponent(body)}`, "_blank", "noopener"); toast("WhatsApp geöffnet"); } else toast(ch === "portal" ? "Im Kundenportal sichtbar" : "E-Mail gesendet"); break; }
+    case "sellVoucher": { const amt = Number((document.getElementById("vamt").value || "").replace(",", ".")); if (!(amt >= 5)) { toast("Bitte Betrag eingeben"); break; } const c = code8(); S.vouchers.push({ code: c, initial: amt, balance: amt, buyer: "", recipient: document.getElementById("vrec").value, source: "vor Ort", at: new Date().toISOString() }); save(); toast(`Gutschein angelegt: ${c}`); break; }
+    case "portalPay": { const i = inv(); pay(i, invOpen(i), "Online (Stripe)", true); toast("Danke! Zahlung erfolgreich (Demo)"); break; }
+    case "portalSend": { const b = document.getElementById("pmsg").value.trim(); if (!b) return; S.messages.push({ id: uid(), customer_id: id, dir: "in", ch: "portal", body: b, at: new Date().toISOString(), read: false }); save(); toast("Nachricht gesendet"); break; }
+    case "careSub": { const p = S.carePlans.find((x) => x.id === id); p.subs++; S.fees.push({ gross: p.price, fee: r2(p.price * 0.005), label: p.name }); save(); toast(`„${p.name}“ abonniert (Demo)`); break; }
+    case "shopAmt": UI.shopAmt = Number(el.dataset.v); render(); break;
+  }
+});
+app.addEventListener("change", (ev) => {
+  if (ev.target.id === "tplsel" && ev.target.value) { const c = cust(ev.target.dataset.cust); document.getElementById("msgbody").value = TPL[ev.target.value](c, ev.target.dataset.veh); ev.target.value = ""; }
+});
+app.addEventListener("submit", (ev) => {
+  const f = ev.target; if (!f.dataset.f) return;
+  ev.preventDefault();
+  const val = (i) => (document.getElementById(i)?.value || "").trim();
+  if (f.dataset.f === "booking") {
+    if (!val("b-name") || !val("b-email")) { toast("Bitte Name und E-Mail angeben"); return; }
+    const c = { id: uid(), type: "private", name: val("b-name"), email: val("b-email"), phone: val("b-phone"), street: "", city: "", notes: "Über die Online-Anfrage angelegt." }; c.portal = "p" + c.id; S.customers.push(c);
+    let vid = null; if (val("b-make")) { vid = uid(); S.vehicles.push({ id: vid, customer_id: c.id, make: val("b-make"), model: val("b-model") || "–", plate: "–", vc: "kompaktwagen", color: "", year: null, damages: "" }); }
+    const o = { id: uid(), number: "ANF-" + uid().slice(0, 6).toUpperCase(), customer_id: c.id, vehicle_id: vid, status: "anfrage", title: val("b-pkg") ? "Anfrage: " + val("b-pkg") : "Online-Anfrage", start: null, net: 0, gross: 0, items: [], history: [{ s: "anfrage", at: new Date().toISOString() }], notes: "" };
+    S.orders.push(o);
+    S.messages.push({ id: uid(), customer_id: c.id, dir: "in", ch: "portal", body: `Neue Online-Anfrage${val("b-pkg") ? " für „" + val("b-pkg") + "“" : ""}\nWunschtermin: ${val("b-wish") || "–"}\nAnzahlung ${S.settings.deposit} € online erhalten.`, at: new Date().toISOString(), read: false });
+    S.fees.push({ gross: S.settings.deposit, fee: r2(S.settings.deposit * 0.005), label: "Anzahlung" });
+    save(); toast("Anfrage + Anzahlung eingegangen (Demo)"); go("portal", c.id);
+  }
+  if (f.dataset.f === "shop") {
+    if (!val("s-name") || !val("s-email")) { toast("Bitte Name und E-Mail angeben"); return; }
+    const amt = UI.shopAmt || 50, c = code8();
+    S.vouchers.push({ code: c, initial: amt, balance: amt, buyer: val("s-name"), recipient: val("s-rec"), source: "online", at: new Date().toISOString() });
+    S.fees.push({ gross: amt, fee: r2(amt * 0.005), label: "Gutschein online" }); save();
+    go("gutscheine"); setTimeout(() => toast(`Bezahlt (Demo) – Gutscheincode: ${c}`), 50);
+  }
+});
+
+window.addEventListener("hashchange", () => { UI.menu = false; if (route().view !== "kalkulator") {} render(); window.scrollTo(0, 0); });
+render();
+</script>
