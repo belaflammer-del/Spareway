@@ -240,6 +240,7 @@ textarea.inp { height: auto; min-height: 72px; padding: 8px 12px; }
 </style>
 
 <div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 
 <script>
 const CATALOG = __CATALOG__;
@@ -357,10 +358,245 @@ function seed() {
   return { services: CATALOG.services.map((s) => ({ ...s, active: true })), packages: CATALOG.packages, customers, vehicles, orders, quotes, counters: { quote: 2, order: 9 } };
 }
 
+// ======================================================================
+// Erweiterung: Rechnungen, E-Rechnung, QR-Zahlung, Nachrichten, Gutscheine,
+// Pflege-Abos, Gebühren, Empfehlungen – und die Kundensicht (Portal, Buchung, Gutschein-Shop)
+// ======================================================================
+const FEE_BPS = 50; // 0,5 %
+const r2 = (n) => Math.round(n * 100) / 100;
+const invNet = (i) => r2(i.items.reduce((a, x) => a + x.net, 0));
+const invGross = (i) => r2(invNet(i) * 1.19);
+const invOpen = (i) => r2(invGross(i) - i.paid);
+const isoDay = (d) => new Date(d).toISOString().slice(0, 10);
+const addD = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString(); };
+const ISL = { draft: "Entwurf", finalized: "Offen", paid: "Bezahlt", cancelled: "Storniert" };
+const IST = { draft: "", finalized: "b-amber", paid: "b-green", cancelled: "b-red" };
+const code8 = () => (Math.random().toString(16).slice(2, 6) + "-" + Math.random().toString(16).slice(2, 6)).toUpperCase();
+
+function seedExtra(S) {
+  S.invoices = [
+    { id: "i1", number: "RE-2026-0041", kind: "invoice", customer_id: "c3", order_id: "o3", status: "paid", issue: addD(-20), due: addD(-6), items: [{ title: "Paket: Komplettaufbereitung", net: 630 }], paid: 749.7, payments: [{ amount: 749.7, method: "Online (Stripe)", at: addD(-15) }], reminders: 0 },
+    { id: "i2", number: "RE-2026-0042", kind: "invoice", customer_id: "c5", order_id: null, status: "finalized", issue: addD(-25), due: addD(-11), items: [{ title: "Paket: Leasingrückgabe", net: 330 }, { title: "Anfahrt (12 km, Hin- und Rückweg)", net: 14.4 }], paid: 0, payments: [], reminders: 1 },
+    { id: "i3", number: "RE-2026-0043", kind: "invoice", customer_id: "c4", order_id: "o4", status: "finalized", issue: addD(-2), due: addD(12), items: [{ title: "Tierhaarentfernung", net: 63.7 }, { title: "Sprühextraktion", net: 115.7 }], paid: 50, payments: [{ amount: 50, method: "Anzahlung (online)", at: addD(-9) }], reminders: 0 },
+  ];
+  S.messages = [
+    { id: uid(), customer_id: "c4", dir: "in", ch: "portal", body: "Hallo, kann ich den Golf morgen schon um 16 Uhr abholen?", at: addD(-0.1), read: false },
+    { id: uid(), customer_id: "c2", dir: "in", ch: "portal", body: "Neue Online-Anfrage für „Keramik Premium“\nFahrzeug: Porsche 911\nWunschtermin: nächste Woche", at: addD(-4), read: true },
+    { id: uid(), customer_id: "c2", dir: "out", ch: "portal", body: "Hallo Herr Becker, vielen Dank! Das Angebot finden Sie in Ihrem Kundenbereich.", at: addD(-3.9), read: true },
+    { id: uid(), customer_id: "c5", dir: "out", ch: "email", body: "Hallo Herr Hoffmann, sicher ist es Ihnen entgangen: Die Rechnung RE-2026-0042 über 409,54 € ist noch offen …", at: addD(-8), read: true },
+  ];
+  S.vouchers = [
+    { code: "7F2A-91C4", initial: 100, balance: 100, buyer: "Sandra Klein", recipient: "Thomas", source: "online", at: addD(-12) },
+    { code: "B3E0-44D1", initial: 50, balance: 20, buyer: "", recipient: "", source: "vor Ort", at: addD(-40) },
+  ];
+  S.carePlans = [
+    { id: "cp1", name: "Pflege-Abo Basic", desc: "• 1× im Monat Handwäsche\n• Felgen & Scheiben", price: 39, active: true, subs: 11 },
+    { id: "cp2", name: "Pflege-Abo Premium", desc: "• 2× im Monat Handwäsche\n• alle 3 Monate Innenraum\n• jährliche Versiegelung", price: 89, active: true, subs: 6 },
+  ];
+  S.fees = [{ gross: 749.7, fee: 3.75, label: "Rechnung RE-2026-0041" }, { gross: 50, fee: 0.25, label: "Anzahlung" }, { gross: 100, fee: 0.5, label: "Gutschein online" }, { gross: 17 * 55, fee: r2(17 * 55 * 0.005), label: "Pflege-Abos" }];
+  S.counters.invoice = 43;
+  S.settings = { stripe: true, deposit: 50, travel: 0.6, review: "https://g.page/r/premium-detailing-koeln/review", vouchers: true, referrals: 2, rewarded: 1 };
+  S.customers.forEach((c) => (c.portal = "p" + c.id));
+  return S;
+}
+
+// ---------- Rechnungen ----------
+function invDoc(i) {
+  const cu = cust(i.customer_id), net = invNet(i), tax = r2(net * 0.19);
+  return `<div class="doc-wrap"><article class="doc">
+    ${i.status === "draft" ? '<p style="float:right;border:2px solid #f59e0b;color:#d97706;padding:2px 10px;border-radius:4px;font-weight:700;letter-spacing:.1em;transform:rotate(6deg)">ENTWURF</p>' : ""}
+    <div class="doc-head"><b style="font-size:18px">Premium Detailing Köln</b><div class="dm" style="text-align:right;font-size:12px">Industriestraße 42<br>50735 Köln<br>0221 123456-0</div></div>
+    <div class="doc-head" style="margin-top:24px"><div><b>${esc(cu.name)}</b><br>${esc(cu.street)}<br>${esc(cu.city)}</div>
+      <div class="doc-meta"><span class="dm">Rechnungsnr.</span><span>${i.number || "wird vergeben"}</span><span class="dm">Datum</span><span>${i.issue ? fmtDate(i.issue) : "–"}</span><span class="dm">Leistungsdatum</span><span>${fmtDate(i.issue || new Date())}</span>${i.due ? `<span class="dm">Fällig am</span><span>${fmtDate(i.due)}</span>` : ""}</div></div>
+    <h2 style="margin:24px 0 8px;font-size:20px">${i.kind === "cancellation" ? "Stornorechnung" : "Rechnung"} ${i.number || ""}</h2>
+    <table><thead><tr><th>Pos.</th><th>Leistung</th><th class="r">Gesamt</th></tr></thead><tbody>${i.items.map((x, n) => `<tr><td class="dm">${n + 1}</td><td>${esc(x.title)}</td><td class="r tnum">${eur(x.net)}</td></tr>`).join("")}</tbody></table>
+    <div style="margin-left:auto;max-width:260px;margin-top:14px;display:flex;flex-direction:column;gap:4px">
+      <div class="kv"><span>Summe netto</span><span class="tnum">${eur(net)}</span></div><div class="kv"><span>USt. 19 %</span><span class="tnum">${eur(tax)}</span></div>
+      <div class="kv" style="font-weight:600;border-top:1px solid var(--doc-line);padding-top:6px"><span>Rechnungsbetrag</span><span class="tnum">${eur(net + tax)}</span></div></div>
+    <p style="margin-top:20px">Zahlbar innerhalb von 14 Tagen ohne Abzug.</p>
+    <p class="dm" style="font-size:10px;border-top:1px solid var(--doc-line);padding-top:8px;margin-top:20px">Steuernummer 217/5123/4567 · Commerzbank Köln · IBAN DE89 3704 0044 0532 0130 00</p>
+  </article></div>`;
+}
+function xrechnung(i) {
+  const cu = cust(i.customer_id), net = invNet(i), tax = r2(net * 0.19);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<ubl:Invoice xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" …>
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0</cbc:CustomizationID>
+  <cbc:ID>${i.number}</cbc:ID>
+  <cbc:IssueDate>${isoDay(i.issue)}</cbc:IssueDate>
+  <cbc:DueDate>${isoDay(i.due)}</cbc:DueDate>
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cac:AccountingSupplierParty> … Premium Detailing Köln … </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty> … ${esc(cu.name)} … </cac:AccountingCustomerParty>
+  <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">${tax.toFixed(2)}</cbc:TaxAmount> … </cac:TaxTotal>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID="EUR">${net.toFixed(2)}</cbc:LineExtensionAmount>
+    <cbc:PayableAmount currencyID="EUR">${(net + tax).toFixed(2)}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+  ${i.items.map((x, n) => `<cac:InvoiceLine><cbc:ID>${n + 1}</cbc:ID> … <cbc:Name>${esc(x.title)}</cbc:Name> …</cac:InvoiceLine>`).join("\n  ")}
+</ubl:Invoice>`;
+}
+function viewInvoices() {
+  const today = isoDay(new Date());
+  const open = S.invoices.filter((i) => i.status === "finalized");
+  const over = open.filter((i) => isoDay(i.due) < today);
+  return `<div class="ph"><div><h1>Rechnungen</h1><p>Aus Aufträgen erstellen, finalisieren, als E-Rechnung exportieren.</p></div></div>
+  <div class="grid4" style="margin-bottom:20px"><div class="card stat"><p>Offene Rechnungen</p><strong>${eur(open.reduce((a, i) => a + invOpen(i), 0))}</strong><span class="small muted">${open.length} Rechnung(en)</span></div>
+    <div class="card stat"><p>Überfällig</p><strong>${over.length}</strong><span class="small muted">werden automatisch gemahnt</span></div>
+    <div class="card stat"><p>Online bezahlt (Monat)</p><strong>${eur(S.fees.reduce((a, f) => a + f.gross, 0))}</strong></div>
+    <div class="card stat"><p>Export</p><strong style="font-size:15px;margin-top:8px">DATEV · Excel</strong><span class="small muted">für den Steuerberater</span></div></div>
+  <div class="card list">${[...S.invoices].reverse().map((i) => { const late = i.status === "finalized" && isoDay(i.due) < today; return `<a href="#rechnung--${i.id}"><div class="t"><b>${esc(cust(i.customer_id).name)}</b><span>${i.kind === "cancellation" ? "Storno " : ""}${i.number || "Entwurf"} · ${i.issue ? fmtDate(i.issue) : "–"}${i.status === "finalized" ? " · fällig " + fmtDate(i.due) : ""}</span></div><div class="row"><span class="tnum">${eur(invGross(i))}</span>${badge(late ? "Überfällig" : ISL[i.status], late ? "b-red" : IST[i.status])}</div></a>`; }).join("")}</div>`;
+}
+function viewInvoice(id) {
+  const i = S.invoices.find((x) => x.id === id); if (!i) return notFound();
+  const st = i.status;
+  const side = st === "draft" ? `<div class="card pad" style="display:flex;flex-direction:column;gap:10px"><b>Entwurf</b><span class="muted small">Beim Finalisieren wird die fortlaufende Nummer vergeben und die Rechnung unveränderbar festgeschrieben.</span><button class="btn" data-a="invFinalize" data-id="${i.id}">Rechnung finalisieren</button></div>`
+    : `<div class="card"><div class="ch"><div><h2>Zahlungen</h2><p>${st === "paid" ? "Vollständig bezahlt" : st === "cancelled" ? "Storniert" : "Offen: " + eur(invOpen(i))}</p></div></div>
+      ${i.payments.map((p) => `<div class="kv small" style="padding:8px 20px;border-top:1px solid var(--border)"><span>${fmtDate(p.at)} · ${esc(p.method)}</span><span class="tnum">${eur(p.amount)}</span></div>`).join("")}
+      ${i.reminders ? `<p class="small muted" style="padding:8px 20px;border-top:1px solid var(--border)">${["", "Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][i.reminders]} wurde automatisch per E-Mail versendet.</p>` : ""}
+      ${st === "finalized" ? `<div class="pad" style="border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px">
+        <button class="btn block" data-a="invQr" data-id="${i.id}">▦ Vor Ort bezahlen (QR-Code)</button>
+        <button class="btn sec block" data-a="invPay" data-id="${i.id}" data-m="Bar">Barzahlung erfassen</button>
+        <div class="row" style="flex-wrap:nowrap"><input class="inp" id="vcode" placeholder="Gutscheincode XXXX-XXXX" style="text-transform:uppercase"><button class="btn sec" data-a="invVoucher" data-id="${i.id}">Einlösen</button></div>
+        ${i.reminders < 3 ? `<button class="btn ghost sm" data-a="invDun" data-id="${i.id}">${["Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][i.reminders]} jetzt senden</button>` : ""}
+      </div>` : ""}</div>`;
+  return `<div class="ph"><div><h1>${i.kind === "cancellation" ? "Stornorechnung" : "Rechnung"} ${i.number || "(Entwurf)"}</h1><p>${esc(cust(i.customer_id).name)} · ${eur(invGross(i))}</p></div>${badge(ISL[st], IST[st])}</div>
+  ${st !== "draft" ? `<div class="card pad row" style="margin-bottom:16px"><button class="btn" data-a="invXml" data-id="${i.id}">⬇ E-Rechnung (XRechnung)</button>${st !== "cancelled" && i.kind === "invoice" ? `<button class="btn ghost" data-a="invCancel" data-id="${i.id}">Stornieren</button>` : ""}<span class="small muted">Finalisiert · unveränderbar · Prüfsumme 7ece9c5d…</span></div>` : ""}
+  <div class="side-layout"><div style="min-width:0">${invDoc(i)}</div>${side}</div>`;
+}
+function createInvoiceFromOrder(o) {
+  let inv = S.invoices.find((x) => x.order_id === o.id && x.status !== "cancelled");
+  if (inv) return inv;
+  inv = { id: uid(), number: null, kind: "invoice", customer_id: o.customer_id, order_id: o.id, status: "draft", issue: null, due: null, items: o.items.map((x) => ({ title: x.title, net: x.net })), paid: 0, payments: [], reminders: 0 };
+  if (!inv.items.length) inv.items = [{ title: o.title || "Fahrzeugaufbereitung", net: o.net }];
+  S.invoices.push(inv); save(); return inv;
+}
+function pay(i, amount, method, online) {
+  i.paid = r2(i.paid + amount); i.payments.push({ amount, method, at: new Date().toISOString() });
+  if (invOpen(i) <= 0.001) i.status = "paid";
+  if (online) S.fees.push({ gross: amount, fee: r2(amount * FEE_BPS / 10000), label: `Rechnung ${i.number}` });
+  save();
+}
+
+// ---------- Nachrichten ----------
+function viewInbox() {
+  const threads = new Map();
+  for (const m of [...S.messages].sort((a, b) => b.at.localeCompare(a.at))) { const t = threads.get(m.customer_id) || { last: m, unread: 0 }; if (m.dir === "in" && !m.read) t.unread++; threads.set(m.customer_id, t); }
+  return `<div class="ph"><div><h1>Nachrichten</h1><p>Anfragen und Unterhaltungen – Kunden schreiben über ihr Portal, du antwortest hier, per E-Mail oder WhatsApp.</p></div></div>
+  <div class="card list">${[...threads.entries()].map(([cid, t]) => `<a href="#nachricht--${cid}"><div class="t"><b style="${t.unread ? "font-weight:700" : ""}">${esc(cust(cid).name)}</b><span>${t.last.dir === "out" ? "Du: " : ""}${esc(t.last.body.split("\n")[0])}</span></div><div style="text-align:right"><span class="small muted">${fmtDate(t.last.at, { dateStyle: "short", timeStyle: "short" })}</span>${t.unread ? `<br><span class="badge b-teal">${t.unread} neu</span>` : ""}</div></a>`).join("")}</div>`;
+}
+const TPL = {
+  termin: (c, v) => `Hallo ${c.name},\nwir bestätigen Ihren Termin für Ihren ${v}. Bitte bringen Sie den Schlüssel mit.\n\nViele Grüße\nPremium Detailing Köln`,
+  fertig: (c, v) => `Hallo ${c.name},\nIhr ${v} ist fertig und kann abgeholt werden. Vorher/Nachher-Fotos finden Sie in Ihrem Kundenbereich.\n\nViele Grüße\nPremium Detailing Köln`,
+  pflege: (c) => `Hallo ${c.name},\ndamit die Versiegelung lange hält:\n• 7 Tage keine Waschanlage\n• Vogelkot zeitnah entfernen\n• Handwäsche mit pH-neutralem Shampoo\n\nViele Grüße\nPremium Detailing Köln`,
+  bewertung: (c, v) => `Hallo ${c.name},\nvielen Dank für Ihren Auftrag! Wenn Sie zufrieden waren, freuen wir uns sehr über eine Google-Bewertung:\n${S.settings.review}\n\nViele Grüße\nPremium Detailing Köln`,
+};
+function viewThread(cid) {
+  const c = cust(cid); if (!c) return notFound();
+  S.messages.filter((m) => m.customer_id === cid).forEach((m) => (m.read = true)); save();
+  const v = vname(S.vehicles.find((x) => x.customer_id === cid));
+  return `<div class="ph"><div><h1>${esc(c.name)}</h1><p>${esc([c.phone, c.email].filter(Boolean).join(" · "))}</p></div><a class="btn sec sm" href="#portal--${cid}">Kundenportal ansehen</a></div>
+  <div class="card"><div class="pad" style="display:flex;flex-direction:column;gap:10px;max-height:50vh;overflow-y:auto">
+    ${S.messages.filter((m) => m.customer_id === cid).sort((a, b) => a.at.localeCompare(b.at)).map((m) => `<div style="display:flex;justify-content:${m.dir === "out" ? "flex-end" : "flex-start"}"><div style="max-width:85%;border-radius:16px;padding:10px 14px;font-size:13px;white-space:pre-line;${m.dir === "out" ? "background:var(--fg);color:var(--bg)" : "background:var(--muted)"}">${esc(m.body)}<div style="font-size:11px;opacity:.6;margin-top:4px">${fmtDate(m.at, { dateStyle: "short", timeStyle: "short" })} · ${{ portal: "Portal", email: "E-Mail", whatsapp: "WhatsApp" }[m.ch] || m.ch}</div></div></div>`).join("") || '<p class="muted small" style="text-align:center">Noch keine Nachrichten.</p>'}
+  </div>
+  <div class="pad" style="border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px">
+    <select class="inp" id="tplsel" data-cust="${cid}" data-veh="${esc(v)}" style="width:auto"><option value="">Vorlage einfügen …</option><option value="termin">Terminbestätigung</option><option value="fertig">Fahrzeug abholbereit</option><option value="pflege">Pflegehinweise nach Versiegelung</option><option value="bewertung">Bitte um Bewertung</option></select>
+    <textarea class="inp" id="msgbody" placeholder="Nachricht an den Kunden …"></textarea>
+    <div class="row"><select class="inp" id="msgch" style="width:auto"><option value="whatsapp">Per WhatsApp</option><option value="portal">Im Kundenportal</option><option value="email">Per E-Mail</option></select><button class="btn" data-a="sendMsg" data-id="${cid}">Senden</button></div>
+  </div></div>`;
+}
+
+// ---------- Gutscheine ----------
+function viewVouchers() {
+  return `<div class="ph"><div><h1>Gutscheine</h1><p>Online und vor Ort verkaufen, bei der Rechnung einlösen.</p></div><a class="btn sec" href="#shop">Gutschein-Shop ansehen</a></div>
+  <div class="grid4" style="margin-bottom:20px"><div class="card stat"><p>Verkauft</p><strong>${eur(S.vouchers.reduce((a, v) => a + v.initial, 0))}</strong></div><div class="card stat"><p>Offenes Guthaben</p><strong>${eur(S.vouchers.reduce((a, v) => a + v.balance, 0))}</strong></div></div>
+  <div class="card pad" style="margin-bottom:20px"><b>Gutschein vor Ort verkaufen</b><div class="row" style="margin-top:10px"><input class="inp" id="vamt" placeholder="Betrag €" inputmode="decimal" style="width:120px"><input class="inp" id="vrec" placeholder="Für (optional)" style="flex:1;min-width:140px"><button class="btn" data-a="sellVoucher">Gutschein anlegen</button></div></div>
+  <div class="card list">${[...S.vouchers].reverse().map((v) => `<div><div class="t"><b style="font-family:ui-monospace,monospace">${v.code}</b><span>${[v.recipient && "für " + v.recipient, v.buyer && "von " + v.buyer, fmtDate(v.at), v.source].filter(Boolean).join(" · ")}</span></div><div class="row"><span class="tnum">${eur(v.balance)} / ${eur(v.initial)}</span>${badge(v.balance ? "Aktiv" : "Eingelöst", v.balance ? "b-green" : "")}</div></div>`).join("")}</div>`;
+}
+
+// ---------- Einstellungen (Auszug) ----------
+function viewSettings() {
+  const st = S.settings, fees = S.fees.reduce((a, f) => a + f.fee, 0), gross = S.fees.reduce((a, f) => a + f.gross, 0);
+  return `<div class="ph"><div><h1>Einstellungen</h1><p>Auszug: Zahlungen, Umsatzwachstum und Empfehlungen.</p></div></div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+  <div class="card"><div class="ch"><div><h2>Online-Zahlungen & Gebühren</h2><p>Kunden zahlen im Portal, per QR-Code oder bei der Buchung – das Geld geht direkt auf dein Konto.</p></div>${badge("Stripe verbunden", "b-green")}</div>
+    <div class="pad"><div style="background:var(--muted);border-radius:12px;padding:14px"><b>So rechnen wir ab</b><p class="muted small" style="margin:4px 0 0">Grundgebühr 29 € / Monat + 0,5 % der online bezahlten Beträge. Bar und Überweisung sind gebührenfrei.</p><p class="tnum" style="margin:8px 0 0">Diesen Monat: ${eur(gross)} online bezahlt · Gebühren <b>${eur(fees)}</b></p></div></div></div>
+  <div class="card"><div class="ch"><div><h2>Mehr Kunden & Umsatz</h2></div></div><div class="pad fgrid">
+    <div class="field full"><label>Google-Bewertungslink</label><input class="inp" value="${esc(st.review)}" readonly><span class="hint">1–3 Tage nach Abschluss wird automatisch um eine Bewertung gebeten.</span></div>
+    <div class="field"><label>Anzahlung bei Online-Anfrage</label><input class="inp" value="${st.deposit},00 €" readonly></div>
+    <div class="field"><label>Anfahrt mobiler Service</label><input class="inp" value="${String(st.travel).replace(".", ",")} € / km" readonly></div>
+  </div></div>
+  <div class="card"><div class="ch"><div><h2>Pflege-Abos für deine Kunden</h2><p>Monatliche, wiederkehrende Einnahmen.</p></div><a class="btn sec sm" href="#buchen">Auf Buchungsseite ansehen</a></div><div class="list">${S.carePlans.map((p) => `<div><div class="t"><b>${esc(p.name)}</b><span>${eur(p.price)} / Monat</span></div>${badge(p.subs + " aktive Abos", "b-teal")}</div>`).join("")}</div></div>
+  <div class="card"><div class="ch"><div><h2>Empfehlen & sparen</h2><p>Für jeden geworbenen Betrieb 1 Monat gratis. Der neue Betrieb testet 30 Tage kostenlos.</p></div></div><div class="pad row"><code style="background:var(--muted);padding:6px 10px;border-radius:8px;font-size:12px;word-break:break-all">detailflow.de/registrieren?ref=A7K2Q9XM</code><span class="small muted">Geworben: ${st.referrals} · belohnt: ${st.rewarded}</span></div></div>
+  <div class="card pad"><b>Weitere Einstellungen in der echten App</b><p class="muted small" style="margin:4px 0 0">Firmendaten, Öffnungszeiten, Team & Rollen, Boxen, Checklisten-Vorlagen, Mahnfristen, DATEV-Konten, Buchungsseite, Tarif.</p></div>
+  </div>`;
+}
+
+// ---------- Kundensicht ----------
+const STEPS = [["Angefragt", ["anfrage", "angebot_erstellt"]], ["Bestätigt", ["bestaetigt", "geplant"]], ["In Arbeit", ["fahrzeug_angenommen", "in_bearbeitung", "qualitaetskontrolle"]], ["Abholbereit", ["fertig", "abholbereit"]], ["Fertig", ["abgeschlossen"]]];
+function customerShell(title, sub, body) {
+  return `<div style="min-height:100dvh;background:var(--muted)"><div class="demo-bar" style="justify-content:space-between"><span><b>Kundensicht</b> – so sieht es der Kunde (ohne App, per Link).</span><a href="#uebersicht" style="text-decoration:underline">← Zurück zur Betriebsansicht</a></div>
+  <div style="max-width:620px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:18px" class="fade">
+  <header><p class="muted small" style="margin:0">Premium Detailing Köln</p><h1 style="margin:2px 0 0;font-size:24px;letter-spacing:-.02em">${title}</h1>${sub ? `<p class="muted" style="margin:4px 0 0">${sub}</p>` : ""}</header>${body}</div></div>`;
+}
+function viewPortal(cid) {
+  const c = cust(cid) || S.customers[3];
+  const orders = S.orders.filter((o) => o.customer_id === c.id && o.status !== "storniert");
+  const invs = S.invoices.filter((i) => i.customer_id === c.id && i.status !== "draft");
+  const ocard = (o) => { const step = STEPS.findIndex(([, s]) => s.includes(o.status)); return `<div class="card pad"><div class="kv"><div><b>${esc(vname(veh(o.vehicle_id)))}</b><div class="small muted">${esc(o.title)}</div></div>${obadge(o.status)}</div>${o.start ? `<p class="small" style="margin:10px 0 0">📅 Termin: ${fmtDate(o.start, { dateStyle: "medium", timeStyle: "short" })} Uhr</p>` : ""}
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:12px">${STEPS.map(([l], n) => `<div style="text-align:center"><div style="height:6px;border-radius:9px;background:${n <= step ? "var(--accent)" : "var(--border)"}"></div><span style="font-size:10px;${n === step ? "font-weight:600" : "color:var(--muted-fg)"}">${l}</span></div>`).join("")}</div></div>`; };
+  return customerShell(`Hallo ${esc(c.name)}`, "Hier sehen Sie den Stand Ihrer Aufträge und Rechnungen.", `
+    ${orders.map(ocard).join("")}
+    ${invs.length ? `<div class="card"><div class="ch"><h2>Rechnungen</h2></div><div class="list">${invs.map((i) => `<div><div class="t"><b style="white-space:normal">${i.number}</b><span>${fmtDate(i.issue)}</span></div><div class="row"><span class="tnum">${eur(invGross(i))}</span>${i.status === "finalized" ? `<button class="btn sm" data-a="portalPay" data-id="${i.id}">Jetzt bezahlen</button>` : badge(ISL[i.status], IST[i.status])}</div></div>`).join("")}</div></div>` : ""}
+    <div class="card"><div class="ch"><h2>Nachrichten</h2></div><div class="pad" style="display:flex;flex-direction:column;gap:8px">
+      ${S.messages.filter((m) => m.customer_id === c.id && m.ch !== "notiz").sort((a, b) => a.at.localeCompare(b.at)).map((m) => `<div style="display:flex;justify-content:${m.dir === "in" ? "flex-end" : "flex-start"}"><div style="max-width:85%;border-radius:16px;padding:9px 13px;font-size:13px;white-space:pre-line;${m.dir === "in" ? "background:var(--fg);color:var(--bg)" : "background:var(--card);border:1px solid var(--border)"}">${esc(m.body)}</div></div>`).join("")}
+      <textarea class="inp" id="pmsg" placeholder="Ihre Nachricht …"></textarea><button class="btn" data-a="portalSend" data-id="${c.id}">Senden</button>
+      <span class="small muted">Tipp: Nach dem Senden in der Betriebsansicht unter „Nachrichten“ nachsehen.</span></div></div>`);
+}
+function viewBooking() {
+  return customerShell("Termin anfragen", "Fahrzeugaufbereitung in Köln – wir melden uns mit Angebot und Terminvorschlag.", `
+    <form class="card pad" data-f="booking" style="display:flex;flex-direction:column;gap:12px">
+      <div class="fgrid"><div class="field"><label>Name *</label><input class="inp" id="b-name" required></div><div class="field"><label>Telefon</label><input class="inp" id="b-phone" type="tel"></div>
+      <div class="field full"><label>E-Mail *</label><input class="inp" id="b-email" type="email" required></div>
+      <div class="field"><label>Hersteller</label><input class="inp" id="b-make" placeholder="z. B. BMW"></div><div class="field"><label>Modell</label><input class="inp" id="b-model" placeholder="z. B. X5"></div>
+      <div class="field full"><label>Gewünschte Leistung</label><select class="inp" id="b-pkg"><option value="">Beratung</option>${S.packages.map((p) => `<option>${esc(p.name)}</option>`).join("")}</select></div>
+      <div class="field full"><label>Wunschtermin</label><input class="inp" id="b-wish" placeholder="z. B. nächste Woche vormittags"></div></div>
+      <p class="small muted" style="margin:0">Zur Reservierung bitten wir um eine Anzahlung von <b>${S.settings.deposit},00 €</b>. Sie wird mit der Rechnung verrechnet.</p>
+      <button class="btn block">Anfrage senden & ${S.settings.deposit} € anzahlen</button></form>
+    <div class="card pad"><b>Pflege-Abos</b><p class="small muted" style="margin:2px 0 10px">Regelmäßig glänzend – monatlich kündbar.</p>${S.carePlans.map((p) => `<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:8px"><div class="kv"><b>${esc(p.name)}</b><b class="tnum">${eur(p.price)}<span class="small muted" style="font-weight:400"> / Monat</span></b></div><p class="small muted" style="white-space:pre-line;margin:4px 0 8px">${esc(p.desc)}</p><button class="btn sm" data-a="careSub" data-id="${p.id}">Abonnieren</button></div>`).join("")}</div>
+    <p style="text-align:center"><a href="#shop" style="color:var(--accent)">🎁 Gutschein verschenken</a></p>`);
+}
+function viewShop() {
+  return customerShell("Gutschein verschenken", "Das perfekte Geschenk für alle, die ihr Auto lieben.", `
+    <form class="card pad" data-f="shop" style="display:flex;flex-direction:column;gap:12px">
+      <div class="field"><label>Betrag</label><div class="seg" style="display:grid;grid-template-columns:repeat(3,1fr)">${[25, 50, 100, 150, 250, 500].map((a) => `<button type="button" class="${(UI.shopAmt || 50) === a ? "on" : ""}" data-a="shopAmt" data-v="${a}">${a} €</button>`).join("")}</div></div>
+      <div class="field"><label>Ihr Name *</label><input class="inp" id="s-name" required></div>
+      <div class="field"><label>Ihre E-Mail *</label><input class="inp" id="s-email" type="email" required></div>
+      <div class="field"><label>Für wen? (optional)</label><input class="inp" id="s-rec"></div>
+      <button class="btn block">Weiter zur Zahlung</button><span class="small muted" style="text-align:center">Sichere Zahlung · gültig 3 Jahre</span></form>`);
+}
+function qrModal() {
+  if (!UI.qr) return "";
+  const i = S.invoices.find((x) => x.id === UI.qr);
+  let svg = "";
+  try { const q = qrcode(0, "M"); q.addData(`https://checkout.stripe.com/c/pay/demo_${i.number}`); q.make(); svg = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }); } catch { svg = "<p>QR-Code</p>"; }
+  return `<div class="modal-bg" data-a="closeQr"><div class="modal fade" style="text-align:center"><h2>Vor Ort bezahlen</h2><p class="muted small">Rechnung ${i.number} · offen ${eur(invOpen(i))}</p>
+    <div style="background:#fff;border-radius:14px;padding:12px;max-width:260px;margin:12px auto">${svg}</div>
+    <p class="small muted">Kunde scannt mit der Handykamera und zahlt mit Karte, Apple Pay oder Google Pay.</p>
+    <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-a="qrPaid" data-id="${i.id}">Zahlung simulieren</button><button class="btn ghost" data-a="closeQr">Schließen</button></div></div></div>`;
+}
+function xmlModal() {
+  if (!UI.xml) return "";
+  const i = S.invoices.find((x) => x.id === UI.xml);
+  return `<div class="modal-bg" data-a="closeXml"><div class="modal fade" style="max-width:720px"><h2>E-Rechnung ${i.number}.xml</h2><p class="small muted">XRechnung 3.0 (UBL) – wird in der echten App als Datei heruntergeladen und kann direkt an Geschäftskunden oder die Buchhaltung gehen. Hier gekürzte Vorschau:</p>
+    <pre style="background:var(--muted);border-radius:10px;padding:12px;font-size:11px;overflow-x:auto;white-space:pre">${esc(xrechnung(i))}</pre><button class="btn" data-a="closeXml">Schließen</button></div></div>`;
+}
+
+
 // ---------- Zustand ----------
-const KEY = "detailflow-demo-v3";
+const KEY = "detailflow-demo-v4";
 let S;
-try { S = JSON.parse(localStorage.getItem(KEY)) || seed(); } catch { S = seed(); }
+try { S = JSON.parse(localStorage.getItem(KEY)) || seedExtra(seed()); } catch { S = seedExtra(seed()); }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
 const quoteCalc = (q) => calculate(q.calc);
 const cust = (id) => S.customers.find((x) => x.id === id);
@@ -387,6 +623,10 @@ const I = {
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   check: '<path d="m5 12 5 5 9-10"/>',
+  msg: '<path d="M4 5h16v11H9l-5 4z"/>',
+  euro: '<path d="M17 6.5A7 7 0 1 0 17 17.5M4 10h9M4 14h9"/>',
+  gift: '<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s6 1 6 1 6 2 6-1-4-3-6 1"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
 };
@@ -397,7 +637,8 @@ const obadge = (s) => badge(OSL[s], OST[s]);
 const qbadge = (s) => badge(QSL[s], QST[s]);
 
 // ---------- Routing ----------
-const NAV = [["uebersicht", "Übersicht", "home"], ["kalender", "Kalender", "cal"], ["auftraege", "Aufträge", "clip"], ["angebote", "Angebote", "file"], ["kunden", "Kunden", "users"], ["fahrzeuge", "Fahrzeuge", "car"], ["leistungen", "Leistungen & Preise", "spark"], ["auswertungen", "Auswertungen", "chart"]];
+const NAV = [["uebersicht", "Übersicht", "home"], ["kalender", "Kalender", "cal"], ["auftraege", "Aufträge", "clip"], ["nachrichten", "Nachrichten", "msg"], ["kunden", "Kunden", "users"], ["angebote", "Angebote", "file"], ["rechnungen", "Rechnungen", "euro"], ["gutscheine", "Gutscheine", "gift"], ["fahrzeuge", "Fahrzeuge", "car"], ["leistungen", "Leistungen & Preise", "spark"], ["auswertungen", "Auswertungen", "chart"], ["einstellungen", "Einstellungen", "gear"]];
+const CUSTOMER_NAV = [["portal--c4", "Kundenportal"], ["buchen", "Buchungsseite"], ["shop", "Gutschein-Shop"]];
 function route() { const h = (location.hash || "").slice(1); const [view, id] = h.split("--"); return { view: view || "uebersicht", id }; }
 const go = (v, id) => { location.hash = id ? `${v}--${id}` : v; };
 
@@ -464,6 +705,7 @@ function viewOrder(id) {
     </div>
     <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
       <div class="card pad"><b>Kunde</b><a href="#kunde--${cu.id}" style="display:block;color:var(--accent);margin-top:4px">${esc(cu.name)}</a><span class="muted small">${esc(cu.phone || "")}</span>
+        <div class="row" style="margin-top:10px"><a class="btn sec sm" href="#nachricht--${cu.id}">Kunde benachrichtigen</a>${o.items.length ? `<button class="btn sm" data-a="orderInvoice" data-id="${o.id}">${S.invoices.some((i) => i.order_id === o.id && i.status !== "cancelled") ? "Zur Rechnung" : "Rechnung erstellen"}</button>` : ""}</div>
         <div style="margin-top:14px"><b>Fahrzeug</b><span style="display:block;margin-top:4px">${esc(vname(v))} · ${esc(v.plate)}</span>${v.damages ? `<span class="small" style="color:var(--amber-fg)">Vorschäden: ${esc(v.damages)}</span>` : ""}</div></div>
       <div class="card"><div class="ch"><h2>Verlauf</h2></div><div class="pad" style="display:flex;flex-direction:column;gap:6px">${[...o.history].reverse().map((h) => `<div class="kv small"><span>${OSL[h.s]}</span><span class="muted">${fmtDate(h.at, { dateStyle: "short", timeStyle: "short" })}</span></div>`).join("")}</div></div>
     </div>
@@ -698,27 +940,34 @@ function modalHtml() {
     </div><div class="row" style="margin-top:18px"><button class="btn" type="submit">Fahrzeug anlegen</button><button class="btn ghost" type="button" data-a="closeModal">Abbrechen</button></div></form></div>`;
 }
 
+
 // ---------- Render ----------
 const app = document.getElementById("app");
 function isDark() { const t = document.documentElement.getAttribute("data-theme"); return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; }
 function render() {
   const { view, id } = route();
-  const navKey = { auftrag: "auftraege", angebot: "angebote", kunde: "kunden", fahrzeug: "fahrzeuge", kalkulator: UI.calc?.target === "order" ? "auftraege" : "angebote" }[view] || view;
-  const views = { kalender: viewCalendar, auswertungen: viewAnalytics, uebersicht: viewDashboard, auftraege: viewOrders, auftrag: () => viewOrder(id), angebote: viewQuotes, angebot: () => viewQuote(id), kalkulator: viewCalc, kunden: viewCustomers, kunde: () => viewCustomer(id), fahrzeuge: viewVehicles, fahrzeug: () => viewVehicle(id), leistungen: viewServices };
+  const navKey = { auftrag: "auftraege", angebot: "angebote", kunde: "kunden", fahrzeug: "fahrzeuge", rechnung: "rechnungen", nachricht: "nachrichten", kalkulator: UI.calc?.target === "order" ? "auftraege" : "angebote" }[view] || view;
+  if (["portal", "buchen", "shop"].includes(view)) {
+    app.innerHTML = ({ portal: () => viewPortal(id || "c4"), buchen: viewBooking, shop: viewShop })[view]() + (UI.toast ? `<div class="toast">${esc(UI.toast)}</div>` : "");
+    return;
+  }
+  const unread = S.messages.filter((m) => m.dir === "in" && !m.read).length;
+  const views = { rechnungen: viewInvoices, rechnung: () => viewInvoice(id), nachrichten: viewInbox, nachricht: () => viewThread(id), gutscheine: viewVouchers, einstellungen: viewSettings, kalender: viewCalendar, auswertungen: viewAnalytics, uebersicht: viewDashboard, auftraege: viewOrders, auftrag: () => viewOrder(id), angebote: viewQuotes, angebot: () => viewQuote(id), kalkulator: viewCalc, kunden: viewCustomers, kunde: () => viewCustomer(id), fahrzeuge: viewVehicles, fahrzeug: () => viewVehicle(id), leistungen: viewServices };
   const body = (views[view] || viewDashboard)();
   const focusId = document.activeElement?.id, selStart = document.activeElement?.selectionStart;
   app.innerHTML = `
   <aside class="side ${UI.menu ? "open" : ""}"><div class="head">${LOGO}</div><div class="company">Premium Detailing Köln</div>
-    <nav class="nav">${NAV.map(([k, l, i]) => `<a href="#${k}" class="${navKey === k ? "on" : ""}">${ic(i)}${l}</a>`).join("")}</nav>
+    <nav class="nav">${NAV.map(([k, l, i]) => `<a href="#${k}" class="${navKey === k ? "on" : ""}">${ic(i)}${l}${k === "nachrichten" && unread ? `<span class="badge b-teal" style="margin-left:auto">${unread}</span>` : ""}</a>`).join("")}
+      <p class="small muted" style="padding:14px 12px 4px;text-transform:uppercase;letter-spacing:.06em;font-size:10px">Kundensicht</p>${CUSTOMER_NAV.map(([k, l]) => `<a href="#${k}">↗ ${l}</a>`).join("")}</nav>
     <div class="foot"><button data-a="theme">${ic(isDark() ? "sun" : "moon")}${isDark() ? "Helles Design" : "Dunkles Design"}</button><button data-a="reset">${ic("spark")}Demo zurücksetzen</button><span class="small muted" style="padding:4px 12px">markus@premium-detailing.de</span></div></aside>
   ${UI.menu ? '<div class="scrim" data-a="menu"></div>' : ""}
   <main>
     <div class="mtop">${LOGO}<button data-a="menu" aria-label="Menü">${ic("menu").replace('class=""', 'width="22" height="22"')}</button></div>
-    <div class="demo-bar"><span><b>Demo mit Beispieldaten.</b> Alles ist klickbar; Änderungen bleiben nur in diesem Browser.</span><button data-a="reset">Zurücksetzen</button></div>
+    <div class="demo-bar"><span><b>Demo mit Beispieldaten.</b> Alles ist klickbar; Änderungen bleiben nur in diesem Browser. <a href="#portal--c4" style="text-decoration:underline">Kundensicht ansehen</a></span><button data-a="reset">Zurücksetzen</button></div>
     <div class="wrap fade">${body}</div>
   </main>
-  <nav class="bnav">${[NAV[0], NAV[1], NAV[2], NAV[4]].map(([k, l, i]) => `<a href="#${k}" class="${navKey === k ? "on" : ""}">${ic(i)}${l}</a>`).join("")}</nav>
-  ${modalHtml()}
+  <nav class="bnav">${[NAV[0], NAV[1], NAV[2], NAV[3]].map(([k, l, i]) => `<a href="#${k}" class="${navKey === k ? "on" : ""}">${ic(i)}${l}</a>`).join("")}</nav>
+  ${modalHtml()}${qrModal()}${xmlModal()}
   ${UI.toast ? `<div class="toast">${esc(UI.toast)}</div>` : ""}`;
   const cs = document.getElementById("calscroll"), tc = cs && cs.querySelector(".cal-col.today");
   if (cs && tc && cs.scrollWidth > cs.clientWidth) cs.scrollLeft = tc.offsetLeft - 46;
@@ -740,7 +989,7 @@ app.addEventListener("click", (ev) => {
   switch (a) {
     case "menu": UI.menu = !UI.menu; render(); break;
     case "theme": document.documentElement.setAttribute("data-theme", isDark() ? "light" : "dark"); render(); break;
-    case "reset": S = seed(); UI.calc = null; save(); toast("Demo zurückgesetzt"); break;
+    case "reset": S = seedExtra(seed()); UI.calc = null; save(); toast("Demo zurückgesetzt"); break;
     case "calWeek": UI.calWeek = el.dataset.v === "0" ? 0 : UI.calWeek + Number(el.dataset.v); render(); break;
     case "boardView": UI.boardView = el.dataset.v; render(); break;
     case "orderNext": { const o = S.orders.find((x) => x.id === el.dataset.id); setOrderStatus(o, NEXT[o.status]); break; }
@@ -807,6 +1056,58 @@ app.addEventListener("submit", (ev) => {
     if (UI.calc && location.hash === "#kalkulator") { UI.calc.customer_id = v.customer_id; UI.calc.vehicle_id = v.id; UI.calc.vehicleClass = v.vc; toast("Fahrzeug angelegt"); } else go("fahrzeug", v.id);
   }
 });
+app.addEventListener("click", (ev) => {
+  const el = ev.target.closest("[data-a]"); if (!el) return;
+  const a = el.dataset.a, id = el.dataset.id;
+  const inv = () => S.invoices.find((x) => x.id === id);
+  switch (a) {
+    case "orderInvoice": { const o = S.orders.find((x) => x.id === id); go("rechnung", createInvoiceFromOrder(o).id); break; }
+    case "invFinalize": { const i = inv(); i.number = `RE-2026-${String(++S.counters.invoice).padStart(4, "0")}`; i.status = "finalized"; i.issue = new Date().toISOString(); i.due = addD(14); save(); toast(`Finalisiert: ${i.number}`); break; }
+    case "invPay": { const i = inv(); pay(i, invOpen(i), el.dataset.m, false); toast("Barzahlung erfasst – gebührenfrei"); break; }
+    case "invQr": UI.qr = id; render(); break;
+    case "closeQr": if (ev.target === el || el.tagName === "BUTTON") { UI.qr = null; render(); } break;
+    case "qrPaid": { const i = inv(); pay(i, invOpen(i), "Online (QR vor Ort)", true); UI.qr = null; toast("Bezahlt ✓ – 0,5 % Gebühr automatisch einbehalten"); break; }
+    case "invXml": UI.xml = id; render(); break;
+    case "closeXml": if (ev.target === el || el.tagName === "BUTTON") { UI.xml = null; render(); } break;
+    case "invCancel": { const i = inv(); i.status = "cancelled"; S.invoices.push({ ...i, id: uid(), kind: "cancellation", number: `RE-2026-${String(++S.counters.invoice).padStart(4, "0")}`, status: "finalized", issue: new Date().toISOString(), items: i.items.map((x) => ({ title: x.title, net: -x.net })), paid: 0, payments: [], reminders: 3 }); save(); toast("Stornorechnung erstellt"); break; }
+    case "invDun": { const i = inv(); i.reminders++; S.messages.push({ id: uid(), customer_id: i.customer_id, dir: "out", ch: "email", body: `${["", "Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][i.reminders]} zu Rechnung ${i.number} über ${eur(invOpen(i))} …`, at: new Date().toISOString(), read: true }); save(); toast("Per E-Mail gesendet"); break; }
+    case "invVoucher": { const i = inv(); const c = (document.getElementById("vcode").value || "").trim().toUpperCase(); const v = S.vouchers.find((x) => x.code === c); if (!v || !v.balance) { toast("Gutschein ungültig oder eingelöst"); break; } const amt = Math.min(v.balance, invOpen(i)); v.balance = r2(v.balance - amt); pay(i, amt, `Gutschein ${v.code}`, false); toast(`${eur(amt)} angerechnet`); break; }
+    case "sendMsg": { const body = document.getElementById("msgbody").value.trim(); if (!body) return; const ch = document.getElementById("msgch").value; const c = cust(id);
+      S.messages.push({ id: uid(), customer_id: id, dir: "out", ch, body, at: new Date().toISOString(), read: true }); save();
+      if (ch === "whatsapp") { const p = (c.phone || "").replace(/[^\d]/g, "").replace(/^0/, "49"); window.open(`https://wa.me/${p}?text=${encodeURIComponent(body)}`, "_blank", "noopener"); toast("WhatsApp geöffnet"); } else toast(ch === "portal" ? "Im Kundenportal sichtbar" : "E-Mail gesendet"); break; }
+    case "sellVoucher": { const amt = Number((document.getElementById("vamt").value || "").replace(",", ".")); if (!(amt >= 5)) { toast("Bitte Betrag eingeben"); break; } const c = code8(); S.vouchers.push({ code: c, initial: amt, balance: amt, buyer: "", recipient: document.getElementById("vrec").value, source: "vor Ort", at: new Date().toISOString() }); save(); toast(`Gutschein angelegt: ${c}`); break; }
+    case "portalPay": { const i = inv(); pay(i, invOpen(i), "Online (Stripe)", true); toast("Danke! Zahlung erfolgreich (Demo)"); break; }
+    case "portalSend": { const b = document.getElementById("pmsg").value.trim(); if (!b) return; S.messages.push({ id: uid(), customer_id: id, dir: "in", ch: "portal", body: b, at: new Date().toISOString(), read: false }); save(); toast("Nachricht gesendet"); break; }
+    case "careSub": { const p = S.carePlans.find((x) => x.id === id); p.subs++; S.fees.push({ gross: p.price, fee: r2(p.price * 0.005), label: p.name }); save(); toast(`„${p.name}“ abonniert (Demo)`); break; }
+    case "shopAmt": UI.shopAmt = Number(el.dataset.v); render(); break;
+  }
+});
+app.addEventListener("change", (ev) => {
+  if (ev.target.id === "tplsel" && ev.target.value) { const c = cust(ev.target.dataset.cust); document.getElementById("msgbody").value = TPL[ev.target.value](c, ev.target.dataset.veh); ev.target.value = ""; }
+});
+app.addEventListener("submit", (ev) => {
+  const f = ev.target; if (!f.dataset.f) return;
+  ev.preventDefault();
+  const val = (i) => (document.getElementById(i)?.value || "").trim();
+  if (f.dataset.f === "booking") {
+    if (!val("b-name") || !val("b-email")) { toast("Bitte Name und E-Mail angeben"); return; }
+    const c = { id: uid(), type: "private", name: val("b-name"), email: val("b-email"), phone: val("b-phone"), street: "", city: "", notes: "Über die Online-Anfrage angelegt." }; c.portal = "p" + c.id; S.customers.push(c);
+    let vid = null; if (val("b-make")) { vid = uid(); S.vehicles.push({ id: vid, customer_id: c.id, make: val("b-make"), model: val("b-model") || "–", plate: "–", vc: "kompaktwagen", color: "", year: null, damages: "" }); }
+    const o = { id: uid(), number: "ANF-" + uid().slice(0, 6).toUpperCase(), customer_id: c.id, vehicle_id: vid, status: "anfrage", title: val("b-pkg") ? "Anfrage: " + val("b-pkg") : "Online-Anfrage", start: null, net: 0, gross: 0, items: [], history: [{ s: "anfrage", at: new Date().toISOString() }], notes: "" };
+    S.orders.push(o);
+    S.messages.push({ id: uid(), customer_id: c.id, dir: "in", ch: "portal", body: `Neue Online-Anfrage${val("b-pkg") ? " für „" + val("b-pkg") + "“" : ""}\nWunschtermin: ${val("b-wish") || "–"}\nAnzahlung ${S.settings.deposit} € online erhalten.`, at: new Date().toISOString(), read: false });
+    S.fees.push({ gross: S.settings.deposit, fee: r2(S.settings.deposit * 0.005), label: "Anzahlung" });
+    save(); toast("Anfrage + Anzahlung eingegangen (Demo)"); go("portal", c.id);
+  }
+  if (f.dataset.f === "shop") {
+    if (!val("s-name") || !val("s-email")) { toast("Bitte Name und E-Mail angeben"); return; }
+    const amt = UI.shopAmt || 50, c = code8();
+    S.vouchers.push({ code: c, initial: amt, balance: amt, buyer: val("s-name"), recipient: val("s-rec"), source: "online", at: new Date().toISOString() });
+    S.fees.push({ gross: amt, fee: r2(amt * 0.005), label: "Gutschein online" }); save();
+    go("gutscheine"); setTimeout(() => toast(`Bezahlt (Demo) – Gutscheincode: ${c}`), 50);
+  }
+});
+
 window.addEventListener("hashchange", () => { UI.menu = false; if (route().view !== "kalkulator") {} render(); window.scrollTo(0, 0); });
 render();
 </script>
