@@ -39,6 +39,20 @@ export function CompanyForm({ company, readOnly }: { company: C; readOnly: boole
           <div className="flex items-center gap-2"><span className="shrink-0 text-sm text-muted-foreground">…/buchen/</span><Input name="slug" defaultValue={v("slug")} placeholder="premium-detailing-koeln" /></div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="booking_enabled" defaultChecked={Boolean(company.booking_enabled)} />Buchungsseite aktiv</label>
         </div>
+        <div className="space-y-2 rounded-xl border border-border p-4 sm:col-span-2">
+          <p className="text-sm font-medium">Automatische Erinnerungen</p>
+          <p className="text-xs text-muted-foreground">Werden täglich per E-Mail versendet, sobald der E-Mail-Versand eingerichtet ist. Texte unter Nachrichten-Vorlagen.</p>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="reminders_enabled" defaultChecked={company.reminders_enabled !== false} />Terminerinnerung am Vortag</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="dunning_enabled" defaultChecked={company.dunning_enabled !== false} />Zahlungserinnerung & Mahnungen bei überfälligen Rechnungen</label>
+          <div className="flex items-center gap-2 text-sm"><span className="shrink-0 text-muted-foreground">Tage nach Fälligkeit:</span><Input name="dunning_days" defaultValue={((company.dunning_days as number[] | undefined) ?? [3, 14, 28]).join(", ")} className="max-w-40" /></div>
+        </div>
+        <div className="grid gap-3 rounded-xl border border-border p-4 sm:col-span-2 sm:grid-cols-3">
+          <p className="text-sm font-medium sm:col-span-3">Buchhaltung (DATEV-Export)</p>
+          {([["consultant", "Beraternummer", ""], ["client", "Mandantennummer", ""], ["fiscalYearStart", "Wirtschaftsjahr ab (MM-TT)", "01-01"], ["revenue19", "Erlöse 19 %", "8400"], ["revenue7", "Erlöse 7 %", "8300"], ["revenue0", "Erlöse steuerfrei / § 19", "8195"], ["debitor", "Debitor (Sammelkonto)", "10000"]] as const).map(([k, l, d]) => (
+            <Field key={k} label={l} name={`acc_${k}`}><Input name={`acc_${k}`} defaultValue={((company.accounting_config as Record<string, string> | undefined)?.[k]) ?? d} /></Field>
+          ))}
+          <p className="text-xs text-muted-foreground sm:col-span-3">Standard: SKR03. Bitte mit deinem Steuerberater abstimmen.</p>
+        </div>
         <Field label="Gültigkeit von Angeboten (Tage)" name="quote_validity_days"><Input name="quote_validity_days" inputMode="numeric" defaultValue={String(company.quote_validity_days ?? 30)} /></Field>
         <Field label="Standard-Angebotsbedingungen" name="quote_terms" className="sm:col-span-2"><Textarea name="quote_terms" defaultValue={v("quote_terms")} /></Field>
       </fieldset>

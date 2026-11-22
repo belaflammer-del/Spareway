@@ -439,3 +439,59 @@ run("Umsatzbeteiligung (Stripe Connect)", () => {
     await expect(d.admin("insert into invoice_payments(company_id, invoice_id, amount, external_id) values ($1, $2, 1, 'pi_dup'), ($1, $2, 1, 'pi_dup')", [companyA, inv])).rejects.toThrow();
   });
 });
+
+run("Automatisierung: Erinnerungen, Mahnwesen, Angebote bearbeiten", () => {
+  let d: Db;
+  beforeAll(async () => { d = new Db(); await d.connect(); });
+  afterAll(async () => d?.end());
+
+  it("findet Termine von morgen für die Erinnerung genau einmal", async () => {
+    await d.admin("update customers set email = 'lena@example.com' where id = $1", [customerA]);
+    const id = (await d.as(ownerA, `select public.create_order_with_items($1::jsonb, '[]'::jsonb) as id`, [
+      JSON.stringify({ company_id: companyA, customer_id: customerA, status: "geplant", scheduled_start: "2026-12-10T09:00:00Z" }),
+    ]))[0].id;
+    const due = (await d.admin("select order_id from public.due_appointment_reminders('2026-12-09T15:00:00Z')")).rows.map((r) => r.order_id);
+    expect(due).toContain(id);
+    await d.admin("update orders set reminder_sent_at = now() where id = $1", [id]);
+    const again = (await d.admin("select order_id from public.due_appointment_reminders('2026-12-09T15:00:00Z')")).rows.map((r) => r.order_id);
+    expect(again).not.toContain(id);
+    await expect(d.as(ownerA, "select * from public.due_appointment_reminders()")).rejects.toThrow(/permission denied/);
+  });
+
+  it("Mahnstufen werden nach Fristen fällig und nicht doppelt", async () => {
+    const order = (await d.as(ownerA, `select public.create_order_with_items($1::jsonb, $2::jsonb) as id`, [
+      JSON.stringify({ company_id: companyA, customer_id: customerA, status: "abgeschlossen" }),
+      JSON.stringify([{ title: "Politur", quantity: 1, unit_price_net: 100, tax_rate: 19, total_net: 100 }]),
+    ]))[0].id;
+    const inv = (await d.as(ownerA, "select public.create_invoice_from_order($1) as id", [order]))[0].id;
+    await d.as(ownerA, "select public.finalize_invoice($1)", [inv]);
+    const due = (await d.admin("select due_date from invoices where id = $1", [inv])).rows[0].due_date as Date;
+    const at = (days: number) => new Date(due.getTime() + days * 864e5 + 12 * 36e5).toISOString();
+    const lvl = async (ts: string) => (await d.admin("select level from public.due_dunning($1) where invoice_id = $2", [ts, inv])).rows.map((r) => r.level);
+    expect(await lvl(at(1))).toEqual([]);
+    expect(await lvl(at(3))).toEqual([1]);
+    await d.as(ownerA, "insert into invoice_reminders(company_id, invoice_id, level) values ($1, $2, 1)", [companyA, inv]);
+    expect(await lvl(at(5))).toEqual([]);
+    expect(await lvl(at(14))).toEqual([2]);
+    await expect(d.as(ownerA, "insert into invoice_reminders(company_id, invoice_id, level) values ($1, $2, 1)", [companyA, inv])).rejects.toThrow(/duplicate/);
+    await expect(d.as(staffA, "insert into invoice_reminders(company_id, invoice_id, level) values ($1, $2, 2)", [companyA, inv])).rejects.toThrow(/row-level security/);
+    await expect(d.as(ownerB, "insert into invoice_reminders(company_id, invoice_id, level) values ($1, $2, 2)", [companyB, inv])).rejects.toThrow(/row-level security/);
+    // bezahlt -> keine Mahnung mehr
+    await d.as(ownerA, "insert into invoice_payments(company_id, invoice_id, amount) values ($1, $2, 119)", [companyA, inv]);
+    expect(await lvl(at(30))).toEqual([]);
+  });
+
+  it("Angebotsentwürfe sind bearbeitbar, versendete nicht", async () => {
+    const q = (await d.as(ownerA, `select public.create_quote_with_items($1::jsonb, $2::jsonb) as id`, [
+      JSON.stringify({ company_id: companyA, customer_id: customerA, vehicle_class: "kombi", soiling_level: "normal", subtotal_net: 10, tax_total: 1.9, total_gross: 11.9 }),
+      JSON.stringify([{ title: "Alt", quantity: 1, unit_price_net: 10, tax_rate: 19, total_net: 10 }]),
+    ]))[0].id;
+    const payload = JSON.stringify({ customer_id: customerA, vehicle_class: "suv", soiling_level: "stark", subtotal_net: 50, tax_total: 9.5, total_gross: 59.5 });
+    await d.as(ownerA, "select public.update_quote_with_items($1, $2::jsonb, $3::jsonb)", [q, payload, JSON.stringify([{ title: "Neu", unit_price_net: 50, tax_rate: 19, total_net: 50 }])]);
+    const items = await d.as(ownerA, "select title from quote_items where quote_id = $1", [q]);
+    expect(items.map((x) => x.title)).toEqual(["Neu"]);
+    await expect(d.as(ownerB, "select public.update_quote_with_items($1, $2::jsonb, '[]'::jsonb)", [q, payload])).rejects.toThrow(/nicht gefunden/);
+    await d.admin("update quotes set status = 'sent' where id = $1", [q]);
+    await expect(d.as(ownerA, "select public.update_quote_with_items($1, $2::jsonb, '[]'::jsonb)", [q, payload])).rejects.toThrow(/Nur Entwürfe/);
+  });
+});

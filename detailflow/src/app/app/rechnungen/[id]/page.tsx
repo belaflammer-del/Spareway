@@ -12,13 +12,14 @@ import { INVOICE_STATUS_LABELS, INVOICE_STATUS_TONE, toXInvoice, type InvoiceSta
 import { missingForXRechnung } from "@/lib/xrechnung";
 import { formatDate, formatDateTime, formatEUR } from "@/lib/utils";
 import { cancelInvoice, deleteDraftInvoice, deleteInvoiceItem, finalizeInvoice } from "@/app/actions/invoices";
+import { sendNextDunning } from "@/app/actions/reminders";
 
 export default async function InvoiceDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ fehler?: string }> }) {
   const { id } = await params;
   const { fehler } = await searchParams;
   const ctx = await getContext();
   const { data: inv } = await ctx.supabase.from("invoices")
-    .select("*, invoice_items(*), invoice_payments(*), customers(*), orders(id, number), cancels:cancels_invoice_id(number)").eq("id", id).maybeSingle();
+    .select("*, invoice_items(*), invoice_payments(*), invoice_reminders(level, sent_at), customers(*), orders(id, number), cancels:cancels_invoice_id(number)").eq("id", id).maybeSingle();
   if (!inv) notFound();
   const { data: cancelledBy } = await ctx.supabase.from("invoices").select("id, number").eq("cancels_invoice_id", id).maybeSingle();
   const status = inv.status as InvoiceStatus;
@@ -89,7 +90,17 @@ export default async function InvoiceDetail({ params, searchParams }: { params: 
                     <li key={p.id} className="flex justify-between px-5 py-2"><span>{formatDate(p.paid_on)} · {p.method}</span><span className="tabular-nums">{formatEUR(p.amount)}</span></li>
                   ))}
                 </ul>
+                {(inv.invoice_reminders as { level: number; sent_at: string }[]).length > 0 && (
+                  <ul className="border-t border-border px-5 py-3 text-xs text-muted-foreground">
+                    {(inv.invoice_reminders as { level: number; sent_at: string }[]).sort((a, b) => a.level - b.level).map((r) => <li key={r.level}>{["", "Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][r.level]} gesendet am {formatDate(r.sent_at)}</li>)}
+                  </ul>
+                )}
                 {status === "finalized" && ctx.role !== "staff" && <div className="border-t border-border p-5"><PaymentForm invoiceId={id} open={open} /></div>}
+                {status === "finalized" && ctx.role !== "staff" && (inv.invoice_reminders as unknown[]).length < 3 && (
+                  <form action={sendNextDunning} className="border-t border-border px-5 py-3"><input type="hidden" name="id" value={id} />
+                    <button className="text-sm text-accent">{["Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][(inv.invoice_reminders as unknown[]).length]} jetzt per E-Mail senden</button>
+                  </form>
+                )}
               </Card>
             )}
           </div>

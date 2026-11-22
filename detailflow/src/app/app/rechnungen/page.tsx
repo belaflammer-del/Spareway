@@ -41,6 +41,19 @@ export default async function Invoices({ searchParams }: { searchParams: Promise
           </form>
         </Card>
       </div>
+      {ctx.role !== "staff" && (
+        <details className="mb-4 rounded-xl border border-border bg-card px-4 py-3">
+          <summary className="cursor-pointer text-sm font-medium">Export für den Steuerberater (DATEV / Excel)</summary>
+          <form action="/app/rechnungen/export" method="get" className="mt-3 flex flex-wrap items-end gap-2 text-sm">
+            <input type="hidden" name="firma" value={ctx.companyId} />
+            <label className="flex flex-col gap-1">Von<input type="date" name="von" required defaultValue={firstOfLastMonth()} className="h-9 rounded-lg border border-border bg-card px-2" /></label>
+            <label className="flex flex-col gap-1">Bis<input type="date" name="bis" required defaultValue={lastOfLastMonth()} className="h-9 rounded-lg border border-border bg-card px-2" /></label>
+            <button name="format" value="datev" className={buttonClass("primary", "sm", "h-9")}>DATEV-Buchungsstapel</button>
+            <button name="format" value="csv" className={buttonClass("secondary", "sm", "h-9")}>Rechnungsausgangsbuch (Excel)</button>
+          </form>
+          <p className="mt-2 text-xs text-muted-foreground">Konten und Berater-/Mandantennummer unter Einstellungen › Buchhaltung. Ersten Import bitte mit dem Steuerberater testen.</p>
+        </details>
+      )}
       <div className="mb-4 flex flex-wrap gap-2">
         <Link href="/app/rechnungen" className={buttonClass(!status ? "primary" : "secondary", "sm")}>Alle</Link>
         {(Object.keys(INVOICE_STATUS_LABELS) as InvoiceStatus[]).map((s) => <Link key={s} href={`/app/rechnungen?status=${s}`} className={buttonClass(status === s ? "primary" : "secondary", "sm")}>{INVOICE_STATUS_LABELS[s]}</Link>)}
@@ -66,4 +79,13 @@ export default async function Invoices({ searchParams }: { searchParams: Promise
       )}
     </>
   );
+}
+
+function firstOfLastMonth() {
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+  return d.toISOString().slice(0, 10).slice(0, 8) + "01";
+}
+function lastOfLastMonth() {
+  const d = new Date(); d.setDate(0);
+  return d.toISOString().slice(0, 10);
 }

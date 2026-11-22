@@ -59,6 +59,22 @@ export async function saveCalculation(_: ActionState, form: FormData): Promise<A
     redirect(`/app/auftraege/${data}`);
   }
 
+  if (d.quote_id) {
+    const { error } = await ctx.supabase.rpc("update_quote_with_items", {
+      p_id: d.quote_id,
+      q: {
+        customer_id: d.customer_id, vehicle_id: d.vehicle_id, vehicle_class: d.calc.vehicleClass, soiling_level: d.calc.soiling,
+        discount_percent: result.discountPercent, calculation: { input: d.calc, result }, subtotal_net: result.netTotal, tax_total: result.taxTotal,
+        total_gross: result.grossTotal, estimated_minutes: result.minutes, material_cost: result.materialCost, manual_override: result.manualOverride,
+        intro_text: d.intro_text, notes: d.notes,
+      },
+      items,
+    });
+    if (error) return { message: "Angebot konnte nicht gespeichert werden: " + error.message };
+    revalidatePath(`/app/angebote/${d.quote_id}`);
+    redirect(`/app/angebote/${d.quote_id}`);
+  }
+
   const validUntil = new Date(Date.now() + ctx.company.quote_validity_days * 86_400_000).toISOString().slice(0, 10);
   const { data, error } = await ctx.supabase.rpc("create_quote_with_items", {
     q: {

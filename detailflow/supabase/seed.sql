@@ -45,6 +45,8 @@ begin
   perform seed_company_operations(c_b);
   perform seed_message_templates(c_a);
   perform seed_message_templates(c_b);
+  perform seed_dunning_templates(c_a);
+  perform seed_dunning_templates(c_b);
   update companies set slug = 'premium-detailing-koeln', booking_enabled = true, contact_name = 'Markus Weber',
     iban = 'DE89370400440532013000', bic = 'COBADEFFXXX', bank_name = 'Commerzbank Köln' where id = c_a;
 

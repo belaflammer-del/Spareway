@@ -41,6 +41,7 @@ export default async function QuoteDetail({ params, searchParams }: { params: Pr
         {fehler && <div className="mb-4"><Notice tone="red">{fehler}</Notice></div>}
         <Card className="mb-6 flex flex-wrap items-center gap-2 p-4">
           {status === "draft" && statusButton("sent", "Als versendet markieren", "primary")}
+          {status === "draft" && <a href={`/app/angebote/${id}/bearbeiten`} className={buttonClass("secondary")}>Bearbeiten</a>}
           {status === "sent" && <>{statusButton("accepted", "Angenommen", "primary")}{statusButton("rejected", "Abgelehnt")}{statusButton("draft", "Zurück zu Entwurf")}</>}
           {(status === "expired") && statusButton("sent", "Erneut versenden")}
           {status === "rejected" && statusButton("draft", "Zurück zu Entwurf")}
@@ -57,7 +58,7 @@ export default async function QuoteDetail({ params, searchParams }: { params: Pr
             <div className="mt-2 flex flex-wrap items-center gap-2"><code className="break-all rounded bg-muted px-2 py-1 text-xs">{publicUrl}</code><CopyButton text={publicUrl} /></div>
           </Card>
         )}
-        {status === "draft" && <div className="mb-6"><Notice>Entwurf: Positionen sind noch änderbar. Nach dem Versenden wird das Angebot festgeschrieben. (Bearbeiten von Entwürfen: neu kalkulieren – Bearbeitungsmaske folgt.)</Notice></div>}
+        {status === "draft" && <div className="mb-6"><Notice>Entwurf: Über „Bearbeiten“ noch änderbar. Nach dem Versenden wird das Angebot festgeschrieben.</Notice></div>}
         <div className="mb-6 grid gap-3 text-sm sm:grid-cols-4">
           <Card className="p-3"><p className="text-xs text-muted-foreground">Dauer (geschätzt)</p><p className="font-medium">{formatMinutes(q.estimated_minutes)}</p></Card>
           <Card className="p-3"><p className="text-xs text-muted-foreground">Materialkosten</p><p className="font-medium">{formatEUR(q.material_cost)}</p></Card>

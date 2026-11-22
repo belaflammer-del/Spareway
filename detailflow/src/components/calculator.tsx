@@ -19,6 +19,8 @@ type Props = {
   tax: { default_tax_rate: number; small_business: boolean };
   canEditPrices: boolean;
   defaults: { customerId?: string; vehicleId?: string; target?: "quote" | "order" };
+  /** Bestehenden Angebotsentwurf bearbeiten */
+  edit?: { quoteId: string; calc: { vehicleClass: VehicleClass; soiling: SoilingLevel; serviceIds: string[]; packageIds: string[]; extras?: { title: string; priceNet: number }[]; specialEffortMinutes?: number; discountPercent?: number; overrideNet?: number | null }; intro: string; notes: string };
 };
 
 export function Calculator(p: Props) {
@@ -26,16 +28,17 @@ export function Calculator(p: Props) {
   const initialVehicle = p.vehicles.find((v) => v.id === p.defaults.vehicleId);
   const [customerId, setCustomerId] = useState(p.defaults.customerId ?? initialVehicle?.customer_id ?? "");
   const [vehicleId, setVehicleId] = useState(initialVehicle?.id ?? "");
-  const [vehicleClass, setVehicleClass] = useState<VehicleClass>(initialVehicle?.vehicle_class ?? "kompaktwagen");
-  const [soiling, setSoiling] = useState<SoilingLevel>("normal");
-  const [serviceIds, setServiceIds] = useState<string[]>([]);
-  const [packageIds, setPackageIds] = useState<string[]>([]);
-  const [extras, setExtras] = useState<{ title: string; priceNet: number }[]>([]);
-  const [effort, setEffort] = useState(0);
-  const [discount, setDiscount] = useState(0);
-  const [override, setOverride] = useState("");
-  const [intro, setIntro] = useState("");
-  const [notes, setNotes] = useState("");
+  const e0 = p.edit?.calc;
+  const [vehicleClass, setVehicleClass] = useState<VehicleClass>(e0?.vehicleClass ?? initialVehicle?.vehicle_class ?? "kompaktwagen");
+  const [soiling, setSoiling] = useState<SoilingLevel>(e0?.soiling ?? "normal");
+  const [serviceIds, setServiceIds] = useState<string[]>(e0?.serviceIds ?? []);
+  const [packageIds, setPackageIds] = useState<string[]>(e0?.packageIds ?? []);
+  const [extras, setExtras] = useState<{ title: string; priceNet: number }[]>(e0?.extras ?? []);
+  const [effort, setEffort] = useState(e0?.specialEffortMinutes ?? 0);
+  const [discount, setDiscount] = useState(e0?.discountPercent ?? 0);
+  const [override, setOverride] = useState(e0?.overrideNet != null ? String(e0.overrideNet).replace(".", ",") : "");
+  const [intro, setIntro] = useState(p.edit?.intro ?? "");
+  const [notes, setNotes] = useState(p.edit?.notes ?? "");
   const [target, setTarget] = useState<"quote" | "order">(p.defaults.target ?? "quote");
   const [scheduled, setScheduled] = useState("");
   const [search, setSearch] = useState("");
@@ -61,7 +64,7 @@ export function Calculator(p: Props) {
     if (v) { setVehicleClass(v.vehicle_class); if (v.customer_id) setCustomerId(v.customer_id); }
   };
 
-  const payload = JSON.stringify({ target, customer_id: customerId, vehicle_id: vehicleId || null, calc, intro_text: intro, notes, scheduled_start: scheduled || null });
+  const payload = JSON.stringify({ target: p.edit ? "quote" : target, quote_id: p.edit?.quoteId ?? null, customer_id: customerId, vehicle_id: vehicleId || null, calc, intro_text: intro, notes, scheduled_start: scheduled || null });
 
   return (
     <form action={action} className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_24rem]">
@@ -181,7 +184,7 @@ export function Calculator(p: Props) {
             ) : <p className="text-sm text-muted-foreground sm:col-span-2">Rabatte und manuelle Preise kann nur ein Mitarbeiter mit Preisrecht vergeben.</p>}
             <div className="sm:col-span-2">
               <p className="mb-1.5 text-sm font-medium">Was möchtest du erstellen?</p>
-              <div className="inline-flex rounded-lg bg-muted p-1 text-sm">
+              <div className={cn("inline-flex rounded-lg bg-muted p-1 text-sm", p.edit && "hidden")}>
                 {([["quote", "Angebot"], ["order", "Direkt Auftrag"]] as const).map(([k, l]) => (
                   <button key={k} type="button" onClick={() => setTarget(k)} className={cn("rounded-md px-3 py-1.5", target === k ? "bg-card font-medium shadow-sm" : "text-muted-foreground")}>{l}</button>
                 ))}
@@ -244,7 +247,7 @@ export function Calculator(p: Props) {
             </ul>
           )}
           <div className="space-y-2 border-t border-border p-4">
-            <SubmitButton className="w-full" pendingText="Wird gespeichert …">{target === "quote" ? "Angebot erstellen" : "Auftrag anlegen"}</SubmitButton>
+            <SubmitButton className="w-full" pendingText="Wird gespeichert …">{p.edit ? "Änderungen speichern" : target === "quote" ? "Angebot erstellen" : "Auftrag anlegen"}</SubmitButton>
             {!customerId && <p className="text-center text-xs text-muted-foreground">Bitte zuerst einen Kunden auswählen.</p>}
             <FormMessage state={state} />
           </div>

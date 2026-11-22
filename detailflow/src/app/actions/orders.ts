@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getContext } from "@/lib/auth";
 import { orderStatusSchema, uuid, type ActionState } from "@/lib/validation";
-import { berlinLocalToISO } from "@/lib/time";
+import { berlinLocalToISO, berlinParts, berlinToDate } from "@/lib/time";
 
 export async function setOrderStatus(form: FormData) {
   const ctx = await getContext();
@@ -65,4 +65,29 @@ export async function toggleOrderItem(form: FormData) {
   const orderId = uuid.parse(form.get("order_id"));
   await ctx.supabase.from("order_items").update({ done: form.get("done") === "true" }).eq("id", id);
   revalidatePath(`/app/auftraege/${orderId}`);
+}
+
+/** Termin per Drag & Drop verschieben (Dauer bleibt erhalten). workstation: undefined = unverändert, null = ohne Box */
+export async function moveOrder(input: { id: string; day: string; minutes?: number; workstation?: string | null }): Promise<{ ok: boolean; message?: string }> {
+  const ctx = await getContext();
+  const p = z.object({
+    id: uuid, day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), minutes: z.number().int().min(0).max(24 * 60 - 1).optional(),
+    workstation: uuid.nullable().optional(),
+  }).safeParse(input);
+  if (!p.success) return { ok: false, message: "Ungültige Eingabe." };
+  const { data: o } = await ctx.supabase.from("orders").select("scheduled_start, scheduled_end, status").eq("id", p.data.id).maybeSingle();
+  if (!o?.scheduled_start) return { ok: false, message: "Auftrag nicht gefunden." };
+  const oldStart = new Date(o.scheduled_start);
+  const duration = o.scheduled_end ? new Date(o.scheduled_end).getTime() - oldStart.getTime() : 60 * 60_000;
+  const keep = berlinParts(oldStart);
+  const mins = p.data.minutes ?? keep.hour * 60 + keep.minute;
+  const [y, m, d] = p.data.day.split("-").map(Number);
+  const start = berlinToDate(y, m, d, Math.floor(mins / 60), mins % 60);
+  const patch: Record<string, unknown> = { scheduled_start: start.toISOString(), scheduled_end: new Date(start.getTime() + duration).toISOString() };
+  if (p.data.workstation !== undefined) patch.workstation_id = p.data.workstation;
+  const { error } = await ctx.supabase.from("orders").update(patch).eq("id", p.data.id);
+  if (error) return { ok: false, message: error.code === "23P01" ? "Die Box ist zu dieser Zeit schon belegt." : error.message };
+  revalidatePath("/app/kalender");
+  revalidatePath(`/app/auftraege/${p.data.id}`);
+  return { ok: true };
 }

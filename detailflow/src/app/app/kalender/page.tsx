@@ -7,6 +7,7 @@ import { vehicleDisplayName, type OrderStatus } from "@/lib/domain";
 import { addDays, berlinDay, berlinParts, dayStart, isValidDay, weekStart } from "@/lib/time";
 import { cn, formatDate } from "@/lib/utils";
 import { layoutLanes } from "@/lib/calendar-layout";
+import { CalendarEvent, DropZone } from "@/components/calendar-dnd";
 
 export const metadata = { title: "Kalender" };
 
@@ -71,7 +72,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   };
   const onDay = (e: Ev, d: string) => new Date(e.scheduled_start) < dayStart(addDays(d, 1)) && new Date(e.scheduled_end) > dayStart(d);
 
-  const grid = (cols: { key: string; label: React.ReactNode; day: string; filter: (e: Ev) => boolean; highlight?: boolean }[]) => (
+  const grid = (cols: { key: string; label: React.ReactNode; day: string; filter: (e: Ev) => boolean; highlight?: boolean; workstation?: string | null }[]) => (
     <div className="overflow-x-auto">
       <div style={{ minWidth: cols.length > 3 ? cols.length * 110 + 48 : undefined }}>
         <div className="grid border-b border-border" style={{ gridTemplateColumns: `48px repeat(${cols.length}, minmax(0,1fr))` }}>
@@ -83,22 +84,22 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             {Array.from({ length: HOUR_TO - HOUR_FROM }, (_, i) => <span key={i} className="absolute right-2 -translate-y-1/2 text-[11px] tabular-nums text-muted-foreground" style={{ top: i * PX }}>{i === 0 ? "" : `${HOUR_FROM + i}:00`}</span>)}
           </div>
           {cols.map((c) => (
-            <div key={c.key} className={cn("relative border-l border-border", c.highlight && "bg-accent-soft/20")}>
+            <DropZone key={c.key} day={c.day} mode="time" hourFrom={HOUR_FROM} pxPerHour={PX} workstation={c.workstation} className={cn("relative border-l border-border transition-colors", c.highlight && "bg-accent-soft/20")}>
               {Array.from({ length: HOUR_TO - HOUR_FROM }, (_, i) => <div key={i} className="absolute inset-x-0 border-t border-border/60" style={{ top: i * PX }} />)}
               {layoutLanes(events.filter((e) => onDay(e, c.day) && c.filter(e)).flatMap((e) => {
                 const pos = timed(e, c.day);
                 return pos ? [{ e, pos, start: pos.top, end: pos.top + pos.height }] : [];
               })).map(({ e, pos, lane, lanes }) => {
                 return (
-                  <Link key={e.id} href={`/app/auftraege/${e.id}`} className={cn("absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-[11px] leading-tight shadow-xs transition hover:brightness-95", color(e))}
+                  <CalendarEvent key={e.id} id={e.id} href={`/app/auftraege/${e.id}`} className={cn("absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-[11px] leading-tight shadow-xs transition hover:brightness-95", color(e))}
                     style={{ ...pos, left: `calc(${(lane / lanes) * 100}% + 3px)`, width: `calc(${100 / lanes}% - 6px)` }}>
                     <span className="block font-semibold tabular-nums">{formatDate(e.scheduled_start, { hour: "2-digit", minute: "2-digit" })}</span>
                     <span className="block truncate font-medium">{label(e)}</span>
                     {pos.height > 50 && <span className="block truncate opacity-80">{e.title}</span>}
-                  </Link>
+                  </CalendarEvent>
                 );
               })}
-            </div>
+            </DropZone>
           ))}
         </div>
       </div>
@@ -112,8 +113,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       return { key: d, day: d, filter: () => true, highlight: d === today, label: <Link href={q("tag", d)} className="hover:underline"><span className="block text-[11px] uppercase text-muted-foreground">{formatDate(dayStart(d), { weekday: "short" })}</span>{formatDate(dayStart(d), { day: "numeric" })}</Link> };
     }));
   } else if (view === "tag") {
-    const cols = [...(boxes ?? []).map((b) => ({ key: b.id, day, label: b.name, filter: (e: Ev) => e.workstation_id === b.id })),
-      { key: "none", day, label: "Ohne Box", filter: (e: Ev) => !e.workstation_id || !boxIndex.has(e.workstation_id) }];
+    const cols = [...(boxes ?? []).map((b) => ({ key: b.id, day, label: b.name, workstation: b.id as string | null, filter: (e: Ev) => e.workstation_id === b.id })),
+      { key: "none", day, label: "Ohne Box", workstation: null, filter: (e: Ev) => !e.workstation_id || !boxIndex.has(e.workstation_id) }];
     body = grid(cols);
   } else {
     const month = day.slice(0, 7);
@@ -125,17 +126,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             const d = addDays(from, i);
             const evs = events.filter((e) => onDay(e, d));
             return (
-              <div key={d} className={cn("min-h-24 border-b border-l border-border p-1.5 text-xs [&:nth-child(7n+1)]:border-l-0", !d.startsWith(month) && "bg-muted/40 text-muted-foreground")}>
+              <DropZone key={d} day={d} mode="day" className={cn("relative min-h-24 border-b border-l border-border p-1.5 text-xs transition-colors [&:nth-child(7n+1)]:border-l-0", !d.startsWith(month) && "bg-muted/40 text-muted-foreground")}>
                 <Link href={q("tag", d)} className={cn("mb-1 inline-flex size-6 items-center justify-center rounded-full", d === today && "bg-foreground text-background font-semibold")}>{Number(d.slice(8))}</Link>
                 <div className="space-y-0.5">
                   {evs.slice(0, 3).map((e) => (
-                    <Link key={e.id} href={`/app/auftraege/${e.id}`} className={cn("block truncate rounded border-l-2 px-1 py-0.5", color(e))}>
+                    <CalendarEvent key={e.id} id={e.id} href={`/app/auftraege/${e.id}`} className={cn("block truncate rounded border-l-2 px-1 py-0.5", color(e))}>
                       <span className="tabular-nums">{formatDate(e.scheduled_start, { hour: "2-digit", minute: "2-digit" })}</span> {label(e)}
-                    </Link>
+                    </CalendarEvent>
                   ))}
                   {evs.length > 3 && <Link href={q("tag", d)} className="block px-1 text-muted-foreground">+ {evs.length - 3} weitere</Link>}
                 </div>
-              </div>
+              </DropZone>
             );
           })}
         </div>
@@ -145,7 +146,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageHeader title="Kalender" description="Termine, Fahrzeugannahmen und Abholungen deines Teams." actions={<LinkButton href="/app/angebote/neu?ziel=order"><Plus className="size-4" />Neuer Termin</LinkButton>} />
+      <PageHeader title="Kalender" description="Termine deines Teams. Zum Verschieben einfach auf einen anderen Tag, eine andere Uhrzeit oder Box ziehen." actions={<LinkButton href="/app/angebote/neu?ziel=order"><Plus className="size-4" />Neuer Termin</LinkButton>} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Link href={q(view, prev)} className={buttonClass("secondary", "sm", "w-8 px-0")} aria-label="Zurück"><ChevronLeft className="size-4" /></Link>

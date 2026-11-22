@@ -21,7 +21,13 @@ export async function switchCompany(form: FormData) {
 export async function updateCompany(_: ActionState, form: FormData): Promise<ActionState> {
   const ctx = await requireAdmin();
   const raw = emptyToNull(Object.fromEntries(form)) as Record<string, unknown>;
-  const parsed = companySchema.safeParse({ ...raw, small_business: form.get("small_business") === "on", booking_enabled: form.get("booking_enabled") === "on" });
+  const acc = (k: string, d: string) => String(form.get(`acc_${k}`) ?? d).trim();
+  const parsed = companySchema.safeParse({
+    ...raw, small_business: form.get("small_business") === "on", booking_enabled: form.get("booking_enabled") === "on",
+    reminders_enabled: form.get("reminders_enabled") === "on", dunning_enabled: form.get("dunning_enabled") === "on",
+    accounting_config: { revenue19: acc("revenue19", "8400"), revenue7: acc("revenue7", "8300"), revenue0: acc("revenue0", "8195"), debitor: acc("debitor", "10000"),
+      consultant: acc("consultant", ""), client: acc("client", ""), fiscalYearStart: acc("fiscalYearStart", "01-01") },
+  });
   if (!parsed.success) return { message: parsed.error.issues[0].message };
   if (parsed.data.booking_enabled && !parsed.data.slug) return { message: "Für die Online-Anfrage bitte eine Adresse (z. B. „premium-detailing-koeln“) festlegen." };
   const { error } = await ctx.supabase.from("companies").update(parsed.data).eq("id", ctx.companyId);

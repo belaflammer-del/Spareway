@@ -91,6 +91,7 @@ export const calculationInputSchema = z.object({
 
 export const quoteCreateSchema = z.object({
   target: z.enum(["quote", "order"]),
+  quote_id: z.string().uuid().optional().nullable(),
   customer_id: uuid,
   vehicle_id: z.string().optional().nullable().transform((v) => (v ? v : null)),
   calc: calculationInputSchema,
@@ -128,6 +129,16 @@ export const companySchema = z.object({
   slug: z.string().trim().toLowerCase().optional().nullable().transform((v) => (v ? v : null))
     .refine((v) => v === null || /^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])$/.test(v), { message: "Adresse der Buchungsseite: nur Kleinbuchstaben, Zahlen und Bindestriche (3–50 Zeichen)." }),
   booking_enabled: z.coerce.boolean(),
+  reminders_enabled: z.coerce.boolean(),
+  dunning_enabled: z.coerce.boolean(),
+  dunning_days: z.string().optional().transform((v) => (v ?? "3,14,28").split(/[,; ]+/).filter(Boolean).map(Number))
+    .refine((a) => a.length >= 1 && a.length <= 3 && a.every((n, i) => Number.isInteger(n) && n >= 0 && n <= 180 && (i === 0 || n > a[i - 1])), { message: "Mahnfristen: bis zu drei aufsteigende Tageszahlen, z. B. 3, 14, 28." }),
+  accounting_config: z.object({
+    revenue19: z.string().regex(/^\d{4,8}$/, "Erlöskonto: 4–8 Ziffern"), revenue7: z.string().regex(/^\d{4,8}$/, "Erlöskonto: 4–8 Ziffern"),
+    revenue0: z.string().regex(/^\d{4,8}$/, "Erlöskonto: 4–8 Ziffern"), debitor: z.string().regex(/^\d{4,9}$/, "Debitorenkonto: 4–9 Ziffern"),
+    consultant: z.string().regex(/^\d{0,7}$/, "Beraternummer: bis 7 Ziffern"), client: z.string().regex(/^\d{0,5}$/, "Mandantennummer: bis 5 Ziffern"),
+    fiscalYearStart: z.string().regex(/^\d{2}-\d{2}$/),
+  }),
 });
 
 export function fieldErrors(error: z.ZodError) {

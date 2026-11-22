@@ -64,7 +64,9 @@ detailflow/
 │  │  ├─ …0003_catalog.sql       Leistungskatalog-Vorlage (136 Leistungen, 8 Pakete), create_company()
 │  │  ├─ …0004_operations.sql    Boxen + Belegungsschutz, Fotos, Checklisten, Auswertungs-Views
 │  │  ├─ …0005_invoices_portal.sql Rechnungen (GoBD-Schutz, Storno, Hash), Kundenportal, Online-Anfrage, Nachrichten
-│  │  └─ …0006_revenue_share.sql  Umsatzbeteiligung: Tarifwerte, Stripe Connect, Plattformgebühren
+│  │  ├─ …0006_revenue_share.sql  Umsatzbeteiligung: Tarifwerte, Stripe Connect, Plattformgebühren
+│  │  ├─ …0007_no_fee_cap.sql     Umsatzbeteiligung ohne Obergrenze
+│  │  └─ …0008_automation.sql     Erinnerungen, Mahnstufen, DATEV-Einstellungen, Angebote bearbeiten
 │  └─ seed.sql                   Beispieldaten (2 Betriebe, Kunden, Fahrzeuge, Angebote, Aufträge)
 ├─ src/
 │  ├─ middleware.ts              Auth-Schutz & Session-Refresh
@@ -146,7 +148,6 @@ Legende: ✅ implementiert & getestet · 🟢 implementiert (Build/Typecheck ok,
 | Tarife Starter/Professional/Business | 🟡 | Tabelle `plans` (Preise/Limits änderbar ohne Code); Benutzerlimit wird erzwungen |
 | **Umsatzbeteiligung:** Endkunden bezahlen Rechnungen online im Portal (Stripe Connect, Destination Charge); Plattform behält 0,5 % (konfigurierbar in `plans.revenue_share_bps`; optionale Monats-Obergrenze `revenue_share_cap_cents`, standardmäßig keine) | ✅ (Gebührenlogik, DB-Rechte, Doppelbuchungsschutz – Tests) / 🟢 (Stripe-Aufrufe) | **nicht gegen Stripe getestet** – vor Start im Stripe-Testmodus durchspielen |
 | Grundgebühr als Stripe-Abo (Checkout + Kundenportal), Webhook setzt Tarif/Status | 🟢 | benötigt Stripe-Preise je Tarif |
-| Angebote bearbeiten (Entwurf) | ⚪ | aktuell: neu kalkulieren |
 | Kalender Tag (Spalten je Box) / Woche / Monat, „Noch nicht eingeplant“ | 🟢 | Zeiten konsequent in Europe/Berlin (7 Unit-Tests) |
 | Arbeitsplätze/Boxen, Doppelbelegung in der DB ausgeschlossen (Exclusion Constraint) | ✅ | getestet |
 | Mitarbeiter-Überschneidungswarnung | 🟢 | |
@@ -160,7 +161,11 @@ Legende: ✅ implementiert & getestet · 🟢 implementiert (Build/Typecheck ok,
 | Kundenportal per persönlichem Link: Status-Fortschritt, Termin, Vorher/Nachher, Angebote, Rechnungen, Nachrichten | ✅ (DB) / 🟢 (UI) | Fotos im Portal benötigen `SUPABASE_SERVICE_ROLE_KEY` |
 | Online-Anfrage `/buchen/<adresse>`: legt Kunde, Fahrzeug, Anfrage und Nachricht an | ✅ (DB) / 🟢 (UI) | Honeypot, Rate-Limit, Einwilligung |
 | Nachrichten-Postfach mit Vorlagen (Termin, Erinnerung, Abholbereit, Pflegehinweise, Rechnung) | 🟢 | E-Mail-Versand vorbereitet (Resend), ohne Schlüssel nur Portal |
-| Material/Lager, automatische Erinnerungen | ⚪ | Phase 4 |
+| Automatische Terminerinnerung (Vortag) und Mahnwesen in 3 Stufen (Fristen je Betrieb), täglicher Job `/api/cron/reminders` | ✅ (Fälligkeitslogik, Rechte – Tests) / 🟢 (Versand) | benötigt E-Mail-Versand + `CRON_SECRET`; Vercel Cron in `vercel.json` |
+| DATEV-Export (EXTF-Buchungsstapel, Windows-1252) und Rechnungsausgangsbuch (Excel) | ✅ (Format – 6 Tests) | ⚖️ ersten Import mit Steuerberatung testen; Konten in Einstellungen |
+| Angebotsentwürfe bearbeiten (Kalkulator mit gespeicherter Eingabe) | ✅ (DB) / 🟢 (UI) | |
+| Kalender: Termine per Drag & Drop verschieben (Tag/Zeit/Box), Box-Doppelbelegung wird abgelehnt | 🟢 | Desktop; auf Touch-Geräten über den Auftrag |
+| Material/Lager | ⚪ | |
 | Serverseitige PDF-Erzeugung | ⚪ | derzeit Browser-Druck „Als PDF speichern“ |
 | E2E-Tests (Playwright) gegen laufende Supabase | ⚪ | |
 
@@ -218,7 +223,7 @@ keine fremden Angebote umwandeln, keine fremden Nummernkreise nutzen; Mitarbeite
 ihre Rolle nicht erhöhen; Tarifdaten sind clientseitig unveränderlich; anonyme Nutzer sehen nur per gültigem Token ein Angebot ohne
 interne Kalkulationsdaten.
 
-**Letzter Lauf (in dieser Entwicklungsumgebung):** 75/75 Tests bestanden (39 DB, 36 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
+**Letzter Lauf (in dieser Entwicklungsumgebung):** 84/84 Tests bestanden (42 DB, 42 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
 Die Oberfläche wurde **nicht** gegen eine laufende Supabase-Instanz durchgeklickt.
 
 CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-Service, Build).
