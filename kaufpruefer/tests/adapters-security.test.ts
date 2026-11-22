@@ -78,3 +78,42 @@ describe("upload validation", () => {
     expect(detectFileType(new Uint8Array(Buffer.from("<html><script>x</script>")))).toBeNull();
   });
 });
+
+import { cleanUrl, extractListingLink, resolveShortLink } from "@/lib/import/share-text";
+
+describe("share texts from marketplace apps", () => {
+  it("extracts the link and title from a Kleinanzeigen iOS share text", () => {
+    const t = "Schau mal, was ich bei Kleinanzeigen gefunden habe: BMW 320d Touring Automatik https://www.kleinanzeigen.de/s-anzeige/bmw-320d-touring/2876543210-216-1234?utm_source=sharesheet&utm_medium=social&utm_campaign=socialbuttons&utm_content=app_ios";
+    const r = extractListingLink(t);
+    expect(r.url).toBe("https://www.kleinanzeigen.de/s-anzeige/bmw-320d-touring/2876543210-216-1234");
+    expect(r.titleHint).toBe("BMW 320d Touring Automatik");
+  });
+
+  it("handles links without scheme, trailing punctuation and keeps mobile.de ids", () => {
+    expect(extractListingLink("guck mal: suchen.mobile.de/fahrzeuge/details.html?id=412345678&ref=app.").url).toBe(
+      "https://suchen.mobile.de/fahrzeuge/details.html?id=412345678",
+    );
+    expect(extractListingLink("(https://www.ebay.de/itm/123456789012)").url).toBe("https://www.ebay.de/itm/123456789012");
+  });
+
+  it("returns nothing when no link is present", () => {
+    expect(extractListingLink("einfach nur text").url).toBeUndefined();
+  });
+
+  it("strips tracking parameters", () => {
+    expect(cleanUrl("https://www.vinted.de/items/1-x?referrer=catalog&utm_source=x")).toBe("https://www.vinted.de/items/1-x");
+  });
+
+  it("resolves platform short links via Location header only", async () => {
+    const f = (async () => new Response(null, { status: 301, headers: { location: "https://www.ebay.de/itm/123456789012?mkevt=1" } })) as unknown as typeof fetch;
+    expect(await resolveShortLink("https://ebay.us/AbC123", f)).toBe("https://www.ebay.de/itm/123456789012");
+  });
+
+  it("imports a full share text end-to-end", async () => {
+    const r = await importFromUrl("Hey, wie findest du das? iPhone 15 Pro 256GB https://www.kleinanzeigen.de/s-anzeige/iphone-15-pro/2876543210-173-1234?utm_source=sharesheet", {});
+    if ("error" in r) throw new Error(r.error);
+    expect(r.platform).toBe("kleinanzeigen");
+    expect(r.listing.title).toBe("iPhone 15 Pro 256GB");
+    expect(r.listing.category).toBe("electronics");
+  });
+});

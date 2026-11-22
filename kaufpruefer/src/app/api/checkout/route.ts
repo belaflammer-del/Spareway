@@ -38,7 +38,7 @@ export async function POST(req: Request) {
           price_data: {
             currency: "eur",
             unit_amount: pkg.priceCents,
-            product_data: { name: `Kaufklar – ${pkg.label}`, description: `${pkg.tokens} Token für vollständige Kaufchecks` },
+            product_data: { name: `DEAL-NIVO – ${pkg.label}`, description: `${pkg.tokens} Token für vollständige Kaufchecks` },
           },
         },
       ],

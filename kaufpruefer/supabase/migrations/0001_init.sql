@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────
--- Kaufklar – Initiales Schema (Supabase / PostgreSQL)
+-- DEAL-NIVO – Initiales Schema (Supabase / PostgreSQL)
 -- Alle Tabellen mit Row Level Security. Schreibende Wallet-Operationen
 -- laufen ausschließlich über SECURITY DEFINER-Funktionen, die nur der
 -- service_role zugänglich sind.

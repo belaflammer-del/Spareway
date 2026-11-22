@@ -72,11 +72,11 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
   agb: {
     title: "Allgemeine Geschäftsbedingungen",
     sections: [
-      { h: "1. Geltungsbereich", p: ["Diese AGB gelten für die Nutzung von Kaufklar durch Verbraucher und Unternehmer. [Anbieterangaben ergänzen.]"] },
+      { h: "1. Geltungsbereich", p: ["Diese AGB gelten für die Nutzung von DEAL-NIVO durch Verbraucher und Unternehmer. [Anbieterangaben ergänzen.]"] },
       {
         h: "2. Leistungsbeschreibung",
         p: [
-          "Kaufklar erstellt automatisierte Prüfberichte zu Gebrauchtwarenangeboten auf Grundlage der verfügbaren und von dir bereitgestellten Daten.",
+          "DEAL-NIVO erstellt automatisierte Prüfberichte zu Gebrauchtwarenangeboten auf Grundlage der verfügbaren und von dir bereitgestellten Daten.",
           "Die Berichte sind eine Orientierungshilfe. Sie stellen keine Garantie für Zustand, Echtheit, Wert, Seriosität des Verkäufers oder Betrugsfreiheit dar und ersetzen keine Besichtigung, Fachprüfung, Authentifizierung oder Rechtsberatung.",
           "Ein Marktwert wird nur angegeben, wenn ausreichende Vergleichsdaten vorliegen.",
         ],
@@ -112,7 +112,7 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
       {
         h: "Vorzeitiges Erlöschen",
         p: [
-          "Bei Verträgen über digitale Leistungen kann das Widerrufsrecht vorzeitig erlöschen, wenn wir mit der Ausführung begonnen haben, nachdem du ausdrücklich zugestimmt und deine Kenntnis vom Erlöschen bestätigt hast (§ 356 Abs. 5 BGB). Kaufklar holt diese Zustimmung vor dem Kauf ein. Nicht eingelöste Tokens: [Behandlung beim Widerruf festlegen – juristisch prüfen].",
+          "Bei Verträgen über digitale Leistungen kann das Widerrufsrecht vorzeitig erlöschen, wenn wir mit der Ausführung begonnen haben, nachdem du ausdrücklich zugestimmt und deine Kenntnis vom Erlöschen bestätigt hast (§ 356 Abs. 5 BGB). DEAL-NIVO holt diese Zustimmung vor dem Kauf ein. Nicht eingelöste Tokens: [Behandlung beim Widerruf festlegen – juristisch prüfen].",
         ],
       },
       { h: "Folgen des Widerrufs", p: ["[Mustertext einfügen.]"] },

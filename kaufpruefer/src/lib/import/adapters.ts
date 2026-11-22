@@ -9,6 +9,7 @@
  * – falls vorhanden – Schlagwörter aus dem URL-Pfad abgeleitet.
  */
 import type { Category, Listing, Platform } from "../domain/schemas";
+import { extractListingLink, resolveShortLink } from "./share-text";
 
 export interface ImportContext {
   ebay?: { clientId?: string; clientSecret?: string; marketplaceId: string };
@@ -177,7 +178,11 @@ export function guessCategory(text: string, fallback: Category = "other"): Categ
 }
 
 export async function importFromUrl(raw: string, ctx: ImportContext): Promise<ImportResult & { platform: Platform; url: string } | { error: string }> {
-  const url = parseListingUrl(raw);
+  // Akzeptiert auch komplette Teilen-Texte aus den Marktplatz-Apps
+  const extracted = extractListingLink(raw);
+  if (!extracted.url) return { error: "Wir haben in deiner Eingabe keinen Link gefunden. Kopiere den Link über „Teilen“ in der App und füge ihn hier ein." };
+  const resolved = extracted.shortLink ? await resolveShortLink(extracted.url, ctx.fetchImpl) : extracted.url;
+  const url = parseListingUrl(resolved);
   if (!url) return { error: "Das sieht nicht nach einem gültigen Link aus." };
   const adapter = detectPlatform(url);
   const notes: string[] = [];
@@ -186,7 +191,8 @@ export async function importFromUrl(raw: string, ctx: ImportContext): Promise<Im
     .split("/")
     .filter((p) => p && !GENERIC.test(p) && /[a-z]{2}/i.test(p) && p.includes("-"))
     .sort((a, b) => b.replace(/[^a-z]/gi, "").length - a.replace(/[^a-z]/gi, "").length)[0];
-  const slugTitle = slugPart ? slugToTitle(slugPart) : undefined;
+  // Titel aus dem Teilen-Text ist genauer als der URL-Slug
+  const slugTitle = extracted.titleHint ?? (slugPart ? slugToTitle(slugPart) : undefined);
 
   if (!adapter) {
     notes.push("Diese Plattform wird noch nicht automatisch unterstützt. Bitte lade Screenshots hoch oder ergänze die Angaben.");

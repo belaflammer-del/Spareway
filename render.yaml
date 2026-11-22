@@ -1,8 +1,8 @@
-# Render Blueprint – Testbetrieb von Kaufklar (Demo-/Lokalmodus, ohne API-Schlüssel)
+# Render Blueprint – Testbetrieb von DEAL-NIVO (Demo-/Lokalmodus, ohne API-Schlüssel)
 # Daten liegen im Container und werden bei jedem Neustart/Deploy zurückgesetzt.
 services:
   - type: web
-    name: kaufklar
+    name: dealnivo
     runtime: node
     plan: free
     rootDir: kaufpruefer

@@ -1,8 +1,8 @@
-# Kaufklar – KI-Kaufprüfer für Gebrauchtwaren
+# DEAL-NIVO – KI-Kaufprüfer für Gebrauchtwaren
 
 > „Ist dieses Angebot sein Geld wert, welche Risiken bestehen und worauf muss ich vor dem Kauf achten?“
 
-Kaufklar prüft Gebrauchtwaren-Angebote (mobile.de, AutoScout24, Kleinanzeigen, eBay, Vinted …) vor dem Kauf und erstellt einen strukturierten Prüfbericht mit Marktwert, Bildbefunden, Schwachstellen, Risiken, Verkäuferanalyse, Checkliste und Deal-Score.
+DEAL-NIVO prüft Gebrauchtwaren-Angebote (mobile.de, AutoScout24, Kleinanzeigen, eBay, Vinted …) vor dem Kauf und erstellt einen strukturierten Prüfbericht mit Marktwert, Bildbefunden, Schwachstellen, Risiken, Verkäuferanalyse, Checkliste und Deal-Score.
 
 **Grundsätze:** Keine erfundenen Preise, keine erfundenen Schäden, keine Betrugsvorwürfe ohne Beleg, keine Garantie. Jede Aussage trägt Quelle, Evidenzstufe und Zeitpunkt.
 

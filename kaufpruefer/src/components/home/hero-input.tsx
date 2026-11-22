@@ -1,54 +1,73 @@
 "use client";
 
-import { ArrowRight, ImageUp, Link2 } from "lucide-react";
+import { ArrowRight, ClipboardPaste, ImageUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { extractListingLink } from "@/lib/import/share-text";
 
 export function HeroInput() {
   const router = useRouter();
-  const [url, setUrl] = useState("");
+  const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const v = url.trim();
-    if (!v) return setError("Bitte füge einen Inseratslink ein.");
-    if (!/^(https?:\/\/)?[\w.-]+\.[a-z]{2,}(\/|$)/i.test(v)) return setError("Das sieht nicht nach einem gültigen Link aus.");
-    router.push(`/check?url=${encodeURIComponent(v)}`);
+  function go(text: string) {
+    const v = text.trim();
+    if (!v) return setError("Füge den Link zum Inserat ein.");
+    // Akzeptiert auch den kompletten Teilen-Text aus Kleinanzeigen, mobile.de, eBay …
+    if (!extractListingLink(v).url) return setError("Kein Link gefunden. Tippe in der App auf „Teilen“ → „Kopieren“ und füge es hier ein.");
+    router.push(`/check?url=${encodeURIComponent(v.slice(0, 2000))}`);
+  }
+
+  async function paste() {
+    try {
+      const t = await navigator.clipboard.readText();
+      setValue(t);
+      setError(null);
+      if (extractListingLink(t).url) go(t);
+    } catch {
+      setError("Einfügen nicht erlaubt – halte lange ins Feld und tippe auf „Einsetzen“.");
+    }
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl">
-      <form onSubmit={submit} className="group flex flex-col gap-2 rounded-2xl border border-border bg-surface p-2 shadow-card transition focus-within:border-ring focus-within:ring-4 focus-within:ring-ring/10 sm:flex-row sm:items-center">
+    <div className="mx-auto w-full max-w-xl">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          go(value);
+        }}
+        className="rounded-2xl border border-border bg-surface p-2 shadow-card focus-within:border-accent"
+      >
         <label htmlFor="hero-url" className="sr-only">Inseratslink</label>
-        <div className="flex flex-1 items-center gap-2.5 px-3">
-          <Link2 className="size-5 shrink-0 text-muted" aria-hidden />
+        <div className="flex items-center gap-2">
           <input
             id="hero-url"
             inputMode="url"
             autoComplete="off"
-            placeholder="Inseratslink hier einfügen"
-            value={url}
+            autoCorrect="off"
+            placeholder="Link zum Inserat einfügen"
+            value={value}
             onChange={(e) => {
-              setUrl(e.target.value);
+              setValue(e.target.value);
               setError(null);
             }}
-            className="h-12 w-full bg-transparent text-base outline-none placeholder:text-muted/80"
+            className="h-12 min-w-0 flex-1 bg-transparent px-3 outline-none placeholder:text-muted/80"
           />
+          <button type="button" onClick={paste} className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-surface-2 px-3 text-sm font-medium active:scale-95">
+            <ClipboardPaste className="size-4" /> Einfügen
+          </button>
         </div>
-        <Button type="submit" size="lg" className="h-12 rounded-xl">
+        <Button type="submit" size="lg" className="mt-2 h-12 w-full">
           Jetzt prüfen <ArrowRight />
         </Button>
       </form>
-      <div className="mt-3 flex flex-col items-center justify-between gap-2 px-1 text-sm sm:flex-row">
-        <p className={error ? "text-bad" : "text-muted"} aria-live="polite">
-          {error ?? "mobile.de, AutoScout24, Kleinanzeigen, eBay, Vinted und weitere"}
-        </p>
-        <button type="button" onClick={() => router.push("/check?mode=screenshots")} className="inline-flex items-center gap-1.5 font-medium text-foreground hover:text-accent">
-          <ImageUp className="size-4" /> Screenshots hochladen
-        </button>
-      </div>
+      <p className={`mt-2.5 min-h-5 text-center text-sm ${error ? "text-bad" : "text-muted"}`} aria-live="polite">
+        {error ?? "Kleinanzeigen · mobile.de · AutoScout24 · eBay · Vinted"}
+      </p>
+      <button type="button" onClick={() => router.push("/check?mode=screenshots")} className="mx-auto mt-1 flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground">
+        <ImageUp className="size-4" /> oder Screenshots hochladen
+      </button>
     </div>
   );
 }

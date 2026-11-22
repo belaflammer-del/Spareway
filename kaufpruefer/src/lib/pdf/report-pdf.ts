@@ -121,9 +121,9 @@ const sevLabel = (s: string) => ({ high: "Hoch", medium: "Mittel", low: "Gering"
 
 export async function renderReportPdf(report: AnalysisReport): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  doc.setTitle(pdfSafe(`Kaufklar Prüfbericht – ${report.listing.title ?? "Angebot"}`));
-  doc.setProducer("Kaufklar");
-  doc.setCreator("Kaufklar");
+  doc.setTitle(pdfSafe(`DEAL-NIVO Prüfbericht – ${report.listing.title ?? "Angebot"}`));
+  doc.setProducer("DEAL-NIVO");
+  doc.setCreator("DEAL-NIVO");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const w = new Writer(doc, font, bold, report.isDemo);
@@ -131,7 +131,7 @@ export async function renderReportPdf(report: AnalysisReport): Promise<Uint8Arra
 
   // Kopf
   w.page.drawRectangle({ x: w.M, y: w.y - 22, width: 22, height: 22, color: INK });
-  w.page.drawText("Kaufklar", { x: w.M + 30, y: w.y - 16, size: 13, font: bold, color: INK });
+  w.page.drawText("DEAL-NIVO", { x: w.M + 30, y: w.y - 16, size: 13, font: bold, color: INK });
   w.page.drawText(pdfSafe(`Prüfbericht · ${new Date(report.createdAt).toLocaleDateString("de-DE")}`), { x: w.W - w.M - 160, y: w.y - 16, size: 9, font, color: MUTED });
   w.y -= 40;
   if (report.isDemo) w.text("DEMO-BERICHT: Alle Angaben, Preise, Bilder und Bewertungen sind fiktiv.", { bold: true, color: rgb(0.5, 0.25, 0.75) });
@@ -235,7 +235,7 @@ export async function renderReportPdf(report: AnalysisReport): Promise<Uint8Arra
 
   // Fußzeilen
   w.pages.forEach((p, i) => {
-    p.drawText(pdfSafe(`Kaufklar · Bericht ${report.id} · Seite ${i + 1}/${w.pages.length}`), { x: w.M, y: 24, size: 7.5, font, color: MUTED });
+    p.drawText(pdfSafe(`DEAL-NIVO · Bericht ${report.id} · Seite ${i + 1}/${w.pages.length}`), { x: w.M, y: 24, size: 7.5, font, color: MUTED });
   });
   return doc.save();
 }

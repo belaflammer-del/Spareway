@@ -18,7 +18,7 @@ const BLOCKS = [
 export default function MethodPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6">
-      <SectionTitle eyebrow="Methodik" title="So bewertet Kaufklar Angebote" desc="Nachvollziehbare Regeln statt Blackbox. Die KI arbeitet im Hintergrund – Preise und Scores berechnet eine transparente Regel-Engine." />
+      <SectionTitle eyebrow="Methodik" title="So bewertet DEAL-NIVO Angebote" desc="Nachvollziehbare Regeln statt Blackbox. Die KI arbeitet im Hintergrund – Preise und Scores berechnet eine transparente Regel-Engine." />
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {BLOCKS.map((b) => (
           <Card key={b.t} className="p-5">

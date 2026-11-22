@@ -73,14 +73,14 @@ export function BuyTokens({ packages, stripeEnabled, stripeTest, testCredits }: 
           Ich verlange ausdrücklich, dass mit der Bereitstellung der digitalen Leistung vor Ablauf der Widerrufsfrist begonnen wird. Mir ist bekannt, dass mein Widerrufsrecht für bereits eingelöste Tokens erlischt.
         </span>
       </label>
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-5 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Button onClick={buy} disabled={!stripeEnabled || busy}>
-          {busy && <Spinner />} {stripeEnabled ? "Zur sicheren Bezahlung" : "Zahlungen nicht konfiguriert"}
+          {busy && <Spinner />} {stripeEnabled ? "Zur sicheren Bezahlung" : "Zahlung noch nicht aktiv"}
         </Button>
         {stripeEnabled && stripeTest && <span className="text-xs text-muted">Stripe-Testmodus: Testkarte 4242 4242 4242 4242 verwenden.</span>}
         {testCredits && (
           <Button variant="subtle" onClick={testCredit} disabled={busy}>
-            3 Test-Tokens gutschreiben (Demo, keine Zahlung)
+            3 Test-Tokens (Demo)
           </Button>
         )}
       </div>

@@ -10,6 +10,6 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/demo/[slug]/pdf
   if (!report) return errorJson(404, "not_found", "Demo nicht gefunden");
   const pdf = await renderReportPdf(report);
   return new Response(new Uint8Array(pdf), {
-    headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="kaufklar-demo-${slug}.pdf"` },
+    headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="dealnivo-demo-${slug}.pdf"` },
   });
 }

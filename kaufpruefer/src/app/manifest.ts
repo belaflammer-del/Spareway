@@ -2,14 +2,14 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Kaufklar – KI-Kaufprüfer",
-    short_name: "Kaufklar",
+    name: "DEAL-NIVO – KI-Kaufprüfer",
+    short_name: "DEAL-NIVO",
     description: "Prüfe Gebrauchtwaren-Angebote vor dem Kauf: Preis, Risiken, Verkäufer.",
     start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",
-    background_color: "#fbfaf7",
-    theme_color: "#fbfaf7",
+    background_color: "#0f0f0e",
+    theme_color: "#0f0f0e",
     lang: "de",
     categories: ["shopping", "finance", "utilities"],
     icons: [

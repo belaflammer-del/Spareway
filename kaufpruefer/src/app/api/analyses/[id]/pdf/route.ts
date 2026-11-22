@@ -13,6 +13,6 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/analyses/[id]/p
   if (!a?.report) return errorJson(404, "not_found", "Bericht nicht gefunden");
   const pdf = await renderReportPdf(a.report);
   return new Response(new Uint8Array(pdf), {
-    headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="kaufklar-${id}.pdf"`, "Cache-Control": "private, no-store" },
+    headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="dealnivo-${id}.pdf"`, "Cache-Control": "private, no-store" },
   });
 }

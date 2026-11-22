@@ -1,6 +1,6 @@
-// Kaufklar Service Worker – App-Shell-Caching für statische Assets.
+// DEAL-NIVO Service Worker – App-Shell-Caching für statische Assets.
 // Personenbezogene Inhalte (API, Berichte, Uploads) werden NIE gecacht.
-const CACHE = "kaufklar-v1";
+const CACHE = "dealnivo-v1";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (e) => {

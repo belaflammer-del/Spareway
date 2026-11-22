@@ -12,9 +12,9 @@ export function LogoMark({ className = "size-7" }: { className?: string }) {
 
 export function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight" aria-label="Kaufklar Startseite">
+    <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight" aria-label="DEAL-NIVO Startseite">
       <LogoMark />
-      <span className="text-[17px]">Kaufklar</span>
+      <span className="text-[17px] font-bold tracking-tight">DEAL<span className="text-accent">-NIVO</span></span>
     </Link>
   );
 }

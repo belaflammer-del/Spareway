@@ -1,8 +1,8 @@
 {
-  "name": "kaufklar",
+  "name": "dealnivo",
   "version": "0.1.0",
   "private": true,
-  "description": "Kaufklar – universeller KI-Kaufprüfer für Gebrauchtwaren",
+  "description": "DEAL-NIVO – universeller KI-Kaufprüfer für Gebrauchtwaren",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

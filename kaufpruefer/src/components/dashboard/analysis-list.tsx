@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { ScoreBox } from "@/components/report/score-ring";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORY_LABELS, PLATFORM_LABELS, RECOMMENDATION_LABELS } from "@/lib/domain/labels";
 import type { AnalysisRecord } from "@/lib/store/types";
@@ -20,7 +21,7 @@ export function AnalysisList({ items }: { items: AnalysisRecord[] }) {
         return (
           <li key={a.id}>
             <Link href={`/analysis/${a.id}`} className="flex items-center gap-4 px-4 py-3.5 transition hover:bg-surface-2/60">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-sm font-semibold tabular">{score?.overall ?? "–"}</div>
+              <ScoreBox score={score?.overall ?? null} size="sm" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{a.title}</p>
                 <p className="mt-0.5 truncate text-xs text-muted">

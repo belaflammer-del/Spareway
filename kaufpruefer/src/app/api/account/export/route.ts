@@ -8,6 +8,6 @@ export async function GET() {
   if (!user) return errorJson(401, "unauthorized", "Nicht angemeldet");
   const data = await getStore().exportUserData(user.id);
   return new Response(JSON.stringify({ exportedAt: new Date().toISOString(), ...data }, null, 2), {
-    headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="kaufklar-datenexport.json"`, "Cache-Control": "no-store" },
+    headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="dealnivo-datenexport.json"`, "Cache-Control": "no-store" },
   });
 }
