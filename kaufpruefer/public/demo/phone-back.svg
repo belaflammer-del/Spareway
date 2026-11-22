@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1f4"/><stop offset="1" stop-color="#dfe4ea"/></linearGradient>
+<linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6675"/><stop offset="1" stop-color="#2f3742"/></linearGradient></defs>
+<rect width="800" height="500" fill="url(#bg)"/>
+<rect x="290" y="30" width="220" height="440" rx="38" fill="#c9c2b6"/><rect x="302" y="42" width="196" height="416" rx="30" fill="#d8d2c7"/>
+<rect x="320" y="62" width="100" height="100" rx="24" fill="#bdb6aa"/><circle cx="347" cy="90" r="18" fill="#2a2d33"/><circle cx="393" cy="90" r="18" fill="#2a2d33"/><circle cx="347" cy="135" r="18" fill="#2a2d33"/>
+<path d="M300 420 L330 440 M305 410 L340 438" stroke="#8a857c" stroke-width="2"/>
+<g font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="600"><rect x="16" y="16" rx="8" width="170" height="28" fill="#7c3aed" opacity="0.9"/><text x="28" y="35" fill="#fff">DEMO-ILLUSTRATION</text></g>
+</svg>

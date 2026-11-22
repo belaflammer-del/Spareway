@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1f4"/><stop offset="1" stop-color="#dfe4ea"/></linearGradient>
+<linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6675"/><stop offset="1" stop-color="#2f3742"/></linearGradient></defs>
+<rect width="800" height="500" fill="url(#bg)"/>
+<rect x="250" y="80" width="300" height="340" rx="10" fill="#f4f2ee" stroke="#d8d3cb" stroke-width="3"/>
+<text x="400" y="170" text-anchor="middle" font-family="serif" font-size="44" letter-spacing="6" fill="#1a1a1a">LABEL</text>
+<rect x="320" y="200" width="160" height="2" fill="#1a1a1a"/><text x="400" y="250" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#444">Größe 3</text>
+<text x="400" y="290" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#777">Polyamid · Daune</text>
+<g font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="600"><rect x="16" y="16" rx="8" width="170" height="28" fill="#7c3aed" opacity="0.9"/><text x="28" y="35" fill="#fff">DEMO-ILLUSTRATION</text></g>
+</svg>

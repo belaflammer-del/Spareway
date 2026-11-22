@@ -1,0 +1,169 @@
+import type { AnalysisReport, Category, Platform } from "../domain/schemas";
+
+export interface UserRecord {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  createdAt: string;
+  /** nur Lokalmodus */
+  passwordHash?: string;
+}
+
+export interface AnalysisRecord {
+  id: string;
+  userId: string;
+  status: "running" | "completed" | "failed";
+  tier: "full" | "quick";
+  category: Category;
+  platform: Platform;
+  title: string;
+  createdAt: string;
+  completedAt?: string;
+  report?: AnalysisReport;
+  errorCode?: string;
+  reservationId?: string;
+  aiCostUsd: number;
+  aiInputTokens: number;
+  aiOutputTokens: number;
+  mode: AnalysisReport["mode"];
+}
+
+export type WalletTxType = "purchase" | "reserve" | "release" | "purchase_refund" | "admin_adjust" | "test_credit";
+
+export interface WalletTx {
+  id: string;
+  userId: string;
+  type: WalletTxType;
+  amount: number; // positiv = Gutschrift, negativ = Belastung
+  balanceAfter: number;
+  refId?: string;
+  idempotencyKey: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface Reservation {
+  id: string;
+  userId: string;
+  analysisId: string;
+  amount: number;
+  status: "reserved" | "captured" | "released";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Purchase {
+  id: string;
+  userId: string;
+  packageId: string;
+  tokens: number;
+  amountCents: number;
+  currency: "eur";
+  status: "pending" | "paid" | "refunded" | "failed";
+  provider: "stripe" | "test";
+  providerRef?: string; // Stripe Checkout Session ID
+  paymentIntent?: string;
+  createdAt: string;
+  paidAt?: string;
+}
+
+export interface UploadRecord {
+  id: string;
+  ownerKey: string; // userId oder anonyme Sitzungs-ID
+  kind: "image" | "video" | "frame";
+  mime: string;
+  size: number;
+  storagePath: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface AppConfig {
+  pricing?: {
+    packages: { id: string; tokens: number; priceCents: number; label: string }[];
+    fullCheckCost: number;
+    vehicleHistoryPriceCents: number;
+  };
+  demoVisibility?: Record<string, boolean>;
+  providers?: Record<string, boolean>;
+}
+
+export interface AdminStats {
+  users: number;
+  usersLast7d: number;
+  analyses: number;
+  analysesCompleted: number;
+  analysesFailed: number;
+  quickChecks: number;
+  tokensSold: number;
+  revenueCents: number;
+  refundsCents: number;
+  aiCostUsdTotal: number;
+  aiCostUsdAvg: number;
+  byCategory: Record<string, number>;
+  byMode: Record<string, number>;
+  recentFailures: { id: string; createdAt: string; category: string; errorCode: string }[];
+  purchasesByPackage: Record<string, number>;
+}
+
+export class WalletError extends Error {
+  constructor(
+    public code: "insufficient_balance" | "not_found" | "invalid_state",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export interface DataStore {
+  kind: "local" | "supabase";
+
+  // Benutzer
+  getUser(id: string): Promise<UserRecord | null>;
+  findUserByEmail(email: string): Promise<UserRecord | null>;
+  createUser(u: UserRecord): Promise<void>;
+  updateUser(id: string, patch: Partial<UserRecord>): Promise<void>;
+  deleteUserData(userId: string): Promise<void>;
+  exportUserData(userId: string): Promise<Record<string, unknown>>;
+
+  // Analysen
+  createAnalysis(a: AnalysisRecord): Promise<void>;
+  updateAnalysis(id: string, patch: Partial<AnalysisRecord>): Promise<void>;
+  getAnalysis(id: string, userId: string): Promise<AnalysisRecord | null>;
+  listAnalyses(userId: string, limit?: number): Promise<AnalysisRecord[]>;
+  deleteAnalysis(id: string, userId: string): Promise<void>;
+  countQuickCheck(): Promise<void>;
+
+  // Wallet (atomar, idempotent)
+  getBalance(userId: string): Promise<number>;
+  listTransactions(userId: string, limit?: number): Promise<WalletTx[]>;
+  reserveTokens(userId: string, analysisId: string, amount: number, idempotencyKey: string): Promise<Reservation>;
+  captureReservation(reservationId: string): Promise<void>;
+  releaseReservation(reservationId: string, note?: string): Promise<void>;
+  /** Gutschrift nach bestätigter Zahlung – idempotent über idempotencyKey */
+  creditTokens(userId: string, amount: number, type: "purchase" | "admin_adjust" | "test_credit", idempotencyKey: string, refId?: string, note?: string): Promise<{ applied: boolean }>;
+  /** Rückbuchung bei Erstattung – nie unter 0 */
+  debitRefund(userId: string, amount: number, idempotencyKey: string, refId?: string): Promise<{ applied: boolean; debited: number }>;
+
+  // Käufe
+  createPurchase(p: Purchase): Promise<void>;
+  updatePurchaseByRef(providerRef: string, patch: Partial<Purchase>): Promise<Purchase | null>;
+  getPurchaseByRef(providerRef: string): Promise<Purchase | null>;
+  getPurchaseByPaymentIntent(pi: string): Promise<Purchase | null>;
+  listPurchases(userId: string): Promise<Purchase[]>;
+
+  // Uploads
+  createUpload(u: UploadRecord): Promise<void>;
+  getUpload(id: string): Promise<UploadRecord | null>;
+  deleteUpload(id: string): Promise<void>;
+  listExpiredUploads(now: string): Promise<UploadRecord[]>;
+  listUploadsByOwner(ownerKey: string): Promise<UploadRecord[]>;
+
+  // Rate Limiting (Fenster-Zähler)
+  hitRateLimit(key: string, windowSeconds: number, limit: number): Promise<{ allowed: boolean; remaining: number; resetAt: string }>;
+
+  // Konfiguration & Admin
+  getConfig(): Promise<AppConfig>;
+  setConfig(patch: AppConfig): Promise<void>;
+  adminStats(): Promise<AdminStats>;
+}

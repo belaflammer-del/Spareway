@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1f4"/><stop offset="1" stop-color="#dfe4ea"/></linearGradient>
+<linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6675"/><stop offset="1" stop-color="#2f3742"/></linearGradient></defs>
+<rect width="800" height="500" fill="url(#bg)"/>
+<ellipse cx="400" cy="400" rx="320" ry="18" fill="#000" opacity="0.12"/>
+<path d="M90 360 Q100 300 170 290 L260 230 Q300 205 380 205 L520 205 Q580 210 630 265 L700 290 Q730 300 730 340 L730 370 L90 370 Z" fill="url(#m)"/>
+<path d="M280 240 Q310 220 380 220 L450 220 L450 285 L230 285 Z" fill="#a9c3d9" opacity=".9"/>
+<path d="M465 220 L515 220 Q565 225 600 280 L465 285 Z" fill="#a9c3d9" opacity=".9"/>
+<path d="M90 330 L200 300 L230 300 L110 345 Z" fill="#6c7786"/>
+<circle cx="220" cy="370" r="52" fill="#1f242b"/><circle cx="220" cy="370" r="26" fill="#9aa3ad"/>
+<circle cx="600" cy="370" r="52" fill="#1f242b"/><circle cx="600" cy="370" r="26" fill="#9aa3ad"/>
+<g font-family="ui-sans-serif,system-ui,sans-serif" font-size="14" font-weight="600"><rect x="16" y="16" rx="8" width="170" height="28" fill="#7c3aed" opacity="0.9"/><text x="28" y="35" fill="#fff">DEMO-ILLUSTRATION</text></g>
+</svg>
