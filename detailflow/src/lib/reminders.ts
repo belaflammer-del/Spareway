@@ -53,13 +53,31 @@ export async function sendDunning(db: Admin, invoiceId: string, level: number) {
   return true;
 }
 
-/** Täglicher Lauf: alle fälligen Erinnerungen und Mahnungen senden */
+/** Bitte um Google-Bewertung nach abgeschlossenem Auftrag */
+export async function sendReviewRequest(db: Admin, orderId: string) {
+  const { data: o } = await db.from("orders").select("id, company_id, customer_id, review_requested_at, companies(name, email, google_review_url), customers(*), vehicles(make, model, variant)").eq("id", orderId).single();
+  const co = o?.companies as unknown as { name: string; email: string | null; google_review_url: string | null } | undefined;
+  if (!o || o.review_requested_at || !co?.google_review_url) return false;
+  const cu = o.customers as unknown as { type: string | null; company_name: string | null; first_name: string | null; last_name: string | null; email: string | null };
+  const tpl = await template(db, o.company_id, "bewertung");
+  if (!tpl || !cu.email) return false;
+  const body = fillTemplate(tpl, { kunde: customerDisplayName(cu), firma: co.name, bewertung: co.google_review_url,
+    fahrzeug: o.vehicles ? vehicleDisplayName(o.vehicles as unknown as Parameters<typeof vehicleDisplayName>[0]) : "Fahrzeug" });
+  const r = await sendMail({ to: cu.email, subject: `Wie zufrieden waren Sie? – ${co.name}`, text: body, replyTo: co.email });
+  if (!r.ok) return false;
+  await db.from("messages").insert({ company_id: o.company_id, customer_id: o.customer_id, order_id: o.id, direction: "out", channel: "email", body, email_status: "sent" });
+  await db.from("orders").update({ review_requested_at: new Date().toISOString() }).eq("id", o.id);
+  return true;
+}
+
+/** Täglicher Lauf: alle fälligen Erinnerungen, Mahnungen und Bewertungsanfragen senden */
 export async function runDailyReminders() {
-  if (!isMailConfigured()) return { skipped: "E-Mail-Versand nicht eingerichtet", reminders: 0, dunning: 0 };
+  if (!isMailConfigured()) return { skipped: "E-Mail-Versand nicht eingerichtet", reminders: 0, dunning: 0, reviewRequests: 0 };
   const db = createAdminClient();
-  const [{ data: appts }, { data: dun }] = await Promise.all([db.rpc("due_appointment_reminders"), db.rpc("due_dunning")]);
-  let reminders = 0, dunning = 0;
+  const [{ data: appts }, { data: dun }, { data: reviews }] = await Promise.all([db.rpc("due_appointment_reminders"), db.rpc("due_dunning"), db.rpc("due_review_requests")]);
+  let reminders = 0, dunning = 0, reviewRequests = 0;
+  for (const r of (reviews ?? []) as { order_id: string }[]) if (await sendReviewRequest(db, r.order_id)) reviewRequests++;
   for (const a of (appts ?? []) as { order_id: string }[]) if (await sendAppointmentReminder(db, a.order_id)) reminders++;
   for (const d of (dun ?? []) as { invoice_id: string; level: number }[]) if (await sendDunning(db, d.invoice_id, d.level)) dunning++;
-  return { reminders, dunning };
+  return { reminders, dunning, reviewRequests };
 }

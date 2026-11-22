@@ -16,6 +16,10 @@ export async function createCompany(_: ActionState, form: FormData): Promise<Act
   const { data, error } = await supabase.rpc("create_company", { company_name: name.data });
   if (error) return { message: "Die Firma konnte nicht angelegt werden: " + error.message };
   (await cookies()).set(ACTIVE_COMPANY_COOKIE, data as string, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
+  // Empfehlungscode aus der Registrierung übernehmen
+  const { data: { user } } = await supabase.auth.getUser();
+  const ref = user?.user_metadata?.ref;
+  if (typeof ref === "string" && /^[A-Z0-9]{8}$/.test(ref)) await supabase.rpc("apply_referral", { p_company: data, p_code: ref });
   redirect("/onboarding?schritt=2");
 }
 

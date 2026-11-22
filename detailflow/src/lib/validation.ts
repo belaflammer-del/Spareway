@@ -87,6 +87,7 @@ export const calculationInputSchema = z.object({
   specialEffortMinutes: z.number().int().min(0).max(10_000).default(0),
   discountPercent: z.number().min(0).max(100).default(0),
   overrideNet: z.number().min(0).max(1_000_000).nullable().default(null),
+  travelKm: z.number().int().min(0).max(1000).default(0),
 });
 
 export const quoteCreateSchema = z.object({
@@ -130,6 +131,14 @@ export const companySchema = z.object({
     .refine((v) => v === null || /^[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])$/.test(v), { message: "Adresse der Buchungsseite: nur Kleinbuchstaben, Zahlen und Bindestriche (3–50 Zeichen)." }),
   booking_enabled: z.coerce.boolean(),
   reminders_enabled: z.coerce.boolean(),
+  reviews_enabled: z.coerce.boolean(),
+  vouchers_enabled: z.coerce.boolean(),
+  google_review_url: z.string().trim().max(500).optional().nullable().transform((v) => (v ? v : null))
+    .refine((v) => v === null || /^https:\/\//.test(v), { message: "Google-Bewertungslink muss mit https:// beginnen." }),
+  deposit_cents: z.string().optional().transform((v) => Math.round(Number((v || "0").replace(",", ".")) * 100))
+    .refine((n) => Number.isFinite(n) && n >= 0 && n <= 100000, { message: "Anzahlung zwischen 0 und 1.000 €." }),
+  travel_cost_per_km: z.string().optional().transform((v) => Number((v || "0").replace(",", ".")))
+    .refine((n) => Number.isFinite(n) && n >= 0 && n <= 10, { message: "Anfahrtskosten: 0 bis 10 € pro km." }),
   dunning_enabled: z.coerce.boolean(),
   dunning_days: z.string().optional().transform((v) => (v ?? "3,14,28").split(/[,; ]+/).filter(Boolean).map(Number))
     .refine((a) => a.length >= 1 && a.length <= 3 && a.every((n, i) => Number.isInteger(n) && n >= 0 && n <= 180 && (i === 0 || n > a[i - 1])), { message: "Mahnfristen: bis zu drei aufsteigende Tageszahlen, z. B. 3, 14, 28." }),
@@ -150,4 +159,4 @@ export function fieldErrors(error: z.ZodError) {
   return out;
 }
 
-export type ActionState = { ok?: boolean; message?: string; errors?: Record<string, string> } | undefined;
+export type ActionState = { ok?: boolean; message?: string; errors?: Record<string, string>; openUrl?: string } | undefined;

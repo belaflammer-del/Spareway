@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { Download, Trash2 } from "lucide-react";
 import { Badge, Card, CardHeader, Notice, PageHeader, buttonClass } from "@/components/ui";
 import { InvoiceDocument } from "@/components/invoice-document";
-import { AddItemForm, DraftHeaderForm, PaymentForm } from "@/components/invoice-forms";
+import { AddItemForm, DraftHeaderForm, PaymentForm, VoucherRedeemForm } from "@/components/invoice-forms";
+import { payInvoiceOnSite } from "@/app/actions/billing";
+import { QrCode } from "lucide-react";
 import { PrintButton } from "@/components/print-button";
 import { ConfirmSubmit } from "@/components/confirm-button";
 import { getContext } from "@/lib/auth";
@@ -95,7 +97,14 @@ export default async function InvoiceDetail({ params, searchParams }: { params: 
                     {(inv.invoice_reminders as { level: number; sent_at: string }[]).sort((a, b) => a.level - b.level).map((r) => <li key={r.level}>{["", "Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][r.level]} gesendet am {formatDate(r.sent_at)}</li>)}
                   </ul>
                 )}
+                {status === "finalized" && (ctx.company as unknown as { stripe_charges_enabled: boolean }).stripe_charges_enabled && (
+                  <form action={payInvoiceOnSite} className="border-t border-border p-5"><input type="hidden" name="id" value={id} />
+                    <button className={buttonClass("primary", "md", "w-full")}><QrCode className="size-4" />Vor Ort bezahlen (QR-Code)</button>
+                    <p className="mt-1 text-xs text-muted-foreground">Kunde scannt und zahlt mit Karte, Apple Pay oder Google Pay.</p>
+                  </form>
+                )}
                 {status === "finalized" && ctx.role !== "staff" && <div className="border-t border-border p-5"><PaymentForm invoiceId={id} open={open} /></div>}
+                {status === "finalized" && ctx.role !== "staff" && <div className="border-t border-border p-5"><p className="mb-2 text-sm font-medium">Gutschein anrechnen</p><VoucherRedeemForm invoiceId={id} /></div>}
                 {status === "finalized" && ctx.role !== "staff" && (inv.invoice_reminders as unknown[]).length < 3 && (
                   <form action={sendNextDunning} className="border-t border-border px-5 py-3"><input type="hidden" name="id" value={id} />
                     <button className="text-sm text-accent">{["Zahlungserinnerung", "1. Mahnung", "2. Mahnung"][(inv.invoice_reminders as unknown[]).length]} jetzt per E-Mail senden</button>

@@ -49,6 +49,8 @@ export type PricingConfig = {
   internalHourlyCost: number;
   vehicleClassFactors: Record<VehicleClass, number>;
   soilingFactors: Record<SoilingLevel, number>;
+  /** Anfahrtskosten je km (mobiler Service), 0 = keine */
+  travelCostPerKm?: number;
 };
 
 export const DEFAULT_PRICING_CONFIG: PricingConfig = {

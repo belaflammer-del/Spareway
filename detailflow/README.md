@@ -66,7 +66,8 @@ detailflow/
 │  │  ├─ …0005_invoices_portal.sql Rechnungen (GoBD-Schutz, Storno, Hash), Kundenportal, Online-Anfrage, Nachrichten
 │  │  ├─ …0006_revenue_share.sql  Umsatzbeteiligung: Tarifwerte, Stripe Connect, Plattformgebühren
 │  │  ├─ …0007_no_fee_cap.sql     Umsatzbeteiligung ohne Obergrenze
-│  │  └─ …0008_automation.sql     Erinnerungen, Mahnstufen, DATEV-Einstellungen, Angebote bearbeiten
+│  │  ├─ …0008_automation.sql     Erinnerungen, Mahnstufen, DATEV-Einstellungen, Angebote bearbeiten
+│  │  └─ …0009_growth.sql         Anzahlungen, Gutscheine, Pflege-Abos, Bewertungen, Empfehlungen, neue Zielgruppen
 │  └─ seed.sql                   Beispieldaten (2 Betriebe, Kunden, Fahrzeuge, Angebote, Aufträge)
 ├─ src/
 │  ├─ middleware.ts              Auth-Schutz & Session-Refresh
@@ -165,6 +166,16 @@ Legende: ✅ implementiert & getestet · 🟢 implementiert (Build/Typecheck ok,
 | DATEV-Export (EXTF-Buchungsstapel, Windows-1252) und Rechnungsausgangsbuch (Excel) | ✅ (Format – 6 Tests) | ⚖️ ersten Import mit Steuerberatung testen; Konten in Einstellungen |
 | Angebotsentwürfe bearbeiten (Kalkulator mit gespeicherter Eingabe) | ✅ (DB) / 🟢 (UI) | |
 | Kalender: Termine per Drag & Drop verschieben (Tag/Zeit/Box), Box-Doppelbelegung wird abgelehnt | 🟢 | Desktop; auf Touch-Geräten über den Auftrag |
+| **Bezahlen vor Ort per QR-Code** (Kunde zahlt mit eigenem Handy; 0,5 % Gebühr) | 🟢 | Tap to Pay am Handy erfordert eine native App (offen) |
+| **Anzahlung** bei Online-Anfrage (fester Betrag, automatische Anrechnung auf die Rechnung) | ✅ (DB) / 🟢 (Stripe) | ⚖️ USt. auf Anzahlungen mit Steuerberatung klären |
+| **Gutscheine**: Online-Shop `/gutschein/<adresse>`, Verkauf vor Ort, Einlösung auf Rechnungen (Teil-/Resteinlösung, 3 Jahre gültig) | ✅ (DB – Tests) / 🟢 (Stripe/UI) | Mehrzweck-Gutschein: USt. erst bei Einlösung |
+| **Pflege-Abos** für Endkunden (Stripe-Abo auf dem Konto des Betriebs, 0,5 % Plattformanteil) | ✅ (DB-Rechte) / 🟢 (Stripe) | benötigt Connect-Webhook |
+| **Google-Bewertungen** automatisch 1–3 Tage nach Abschluss anfragen + Button im Auftrag | ✅ (Fälligkeit – Tests) / 🟢 (Versand) | |
+| **Mobiler Service**: Anfahrtskosten je km im Kalkulator | ✅ (Unit-Test) | |
+| **WhatsApp**: Nachricht mit Vorlage per WhatsApp öffnen (wa.me) | 🟢 | WhatsApp-Business-API (automatisch) offen |
+| **Installierbare App** (Web-App-Manifest, Icons, Kurzbefehle) | 🟢 | |
+| **Empfehlungsprogramm**: Link je Betrieb, 30 Tage Test für Geworbene, 1 Monat Guthaben für Werbende | ✅ (Missbrauchsschutz – Tests) / 🟢 (Stripe-Gutschrift) | |
+| Zielgruppen Folierung & Smart Repair (12 zusätzliche Leistungsvorlagen) | ✅ | |
 | Material/Lager | ⚪ | |
 | Serverseitige PDF-Erzeugung | ⚪ | derzeit Browser-Druck „Als PDF speichern“ |
 | E2E-Tests (Playwright) gegen laufende Supabase | ⚪ | |
@@ -223,7 +234,7 @@ keine fremden Angebote umwandeln, keine fremden Nummernkreise nutzen; Mitarbeite
 ihre Rolle nicht erhöhen; Tarifdaten sind clientseitig unveränderlich; anonyme Nutzer sehen nur per gültigem Token ein Angebot ohne
 interne Kalkulationsdaten.
 
-**Letzter Lauf (in dieser Entwicklungsumgebung):** 84/84 Tests bestanden (42 DB, 42 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
+**Letzter Lauf (in dieser Entwicklungsumgebung):** 91/91 Tests bestanden (48 DB, 43 Unit), `tsc` fehlerfrei, `next build` erfolgreich.
 Die Oberfläche wurde **nicht** gegen eine laufende Supabase-Instanz durchgeklickt.
 
 CI: `.github/workflows/detailflow-ci.yml` (Typecheck, alle Tests mit PostgreSQL-Service, Build).
@@ -253,7 +264,7 @@ Modell: **Grundgebühr je Tarif + 0,5 % der online bezahlten Rechnungen, ohne Ob
 
 1. Stripe-Konto der Plattform anlegen, **Connect** aktivieren (Express-Konten, Land DE).
 2. Je Tarif ein Produkt mit monatlichem Preis anlegen → IDs in `STRIPE_PRICE_STARTER/PROFESSIONAL/BUSINESS`.
-3. Webhook-Endpunkt `<APP_URL>/api/stripe/webhook` mit den Ereignissen `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.updated`, `customer.subscription.deleted`, `account.updated` (für Connect-Konten „Events on Connected accounts“ aktivieren) → Signing Secret in `STRIPE_WEBHOOK_SECRET`.
+3. Webhook-Endpunkt `<APP_URL>/api/stripe/webhook` (zusätzlich als **Connect-Webhook** für Pflege-Abos) mit den Ereignissen `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.updated`, `customer.subscription.deleted`, `account.updated` (für Connect-Konten „Events on Connected accounts“ aktivieren) → Signing Secret in `STRIPE_WEBHOOK_SECRET`.
 4. `STRIPE_SECRET_KEY` und `SUPABASE_SERVICE_ROLE_KEY` setzen (beide nur serverseitig).
 5. Alles im **Testmodus** durchspielen: Betrieb verbindet Stripe → Rechnung finalisieren → im Kundenportal bezahlen (Testkarte 4242 …) → Zahlung und Gebühr erscheinen in der App.
 

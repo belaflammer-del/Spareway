@@ -68,7 +68,7 @@ run("Mandantentrennung (RLS)", () => {
 
   it("legt bei Firmenanlage den kompletten Leistungskatalog ohne Preise an", async () => {
     const rows = await db.as(ownerA, "select count(*)::int as n, max(base_price)::float as maxp from services where company_id = $1", [companyA]);
-    expect(rows[0].n).toBeGreaterThan(100);
+    expect(rows[0].n).toBeGreaterThan(140);
     expect(rows[0].maxp).toBe(0);
     const pk = await db.as(ownerA, "select count(*)::int as n from packages");
     expect(pk[0].n).toBe(8);
@@ -493,5 +493,78 @@ run("Automatisierung: Erinnerungen, Mahnwesen, Angebote bearbeiten", () => {
     await expect(d.as(ownerB, "select public.update_quote_with_items($1, $2::jsonb, '[]'::jsonb)", [q, payload])).rejects.toThrow(/nicht gefunden/);
     await d.admin("update quotes set status = 'sent' where id = $1", [q]);
     await expect(d.as(ownerA, "select public.update_quote_with_items($1, $2::jsonb, '[]'::jsonb)", [q, payload])).rejects.toThrow(/Nur Entwürfe/);
+  });
+});
+
+run("Wachstum: Gutscheine, Empfehlungen, Bewertungen, Anzahlungen", () => {
+  let d: Db;
+  let inv: string;
+  beforeAll(async () => {
+    d = new Db(); await d.connect();
+    const order = (await d.as(ownerA, `select public.create_order_with_items($1::jsonb, $2::jsonb) as id`, [
+      JSON.stringify({ company_id: companyA, customer_id: customerA, status: "abgeschlossen" }),
+      JSON.stringify([{ title: "Keramik", quantity: 1, unit_price_net: 100, tax_rate: 19, total_net: 100 }]),
+    ]))[0].id;
+    inv = (await d.as(ownerA, "select public.create_invoice_from_order($1) as id", [order]))[0].id;
+    await d.as(ownerA, "select public.finalize_invoice($1)", [inv]);
+  });
+  afterAll(async () => d?.end());
+
+  it("Gutschein verkaufen und teilweise einlösen", async () => {
+    const code = (await d.as(ownerA, "select public.create_voucher($1, 50, 'Max') as c", [companyA]))[0].c;
+    expect(code).toMatch(/^[0-9A-F]{4}-[0-9A-F]{4}$/);
+    const used = (await d.as(ownerA, "select public.redeem_voucher($1, $2) as a", [inv, code.toLowerCase()]))[0].a;
+    expect(Number(used)).toBe(50);
+    const v = (await d.as(ownerA, "select balance::float from vouchers where code = $1", [code]))[0];
+    expect(v.balance).toBe(0);
+    await expect(d.as(ownerA, "select public.redeem_voucher($1, $2)", [inv, code])).rejects.toThrow(/vollständig eingelöst/);
+    const paid = (await d.as(ownerA, "select paid_amount::float from invoices where id = $1", [inv]))[0].paid_amount;
+    expect(paid).toBe(50);
+  });
+
+  it("Gutschein deckt höchstens den offenen Betrag, Rest bleibt erhalten", async () => {
+    const code = (await d.as(ownerA, "select public.create_voucher($1, 100, null) as c", [companyA]))[0].c;
+    const used = (await d.as(ownerA, "select public.redeem_voucher($1, $2) as a", [inv, code]))[0].a;
+    expect(Number(used)).toBe(69); // 119 - 50
+    expect((await d.as(ownerA, "select balance::float from vouchers where code = $1", [code]))[0].balance).toBe(31);
+    expect((await d.as(ownerA, "select status from invoices where id = $1", [inv]))[0].status).toBe("paid");
+  });
+
+  it("Gutscheine: fremde Firmen und Mitarbeiter haben keinen Zugriff", async () => {
+    await expect(d.as(staffA, "select public.create_voucher($1, 20, null)", [companyA])).rejects.toThrow(/Keine Berechtigung/);
+    await expect(d.as(ownerB, "select public.create_voucher($1, 20, null)", [companyA])).rejects.toThrow(/Keine Berechtigung/);
+    expect((await d.as(ownerB, "select count(*)::int as n from vouchers"))[0].n).toBe(0);
+    await expect(d.as(ownerA, "insert into vouchers(company_id, code, initial_amount, balance) values ($1, 'FAKE', 999, 999)", [companyA])).rejects.toThrow(/row-level security/);
+    await expect(d.as(ownerA, "update vouchers set balance = 1000 returning id")).resolves.toHaveLength(0);
+    const code = (await d.as(ownerA, "select public.create_voucher($1, 20, null) as c", [companyA]))[0].c;
+    await expect(d.as(ownerB, "select public.redeem_voucher($1, $2)", [inv, code])).rejects.toThrow(/nicht gefunden/);
+  });
+
+  it("Empfehlung: nur einmal, nicht für sich selbst, Code nicht manipulierbar", async () => {
+    const codeA = (await d.as(ownerA, "select referral_code from companies where id = $1", [companyA]))[0].referral_code;
+    expect((await d.as(ownerB, "select public.apply_referral($1, $2) as ok", [companyB, codeA]))[0].ok).toBe(true);
+    expect((await d.as(ownerB, "select public.apply_referral($1, $2) as ok", [companyB, codeA]))[0].ok).toBe(false);
+    expect((await d.as(ownerA, "select public.apply_referral($1, $2) as ok", [companyA, codeA]))[0].ok).toBe(false);
+    expect((await d.as(ownerA, "select count(*)::int as n from referrals"))[0].n).toBe(1);
+    await expect(d.as(ownerB, "update companies set referred_by = null where id = $1", [companyB])).rejects.toThrow(/Empfehlungsdaten/);
+    await expect(d.as(ownerA, "update companies set referral_code = 'GRATIS' where id = $1", [companyA])).rejects.toThrow(/Empfehlungsdaten/);
+  });
+
+  it("Bewertungsanfrage wird 1–3 Tage nach Abschluss fällig, nur mit Google-Link", async () => {
+    const o = (await d.admin("select id from orders where company_id = $1 and status = 'abgeschlossen' order by created_at desc limit 1", [companyA])).rows[0].id;
+    await d.admin("update orders set completed_at = now() - interval '2 days' where id = $1", [o]);
+    expect((await d.admin("select order_id from public.due_review_requests()")).rows.map((r) => r.order_id)).not.toContain(o);
+    await d.as(ownerA, "update companies set google_review_url = 'https://g.page/r/test/review' where id = $1", [companyA]);
+    expect((await d.admin("select order_id from public.due_review_requests()")).rows.map((r) => r.order_id)).toContain(o);
+    await expect(d.as(ownerA, "update companies set google_review_url = 'javascript:alert(1)' where id = $1", [companyA])).rejects.toThrow(/check constraint/);
+  });
+
+  it("Anzahlungen und Pflege-Abos können nicht vom Client angelegt werden", async () => {
+    const o = (await d.admin("select id from orders where company_id = $1 limit 1", [companyA])).rows[0].id;
+    await expect(d.as(ownerA, "insert into order_deposits(company_id, order_id, amount, external_id) values ($1, $2, 10, 'x')", [companyA, o])).rejects.toThrow(/row-level security/);
+    await expect(d.as(ownerA, "insert into care_subscriptions(company_id, stripe_subscription_id, status) values ($1, 'sub_x', 'active')", [companyA])).rejects.toThrow(/row-level security/);
+    await expect(d.as(staffA, "insert into care_plans(company_id, name, price_cents) values ($1, 'Abo', 2900)", [companyA])).rejects.toThrow(/row-level security/);
+    await d.as(ownerA, "insert into care_plans(company_id, name, price_cents) values ($1, 'Pflege-Abo Basic', 2900)", [companyA]);
+    expect((await d.as(ownerB, "select count(*)::int as n from care_plans where company_id = $1", [companyA]))[0].n).toBe(0);
   });
 });

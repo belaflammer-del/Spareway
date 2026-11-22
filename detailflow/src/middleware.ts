@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/registrieren", "/passwort-vergessen", "/auth", "/angebot/", "/einladung", "/portal/", "/buchen/", "/api/stripe/webhook", "/api/cron/"];
+const PUBLIC_PATHS = ["/login", "/registrieren", "/passwort-vergessen", "/auth", "/angebot/", "/einladung", "/portal/", "/buchen/", "/api/stripe/webhook", "/api/cron/", "/gutschein/", "/zahlung-danke"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -34,5 +34,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|webp|ico)$).*)"],
 };

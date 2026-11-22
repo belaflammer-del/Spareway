@@ -38,6 +38,7 @@ export async function signUp(_: ActionState, form: FormData): Promise<ActionStat
     full_name: z.string().trim().min(2, "Bitte deinen Namen angeben.").max(100),
     email, password,
     terms: z.literal("on", { message: "Bitte stimme den Nutzungsbedingungen und der Datenschutzerklärung zu." }),
+    ref: z.string().regex(/^[A-Z0-9]{8}$/).optional().catch(undefined),
   }).safeParse(Object.fromEntries(form));
   if (!parsed.success) return { message: parsed.error.issues[0].message };
   if (!rateLimit(`signup:${await clientIp()}`, 5, 60 * 60_000)) return { message: "Zu viele Registrierungen. Bitte später erneut versuchen." };
@@ -46,7 +47,7 @@ export async function signUp(_: ActionState, form: FormData): Promise<ActionStat
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: { data: { full_name: parsed.data.full_name }, emailRedirectTo: `${env.appUrl}/auth/callback?next=/onboarding` },
+    options: { data: { full_name: parsed.data.full_name, ref: parsed.data.ref ?? null }, emailRedirectTo: `${env.appUrl}/auth/callback?next=/onboarding` },
   });
   if (error) return { message: error.message.includes("registered") ? "Diese E-Mail-Adresse ist bereits registriert." : "Registrierung fehlgeschlagen. Bitte erneut versuchen." };
   if (data.session) {

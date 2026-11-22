@@ -74,6 +74,8 @@ export async function finalizeInvoice(form: FormData) {
   const id = uuid.parse(form.get("id"));
   const { error } = await ctx.supabase.rpc("finalize_invoice", { p_id: id });
   if (error) back(id, error.message);
+  // Online-Anzahlungen aus der Buchung automatisch anrechnen
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) await (await import("@/lib/payments")).applyDeposits(id);
   revalidatePath("/app/rechnungen");
   revalidatePath(`/app/rechnungen/${id}`);
 }
@@ -110,4 +112,16 @@ export async function recordPayment(_: ActionState, form: FormData): Promise<Act
   revalidatePath(`/app/rechnungen/${id}`);
   revalidatePath("/app/rechnungen");
   return { ok: true, message: "Zahlung erfasst." };
+}
+
+export async function redeemVoucher(_: ActionState, form: FormData): Promise<ActionState> {
+  const ctx = await getContext();
+  const id = uuid.parse(form.get("invoice_id"));
+  const code = String(form.get("code") ?? "").trim();
+  if (!/^[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}$/.test(code)) return { message: "Bitte einen Gutscheincode im Format XXXX-XXXX eingeben." };
+  const normalized = code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
+  const { data, error } = await ctx.supabase.rpc("redeem_voucher", { p_invoice: id, p_code: normalized });
+  if (error) return { message: error.message };
+  revalidatePath(`/app/rechnungen/${id}`);
+  return { ok: true, message: `Gutschein über ${Number(data).toFixed(2).replace(".", ",")} € angerechnet.` };
 }

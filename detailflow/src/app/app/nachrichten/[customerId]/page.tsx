@@ -11,10 +11,11 @@ import { env } from "@/lib/env";
 import { isMailConfigured } from "@/lib/mailer";
 import { markRead, resetPortalLink } from "@/app/actions/messages";
 
-const CHANNEL = { portal: "Portal", email: "E-Mail", telefon: "Telefonat", notiz: "Interne Notiz" } as const;
+const CHANNEL = { portal: "Portal", email: "E-Mail", telefon: "Telefonat", notiz: "Interne Notiz", whatsapp: "WhatsApp" } as const;
 
-export default async function Thread({ params }: { params: Promise<{ customerId: string }> }) {
+export default async function Thread({ params, searchParams }: { params: Promise<{ customerId: string }>; searchParams: Promise<{ vorlage?: string }> }) {
   const { customerId } = await params;
+  const { vorlage } = await searchParams;
   const ctx = await getContext();
   const { data: cu } = await ctx.supabase.from("customers").select("*").eq("id", customerId).maybeSingle();
   if (!cu) notFound();
@@ -31,6 +32,7 @@ export default async function Thread({ params }: { params: Promise<{ customerId:
     fahrzeug: o?.vehicles ? vehicleDisplayName(o.vehicles as unknown as Parameters<typeof vehicleDisplayName>[0]) : "Fahrzeug",
     termin: o?.scheduled_start ? formatDateTime(o.scheduled_start) + " Uhr" : "{termin}",
     betrag: o ? formatEUR(o.total_gross) : "{betrag}",
+    bewertung: (ctx.company as unknown as { google_review_url: string | null }).google_review_url ?? "{bewertung}",
   };
   return (
     <>
@@ -52,7 +54,7 @@ export default async function Thread({ params }: { params: Promise<{ customerId:
           </div>
           <div className="border-t border-border p-5">
             <MessageComposer customerId={customerId} templates={templates ?? []} vars={vars} mailReady={isMailConfigured()}
-              orders={(orders ?? []).map((x) => ({ id: x.id, label: `${x.number}${x.title ? " · " + x.title : ""}` }))} />
+              orders={(orders ?? []).map((x) => ({ id: x.id, label: `${x.number}${x.title ? " · " + x.title : ""}` }))} initialTemplate={vorlage} />
           </div>
         </Card>
         <div className="space-y-6">

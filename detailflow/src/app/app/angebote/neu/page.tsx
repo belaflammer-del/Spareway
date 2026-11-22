@@ -22,7 +22,7 @@ export default async function NewQuote({ searchParams }: { searchParams: Promise
         vehicles={(vehicles ?? []).map((v) => ({ id: v.id, customer_id: v.customer_id, vehicle_class: v.vehicle_class as VehicleClass, name: `${vehicleDisplayName(v)}${v.license_plate ? ` (${v.license_plate})` : ""}` }))}
         services={catalog.services}
         packages={catalog.packages}
-        config={normalizePricingConfig(ctx.company.pricing_config)}
+        config={{ ...normalizePricingConfig(ctx.company.pricing_config), travelCostPerKm: Number((ctx.company as unknown as { travel_cost_per_km?: number }).travel_cost_per_km ?? 0) }}
         tax={{ default_tax_rate: Number(ctx.company.default_tax_rate), small_business: ctx.company.small_business }}
         canEditPrices={ctx.canEditPrices}
         defaults={{ customerId: sp.kunde || undefined, vehicleId: sp.fahrzeug || undefined, target: sp.ziel === "order" ? "order" : "quote" }}

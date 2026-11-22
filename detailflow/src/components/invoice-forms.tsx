@@ -1,6 +1,6 @@
 "use client";
 import { useActionState } from "react";
-import { addInvoiceItem, recordPayment, updateInvoiceDraft } from "@/app/actions/invoices";
+import { addInvoiceItem, recordPayment, redeemVoucher, updateInvoiceDraft } from "@/app/actions/invoices";
 import { Field, Input, Select, Textarea } from "@/components/ui";
 import { FormMessage, SubmitButton } from "@/components/form";
 
@@ -45,6 +45,17 @@ export function PaymentForm({ invoiceId, open }: { invoiceId: string; open: numb
         <Select name="method" defaultValue="Überweisung" aria-label="Zahlungsart">{["Überweisung", "Bar", "EC-Karte", "Kreditkarte", "PayPal", "Sonstiges"].map((m) => <option key={m}>{m}</option>)}</Select>
       </div>
       <div className="flex items-center gap-3"><SubmitButton>Zahlung erfassen</SubmitButton><FormMessage state={state} /></div>
+    </form>
+  );
+}
+
+export function VoucherRedeemForm({ invoiceId }: { invoiceId: string }) {
+  const [state, action] = useActionState(redeemVoucher, undefined);
+  return (
+    <form action={action} className="space-y-2">
+      <input type="hidden" name="invoice_id" value={invoiceId} />
+      <div className="flex gap-2"><Input name="code" placeholder="Gutscheincode XXXX-XXXX" className="font-mono uppercase" aria-label="Gutscheincode" required /><SubmitButton variant="secondary" pendingText="…">Einlösen</SubmitButton></div>
+      <FormMessage state={state} />
     </form>
   );
 }

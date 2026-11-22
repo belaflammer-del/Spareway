@@ -25,6 +25,7 @@ export async function updateCompany(_: ActionState, form: FormData): Promise<Act
   const parsed = companySchema.safeParse({
     ...raw, small_business: form.get("small_business") === "on", booking_enabled: form.get("booking_enabled") === "on",
     reminders_enabled: form.get("reminders_enabled") === "on", dunning_enabled: form.get("dunning_enabled") === "on",
+    reviews_enabled: form.get("reviews_enabled") === "on", vouchers_enabled: form.get("vouchers_enabled") === "on",
     accounting_config: { revenue19: acc("revenue19", "8400"), revenue7: acc("revenue7", "8300"), revenue0: acc("revenue0", "8195"), debitor: acc("debitor", "10000"),
       consultant: acc("consultant", ""), client: acc("client", ""), fiscalYearStart: acc("fiscalYearStart", "01-01") },
   });

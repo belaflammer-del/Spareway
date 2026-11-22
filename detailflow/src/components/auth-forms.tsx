@@ -26,7 +26,7 @@ export function LoginForm({ next }: { next?: string }) {
   );
 }
 
-export function SignUpForm() {
+export function SignUpForm({ refCode }: { refCode?: string }) {
   const [state, action] = useActionState(signUp, undefined);
   if (state?.ok) return <Card className="p-6"><h1 className="text-xl font-semibold">E-Mail bestätigen</h1><p className="mt-2 text-sm text-muted-foreground">{state.message}</p></Card>;
   return (
@@ -34,6 +34,8 @@ export function SignUpForm() {
       <h1 className="text-xl font-semibold">Konto erstellen</h1>
       <p className="mt-1 text-sm text-muted-foreground">In wenigen Minuten ist dein Betrieb eingerichtet.</p>
       <form action={action} className="mt-6 space-y-4">
+        {refCode && <input type="hidden" name="ref" value={refCode} />}
+        {refCode && <p className="rounded-lg bg-accent-soft/50 px-3 py-2 text-sm">Empfohlen von einem Partnerbetrieb: <strong>30 Tage kostenlos</strong>.</p>}
         <Field label="Dein Name" name="full_name"><Input id="full_name" name="full_name" autoComplete="name" required /></Field>
         <Field label="E-Mail" name="email"><Input id="email" name="email" type="email" autoComplete="email" required /></Field>
         <Field label="Passwort" name="password" hint="Mindestens 10 Zeichen"><Input id="password" name="password" type="password" autoComplete="new-password" minLength={10} required /></Field>

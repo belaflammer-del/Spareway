@@ -39,6 +39,14 @@ export function CompanyForm({ company, readOnly }: { company: C; readOnly: boole
           <div className="flex items-center gap-2"><span className="shrink-0 text-sm text-muted-foreground">…/buchen/</span><Input name="slug" defaultValue={v("slug")} placeholder="premium-detailing-koeln" /></div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="booking_enabled" defaultChecked={Boolean(company.booking_enabled)} />Buchungsseite aktiv</label>
         </div>
+        <div className="grid gap-3 rounded-xl border border-border p-4 sm:col-span-2 sm:grid-cols-2">
+          <p className="text-sm font-medium sm:col-span-2">Mehr Kunden & Umsatz</p>
+          <Field label="Google-Bewertungslink" name="google_review_url" hint="Google Unternehmensprofil › „Rezensionen erhalten“" className="sm:col-span-2"><Input name="google_review_url" defaultValue={v("google_review_url")} placeholder="https://g.page/r/…/review" /></Field>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="reviews_enabled" defaultChecked={company.reviews_enabled !== false} />1–3 Tage nach Abschluss automatisch um eine Bewertung bitten</label>
+          <Field label="Anzahlung bei Online-Anfrage (€)" name="deposit_cents" hint="0 = keine Anzahlung"><Input name="deposit_cents" inputMode="decimal" defaultValue={String(Number(company.deposit_cents ?? 0) / 100).replace(".", ",")} /></Field>
+          <Field label="Anfahrtskosten mobiler Service (€/km)" name="travel_cost_per_km" hint="0 = kein mobiler Service"><Input name="travel_cost_per_km" inputMode="decimal" defaultValue={String(company.travel_cost_per_km ?? 0).replace(".", ",")} /></Field>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="vouchers_enabled" defaultChecked={Boolean(company.vouchers_enabled)} />Gutscheine online verkaufen (…/gutschein/&lt;deine-adresse&gt;)</label>
+        </div>
         <div className="space-y-2 rounded-xl border border-border p-4 sm:col-span-2">
           <p className="text-sm font-medium">Automatische Erinnerungen</p>
           <p className="text-xs text-muted-foreground">Werden täglich per E-Mail versendet, sobald der E-Mail-Versand eingerichtet ist. Texte unter Nachrichten-Vorlagen.</p>

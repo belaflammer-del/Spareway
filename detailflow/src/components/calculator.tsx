@@ -35,6 +35,7 @@ export function Calculator(p: Props) {
   const [packageIds, setPackageIds] = useState<string[]>(e0?.packageIds ?? []);
   const [extras, setExtras] = useState<{ title: string; priceNet: number }[]>(e0?.extras ?? []);
   const [effort, setEffort] = useState(e0?.specialEffortMinutes ?? 0);
+  const [travelKm, setTravelKm] = useState((e0 as { travelKm?: number } | undefined)?.travelKm ?? 0);
   const [discount, setDiscount] = useState(e0?.discountPercent ?? 0);
   const [override, setOverride] = useState(e0?.overrideNet != null ? String(e0.overrideNet).replace(".", ",") : "");
   const [intro, setIntro] = useState(p.edit?.intro ?? "");
@@ -46,7 +47,7 @@ export function Calculator(p: Props) {
 
   const customerVehicles = p.vehicles.filter((v) => !customerId || v.customer_id === customerId);
   const overrideNet = override.trim() === "" ? null : Number(override.replace(",", "."));
-  const calc = { vehicleClass, soiling, serviceIds, packageIds, extras, specialEffortMinutes: effort, discountPercent: discount, overrideNet: Number.isFinite(overrideNet) ? overrideNet : null };
+  const calc = { vehicleClass, soiling, serviceIds, packageIds, extras, specialEffortMinutes: effort, travelKm, discountPercent: discount, overrideNet: Number.isFinite(overrideNet) ? overrideNet : null };
   const result = useMemo(() => calculate(calc, { services: p.services, packages: p.packages }, p.config, p.tax), [JSON.stringify(calc)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const covered = useMemo(() => new Set(packageIds.flatMap((id) => p.packages.find((x) => x.id === id)?.service_ids ?? [])), [packageIds, p.packages]);
@@ -161,6 +162,11 @@ export function Calculator(p: Props) {
             <Field label="Sonderaufwand (Minuten)" name="effort" hint={`Wird mit ${formatEUR(p.config.hourlyRate)}/Std. berechnet`}>
               <Input id="effort" inputMode="numeric" value={effort || ""} onChange={(e) => setEffort(Math.max(0, Number(e.target.value) || 0))} placeholder="0" />
             </Field>
+            {(p.config.travelCostPerKm ?? 0) > 0 && (
+              <Field label="Anfahrt (km, einfache Strecke)" name="travel" hint={`${formatEUR(p.config.travelCostPerKm ?? 0)}/km, Hin- und Rückweg`}>
+                <Input id="travel" inputMode="numeric" value={travelKm || ""} onChange={(e) => setTravelKm(Math.max(0, Math.min(1000, Number(e.target.value) || 0)))} placeholder="0" />
+              </Field>
+            )}
           </div>
           <div className="mt-4 space-y-2">
             {extras.map((x, i) => (

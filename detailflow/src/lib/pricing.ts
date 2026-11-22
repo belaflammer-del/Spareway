@@ -44,6 +44,8 @@ export type CalculationInput = {
   discountPercent?: number;
   /** Manuell festgelegter Netto-Endpreis (nur mit Preisrecht) */
   overrideNet?: number | null;
+  /** Anfahrt in km (einfache Strecke) beim mobilen Service */
+  travelKm?: number;
 };
 
 export type CompanyTax = { default_tax_rate: number; small_business: boolean };
@@ -51,7 +53,7 @@ export type CompanyTax = { default_tax_rate: number; small_business: boolean };
 export type LineBreakdown = { base: number; classSurcharge: number; soilingSurcharge: number; minimumApplied: boolean };
 
 export type CalculatedLine = {
-  kind: "service" | "package" | "extra" | "effort";
+  kind: "service" | "package" | "extra" | "effort" | "travel";
   serviceId?: string;
   packageId?: string;
   title: string;
@@ -195,6 +197,13 @@ export function calculate(
   if (effort > 0) {
     const cents = c((cfg.hourlyRate * effort) / 60);
     lines.push({ kind: "effort", title: `Sonderaufwand (${formatMinutes(effort)})`, quantity: 1, unitPriceNet: e(cents), totalNet: e(cents), taxRate: defaultRate, minutes: effort, materialCost: 0 });
+  }
+
+  // 3b) Anfahrt (mobiler Service): Hin- und Rückweg
+  const km = Math.max(0, Math.round(input.travelKm ?? 0));
+  if (km > 0 && (cfg.travelCostPerKm ?? 0) > 0) {
+    const cents = c(km * 2 * (cfg.travelCostPerKm ?? 0));
+    lines.push({ kind: "travel", title: `Anfahrt (${km} km, Hin- und Rückweg)`, quantity: 1, unitPriceNet: e(cents), totalNet: e(cents), taxRate: defaultRate, minutes: 0, materialCost: 0 });
   }
 
   // 4) Freie Zusatzpositionen

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, CalendarDays, Car, ClipboardList, MessageSquare, Receipt, FileText, Home, LogOut, Menu, Moon, Settings, Sparkles, Sun, Users, X } from "lucide-react";
+import { BarChart3, CalendarDays, Car, ClipboardList, Gift, MessageSquare, Receipt, FileText, Home, LogOut, Menu, Moon, Settings, Sparkles, Sun, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/app/nachrichten", label: "Nachrichten", icon: MessageSquare },
   { href: "/app/angebote", label: "Angebote", icon: FileText },
   { href: "/app/rechnungen", label: "Rechnungen", icon: Receipt },
+  { href: "/app/gutscheine", label: "Gutscheine", icon: Gift },
   { href: "/app/kunden", label: "Kunden", icon: Users },
   { href: "/app/fahrzeuge", label: "Fahrzeuge", icon: Car },
   { href: "/app/leistungen", label: "Leistungen & Preise", icon: Sparkles },

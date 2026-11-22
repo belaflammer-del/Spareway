@@ -26,7 +26,7 @@ export async function saveCalculation(_: ActionState, form: FormData): Promise<A
   }
 
   const catalog = await loadCatalog(ctx);
-  const cfg = normalizePricingConfig(ctx.company.pricing_config);
+  const cfg = { ...normalizePricingConfig(ctx.company.pricing_config), travelCostPerKm: Number((ctx.company as unknown as { travel_cost_per_km?: number }).travel_cost_per_km ?? 0) };
   const result = calculate(d.calc, catalog, cfg, { default_tax_rate: Number(ctx.company.default_tax_rate), small_business: ctx.company.small_business });
   if (result.lines.length === 0) return { message: "Bitte mindestens eine Leistung oder ein Paket auswählen." };
 

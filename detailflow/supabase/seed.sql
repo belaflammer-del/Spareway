@@ -47,6 +47,12 @@ begin
   perform seed_message_templates(c_b);
   perform seed_dunning_templates(c_a);
   perform seed_dunning_templates(c_b);
+  perform seed_growth_templates(c_a);
+  perform seed_growth_templates(c_b);
+  update companies set google_review_url = 'https://g.page/r/premium-detailing-koeln/review', vouchers_enabled = true, travel_cost_per_km = 0.6 where id = c_a;
+  insert into care_plans(company_id, name, description, price_cents) values
+    (c_a, 'Pflege-Abo Basic', E'• 1× im Monat Handwäsche\n• Felgen & Scheiben', 3900),
+    (c_a, 'Pflege-Abo Premium', E'• 2× im Monat Handwäsche\n• alle 3 Monate Innenraum\n• jährliche Versiegelung', 8900);
   update companies set slug = 'premium-detailing-koeln', booking_enabled = true, contact_name = 'Markus Weber',
     iban = 'DE89370400440532013000', bic = 'COBADEFFXXX', bank_name = 'Commerzbank Köln' where id = c_a;
 

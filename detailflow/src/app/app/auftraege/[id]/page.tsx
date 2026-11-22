@@ -104,7 +104,10 @@ export default async function OrderDetail({ params, searchParams }: { params: Pr
               {v.special_notes && <p className="mt-1 text-xs text-muted-foreground">{v.special_notes}</p>}
             </>)}
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={`/app/nachrichten/${c.id}`} className={buttonClass("secondary", "sm")}>Kunde benachrichtigen</Link>
+              <Link href={`/app/nachrichten/${c.id}${status === "abholbereit" ? "?vorlage=fertig" : ""}`} className={buttonClass("secondary", "sm")}>Kunde benachrichtigen</Link>
+              {status === "abgeschlossen" && (ctx.company as unknown as { google_review_url: string | null }).google_review_url && (
+                <Link href={`/app/nachrichten/${c.id}?vorlage=bewertung`} className={buttonClass("secondary", "sm")}>Um Bewertung bitten</Link>
+              )}
               {invoice ? <Link href={`/app/rechnungen/${invoice.id}`} className={buttonClass("secondary", "sm")}>Rechnung {invoice.number ?? "(Entwurf)"}</Link>
                 : <form action={createInvoiceFromOrder}><input type="hidden" name="order_id" value={id} /><button className={buttonClass("primary", "sm")}>Rechnung erstellen</button></form>}
             </div>

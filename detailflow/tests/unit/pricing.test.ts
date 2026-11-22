@@ -112,6 +112,14 @@ describe("calculate", () => {
     expect(r.estimatedProfit).toBe(44.5); // 85 - 3 Material - 37,5 Arbeit
   });
 
+  it("berechnet Anfahrt (Hin- und Rückweg) nur bei hinterlegtem km-Satz", () => {
+    const r = calculate({ vehicleClass: "kompaktwagen", soiling: "normal", serviceIds: ["wash"], packageIds: [], travelKm: 12 }, catalog, { ...cfg, travelCostPerKm: 0.5 }, tax);
+    expect(r.lines.at(-1)).toMatchObject({ kind: "travel", totalNet: 12 });
+    expect(r.subtotalNet).toBe(52);
+    const none = calculate({ vehicleClass: "kompaktwagen", soiling: "normal", serviceIds: ["wash"], packageIds: [], travelKm: 12 }, catalog, cfg, tax);
+    expect(none.lines.some((l) => l.kind === "travel")).toBe(false);
+  });
+
   it("warnt bei Leistungen ohne Preis", () => {
     const free = svc({ id: "free", name: "Neue Leistung", base_price: 0 });
     const r = calculate({ vehicleClass: "kompaktwagen", soiling: "normal", serviceIds: ["free"], packageIds: [] }, { services: [free], packages: [] }, cfg, tax);

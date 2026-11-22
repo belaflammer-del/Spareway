@@ -1,15 +1,16 @@
 "use client";
-import { useActionState, useRef } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { sendMessage } from "@/app/actions/messages";
 import { Select, Textarea } from "@/components/ui";
 import { FormMessage, SubmitButton } from "@/components/form";
 import { fillTemplate } from "@/lib/invoice";
 
-export function MessageComposer({ customerId, templates, vars, mailReady, orders }: {
-  customerId: string; templates: { key: string; name: string; body: string }[]; vars: Record<string, string>; mailReady: boolean; orders: { id: string; label: string }[];
+export function MessageComposer({ customerId, templates, vars, mailReady, orders, initialTemplate }: {
+  customerId: string; templates: { key: string; name: string; body: string }[]; vars: Record<string, string>; mailReady: boolean; orders: { id: string; label: string }[]; initialTemplate?: string;
 }) {
   const [state, action] = useActionState(sendMessage, undefined);
   const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { if (state?.openUrl) window.open(state.openUrl, "_blank", "noopener"); }, [state]);
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="customer_id" value={customerId} />
@@ -25,9 +26,10 @@ export function MessageComposer({ customerId, templates, vars, mailReady, orders
           </Select>
         )}
       </div>
-      <Textarea ref={ref} name="body" required placeholder="Nachricht an den Kunden …" className="min-h-28" />
+      <Textarea ref={ref} name="body" required placeholder="Nachricht an den Kunden …" className="min-h-28" defaultValue={initialTemplate ? fillTemplate(templates.find((t) => t.key === initialTemplate)?.body ?? "", vars) : undefined} />
       <div className="flex flex-wrap items-center gap-2">
         <Select name="channel" defaultValue={mailReady ? "email" : "portal"} className="h-10 w-auto" aria-label="Versandweg">
+          <option value="whatsapp">Per WhatsApp</option>
           <option value="portal">Im Kundenportal</option>
           <option value="email">Per E-Mail {mailReady ? "" : "(nicht eingerichtet)"}</option>
           <option value="telefon">Telefonat notieren</option>

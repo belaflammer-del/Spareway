@@ -4,6 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "DetailFlow", template: "%s · DetailFlow" },
   description: "Die Betriebssoftware für professionelle Fahrzeugaufbereitung.",
+  applicationName: "DetailFlow",
+  appleWebApp: { capable: true, title: "DetailFlow", statusBarStyle: "default" },
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  formatDetection: { telephone: false },
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#fafafa" };
 
