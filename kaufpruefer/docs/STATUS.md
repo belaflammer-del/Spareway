@@ -1,33 +1,20 @@
-# DEAL-NIVO – Entwicklungsstand (V2)
+# DEAL-NIVO – Entwicklungsstand (V3)
 
-## Fertig implementiert und getestet
-- **KI-Pipeline (OpenAI, austauschbar):** Extraktion aus Screenshots/Text, Bildbefunde mit Evidenzstufen und Markierung, Text-Bild-Widersprüche, unverifizierte Modell-Hinweise klar gekennzeichnet, OCR von Bewertungen, Texte. Zod-Validierung (doppelt), Timeouts + 2 Wiederholungen, Logging ohne Inhalte, Fallback auf Regelmodus bei KI-Fehlern.
-- **Kostenkontrolle:** KI-Kosten pro Analyse (Modell, Tokens, Dauer), Tages-Kostenbremse (`AI_DAILY_BUDGET_USD`, im Admin änderbar), Modell im Admin umstellbar.
-- **Link-Import:** Teilen-Texte der Apps, Tracking-Entfernung, eBay-Kurzlinks, eBay Browse API (mit Schlüssel).
-- **Screenshot-Workflow:** Mehrfachupload mit Fortschritt, KI führt Screenshots zusammen, **Konflikte** (z. B. zwei Kilometerstände) werden zur Auswahl angezeigt statt geraten.
-- **Bestätigungsschritt:** „Angebot erkannt“-Karte, nur fehlende Pflichtangaben, Rest aufklappbar.
-- **Marktpreis:** Valuation-Engine (IQR, gewichtete Quartile, Regression, Angebot vs. Verkauf), **Liste der Vergleichsangebote** mit Quelle/Datum/Link, **eBay-Vergleichsangebote** über Browse API (mit Schlüssel), lizenzierter HTTP-Provider vorbereitet.
-- **Ergebnisseite:** Produktbild, Score-Kasten, Preis-Wasserwaage, „Lohnt sich eine Besichtigung?“, realistischer Preis, separate Karten (Preis, Zustand, Schwachstellen, Risiken, Verkäufer, Bezahlung, Checkliste, Nachricht, Datenqualität), **Checkliste in drei Phasen**, Hinweis auf veraltete Marktdaten.
-- **Verkäuferprüfung nachträglich** zu bezahlten Analysen – ohne weiteren Token. Screenshots, Bildschirmaufnahme oder Text.
-- **Video:** Frame-Auswahl nach Scrollbewegung, Hinweis bei zu schnellem/zu wenig Scrollen, sofortige Löschung.
-- **Angebotsvergleich** (`/vergleich`): eigene Analysen und Demos, nur aus Berichtsdaten, kostenlos.
-- **Token:** Reservierung/Verbuchung/Freigabe, Idempotenz, **Wiederverwendung identischer Analysen (7 Tage) ohne neuen Token**, klare Einzelpreis-Kommunikation.
-- **Historie:** Suche, Kategorie-Filter, Veraltet-Hinweis.
-- **Kategorien:** Status live/beta im Admin; Beta = nur Schnellcheck.
-- **Admin:** aktive Nutzer, Verkäuferprüfungen, Vergleiche, Wiederverwendungen, Ø Dauer, häufigste Fehler, KI-Kosten heute vs. Budget.
-- **Tests:** 60 automatisierte Tests inkl. simuliertem KI-Durchlauf; KI-Qualitätsmessung (`npm run eval`) mit Referenz-Inseraten, Genauigkeit ≥ 90 %, Halluzinationsrate ≤ 5 %.
+| Funktion | Status | Getestet | Benötigt | Einschränkungen |
+|---|---|---|---|---|
+| Vergleichsangebote im Bericht | Vollständig | Unit + Browser | – (für Live-Daten: eBay/Anbieter) | Ohne Datenquelle nur Nutzer-Vergleiche; Daten > 90 Tage werden verworfen |
+| eBay aktive Angebote (Browse API) | Vorbereitet, nicht angebunden | Unit (simulierte API) | `EBAY_CLIENT_ID/SECRET` | Angebotspreise, keine Verkaufspreise |
+| eBay Verkaufspreise (Insights API) | Vorbereitet, deaktiviert | Unit (simulierte API) | Freischaltung durch eBay + `EBAY_INSIGHTS_ENABLED=true` | Zugang nur auf Antrag |
+| Konflikte zwischen Screenshots | Vollständig (regelbasiert) | Unit (125.000 vs. 152.000 km) | `OPENAI_API_KEY` fürs Auslesen | Ohne KI keine Screenshot-Auswertung |
+| Kompakte Bestätigung | Vollständig | Browser | – | – |
+| Verkäuferprüfung nachträglich / ergänzen | Vollständig | Unit + Browser (Token unverändert) | Für Screenshots/Video: KI | Text-Eingabe funktioniert ohne KI |
+| Angebotsvergleich (gespeichert, neue Links) | Vollständig | Unit + Browser | – | Zusammenfassung regelbasiert (keine KI nötig) |
+| Wiederverwendung & Versionierung | Vollständig | Unit | – | Wiederverwendung nur ohne neu hochgeladene Bilder |
+| Historie: Suche, Filter, Sortierung, Seiten | Vollständig | Unit + Browser | Supabase-Migration 0003 | – |
+| KI-Kostenkontrolle (alle Limits) | Vollständig | Unit | – | Job-Liste/Video im Prozessspeicher (1 Instanz) |
+| Beta-Kategorien (Live/Beta/Aus) | Vollständig | Browser | – | – |
+| Transparente Preise | Vollständig | Browser | – | – |
+| KI-Rückfragen zum Bericht | Vollständig | Unit (simulierte KI) | `OPENAI_API_KEY` | Ohne KI deaktiviert mit Hinweis |
+| Bildschirmaufnahme asynchron | Vollständig | Unit (echtes FFmpeg) | FFmpeg auf dem Server, KI für Texterkennung | Render-Standardumgebung hat evtl. kein FFmpeg |
 
-## Teilweise (braucht Zugänge)
-- Echte KI-Analysen → `OPENAI_API_KEY`
-- Dauerhafte Daten, E-Mail-Bestätigung → Supabase (Migrationen `0001_init.sql` und `0002_v2.sql`)
-- eBay-Import und eBay-Vergleichspreise → `EBAY_CLIENT_ID/SECRET`
-- Fahrzeug-Marktwerte mit Verkaufspreisen → lizenzierter Datenanbieter
-- Zahlungen → Stripe (bewusst später)
-
-## Noch offen
-- Videoanalyse asynchron mit Fortschrittsanzeige (läuft derzeit synchron im Request, max. 90 s Video)
-- Analysen über Job-Queue statt im Request (für viele parallele Nutzer)
-- Wissensdatenbank mit geprüften Schwachstellen befüllen
-- mobile.de/AutoScout24-Import (nur mit Partnervertrag)
-- Monitoring/Alerting (z. B. Sentry), Lasttests
-- Native Apps inkl. „Teilen → DEAL-NIVO“
+Weitere offene Punkte: Analysen über Job-Queue (für viele parallele Nutzer), Monitoring, Wissensdatenbank füllen, mobile.de/AutoScout24 (Partnervertrag), Stripe (bewusst später).

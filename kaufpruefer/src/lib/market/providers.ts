@@ -20,6 +20,9 @@ export interface MarketQuery {
   year?: number;
   mileageKm?: number;
   region?: string;
+  storageGb?: number;
+  fuel?: string;
+  transmission?: string;
 }
 
 export interface MarketDataProvider {
@@ -31,7 +34,7 @@ export interface MarketDataProvider {
 }
 
 export function queryFromListing(l: Listing): MarketQuery {
-  return { category: l.category, brand: l.brand, model: l.model, variant: l.variant, year: l.year, mileageKm: l.mileageKm, region: l.location };
+  return { category: l.category, brand: l.brand, model: l.model, variant: l.variant, year: l.year, mileageKm: l.mileageKm, region: l.location, storageGb: l.storageGb, fuel: l.fuel, transmission: l.transmission };
 }
 
 export const UserComparableInputSchema = z.object({
@@ -41,6 +44,7 @@ export const UserComparableInputSchema = z.object({
   mileageKm: z.coerce.number().nonnegative().max(2_000_000).optional(),
   title: z.string().max(200).optional(),
   url: z.string().max(500).optional(),
+  condition: z.string().max(80).optional(),
 });
 export type UserComparableInput = z.infer<typeof UserComparableInputSchema>;
 
@@ -53,7 +57,8 @@ export function userComparables(items: UserComparableInput[]): Comparable[] {
     priceType: i.priceType,
     year: i.year,
     mileageKm: i.mileageKm,
-    url: i.url,
+    url: i.url && /^https:\/\//.test(i.url) ? i.url : undefined,
+    conditionText: i.condition,
     source: "Vom Nutzer hinterlegt",
     collectedAt: at,
   }));

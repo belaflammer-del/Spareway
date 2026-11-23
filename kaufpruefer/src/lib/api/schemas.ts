@@ -33,6 +33,8 @@ export const AnalysisRequestSchema = z.object({
   listing: ClientListingSchema,
   comparables: z.array(UserComparableInputSchema).max(40).default([]),
   seller: SellerRequestSchema.optional(),
+  /** Nutzer hat die Einschränkungen einer Beta-Kategorie bestätigt */
+  acceptBeta: z.boolean().optional(),
 });
 
 export const QuickCheckRequestSchema = z.object({ listing: ClientListingSchema });

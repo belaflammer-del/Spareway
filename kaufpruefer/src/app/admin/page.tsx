@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { AiConfigForm } from "@/components/dashboard/ai-config-form";
 import { toggleCategoryAction, toggleDemoAction, toggleProviderAction } from "@/lib/admin/actions";
 import { aiSpendKey, dailyBudgetUsd } from "@/lib/ai/budget";
+import { resolveLimits, spendKeys } from "@/lib/ai/guard";
 import { requireAdmin } from "@/lib/auth/session";
 import { env, features } from "@/lib/config/env";
 import { DEFAULT_CATEGORY_STATUS, PROVIDER_INFO, type ProviderKey } from "@/lib/config/providers";
@@ -31,8 +32,17 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 export default async function AdminPage() {
   await requireAdmin();
   const store = getStore();
-  const [s, cfg, pricing, spentMicro, budget] = await Promise.all([store.adminStats(), store.getConfig(), getPricing(), store.getCounter(aiSpendKey()), dailyBudgetUsd()]);
+  const [s, cfg, pricing, spentMicro, budget, monthMicro, limitHits] = await Promise.all([
+    store.adminStats(),
+    store.getConfig(),
+    getPricing(),
+    store.getCounter(aiSpendKey()),
+    dailyBudgetUsd(),
+    store.getCounter(spendKeys.globalMonth()),
+    store.getCounter("ai_limit_hit"),
+  ]);
   const spentToday = spentMicro / 1_000_000;
+  const lim = resolveLimits(cfg);
   const usdToEur = 0.92; // Näherung nur für die Wirtschaftlichkeitsanzeige
   const netRevenue = (s.revenueCents - s.refundsCents) / 100;
   const aiCostEur = s.aiCostUsdTotal * usdToEur;
@@ -59,6 +69,7 @@ export default async function AdminPage() {
         <Kpi label="Verkäuferprüfungen" value={String(s.sellerChecks)} sub={`Vergleiche: ${s.comparisons} · wiederverwendet: ${s.reusedAnalyses}`} />
         <Kpi label="Ø Dauer pro Analyse" value={s.avgDurationMs ? `${(s.avgDurationMs / 1000).toFixed(1)} s` : "–"} />
         <Kpi label="KI-Kosten heute" value={`$${spentToday.toFixed(2)}`} sub={`Budget $${budget.toFixed(2)} / Tag`} />
+        <Kpi label="KI-Kosten Monat" value={`$${(monthMicro / 1e6).toFixed(2)}`} sub={`Budget $${lim.globalMonthUsd.toFixed(0)} · Limit-Treffer: ${limitHits}`} />
         <Kpi label="Deckungsbeitrag pro Token" value={formatEur(margin)} sub="Ø Erlös/Token − Ø KI-Kosten (ohne Zahlungsgebühren)" />
       </section>
 
@@ -140,15 +151,28 @@ export default async function AdminPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
-          <h2 className="font-semibold">KI-Modell & Kostenlimit</h2>
+          <h2 className="font-semibold">KI-Modelle & Limits</h2>
           <p className="mt-1 text-sm text-muted">Bei erreichtem Tagesbudget werden keine KI-Aufrufe mehr gestartet.</p>
           <div className="mt-4">
-            <AiConfigForm model={cfg.ai?.model} defaultModel={env.ai.openaiModel} budget={budget} />
+            <AiConfigForm
+              model={cfg.ai?.model}
+              fastModel={cfg.ai?.fastModel}
+              defaultModel={env.ai.openaiModel}
+              dailyBudgetUsd={lim.globalDayUsd}
+              perAnalysisUsd={lim.perAnalysisUsd}
+              perUserDayUsd={lim.perUserDayUsd}
+              globalMonthUsd={lim.globalMonthUsd}
+              maxCallsPerAnalysis={lim.maxCallsPerAnalysis}
+              maxImagesPerUpload={cfg.limits?.maxImagesPerUpload ?? 12}
+              videoMaxSeconds={cfg.limits?.videoMaxSeconds ?? env.videoMaxSeconds}
+              videoMaxMb={cfg.limits?.videoMaxMb ?? env.videoMaxMb}
+              chatQuestionsPerAnalysis={cfg.limits?.chatQuestionsPerAnalysis ?? 5}
+            />
           </div>
         </Card>
         <Card className="p-5">
           <h2 className="font-semibold">Produktkategorien</h2>
-          <p className="mt-1 text-sm text-muted">„Beta“ = nur kostenloser Schnellcheck, kein kostenpflichtiger Komplettcheck.</p>
+          <p className="mt-1 text-sm text-muted">Live = vollständig · Beta = Komplettcheck nur nach Bestätigung der Einschränkungen · Aus = keine Prüfungen. Antippen schaltet weiter.</p>
           <ul className="mt-3 space-y-2">
             {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => {
               const st = cfg.categories?.[c] ?? DEFAULT_CATEGORY_STATUS[c] ?? "beta";
@@ -157,7 +181,7 @@ export default async function AdminPage() {
                   <span>{CATEGORY_LABELS[c]}</span>
                   <form action={toggleCategoryAction}>
                     <input type="hidden" name="category" value={c} />
-                    <Button size="sm" variant={st === "live" ? "outline" : "subtle"}>{st === "live" ? "Live" : "Beta"}</Button>
+                    <Button size="sm" variant={st === "live" ? "outline" : "subtle"}>{st === "live" ? "Live" : st === "beta" ? "Beta" : "Aus"}</Button>
                   </form>
                 </li>
               );

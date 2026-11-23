@@ -198,6 +198,13 @@ export const ComparableSchema = z.object({
   region: z.string().optional(),
   listingAgeDays: z.number().nonnegative().optional(),
   url: z.string().optional(),
+  /** Vorschaubild – nur aus zulässigen Quellen (z. B. eBay API) */
+  imageUrl: z.string().optional(),
+  /** Zustand im Wortlaut der Quelle */
+  conditionText: z.string().optional(),
+  platform: z.string().optional(),
+  /** Weitere relevante Eigenschaften (Motor, Getriebe, Speicher, Akku, Lieferumfang …) */
+  attributes: z.record(z.string(), z.string()).optional(),
   source: z.string(),
   collectedAt: z.string(),
 });
@@ -430,6 +437,10 @@ export const AnalysisReportSchema = z.object({
   market: MarketValuationSchema,
   product: ProductAnalysisSchema,
   seller: SellerAnalysisSchema.optional(),
+  /** Protokoll der Verkäuferprüfungen (jede Ergänzung separat nachvollziehbar) */
+  sellerRuns: z
+    .array(z.object({ at: z.string(), method: z.string(), submitted: z.number().int(), newReviews: z.number().int(), duplicates: z.number().int(), total: z.number().int() }))
+    .default([]),
   risks: z.array(RiskFindingSchema),
   payment: z.array(PaymentAdviceSchema),
   checklist: ChecklistSchema,

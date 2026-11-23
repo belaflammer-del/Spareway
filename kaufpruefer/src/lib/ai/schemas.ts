@@ -47,6 +47,10 @@ export const ExtractionOutputSchema = z.object({
   lowConfidenceFields: z.array(z.string()),
   /** Widersprüchliche Werte für dasselbe Feld auf verschiedenen Bildern/Texten */
   conflicts: z.array(z.object({ field: z.string(), values: z.array(z.string()), imageIndexes: z.array(z.number().int()) })),
+  /** Jeder einzeln gelesene Wert pro Bild (für die deterministische Zusammenführung) */
+  observations: z.array(
+    z.object({ field: z.string(), value: z.string(), imageIndex: z.number().int().nullable(), confidence: z.enum(["high", "medium", "low"]) }),
+  ),
   images: z.array(
     z.object({
       index: z.number().int(),

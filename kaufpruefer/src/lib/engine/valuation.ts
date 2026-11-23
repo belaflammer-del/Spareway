@@ -19,6 +19,8 @@ export interface ValuationConfig {
   staleListingDays: number;
   staleListingWeight: number;
   regressionMinComparables: number;
+  /** Ältere Datenerhebungen werden nicht verwendet (Aktualität) */
+  maxDataAgeDays: number;
 }
 
 export const DEFAULT_VALUATION_CONFIG: ValuationConfig = {
@@ -28,7 +30,10 @@ export const DEFAULT_VALUATION_CONFIG: ValuationConfig = {
   staleListingDays: 60,
   staleListingWeight: 0.8,
   regressionMinComparables: 8,
+  maxDataAgeDays: 90,
 };
+
+export const NO_COMPARABLES_TEXT = "Für dieses Produkt konnten aktuell keine ausreichend belastbaren Vergleichsangebote abgerufen werden.";
 
 export const INSUFFICIENT_TEXT = "Marktwert derzeit nicht verlässlich bestimmbar";
 
@@ -148,7 +153,13 @@ export function valuate(
 ): MarketValuation {
   const collectedAt = nowIso();
   const sources = Array.from(new Set(comparables.map((c) => c.source)));
-  const valid = comparables.filter((c) => Number.isFinite(c.priceEur) && c.priceEur > 0);
+  const nowMs = Date.now();
+  const fresh = comparables.filter((c) => {
+    const t = Date.parse(c.collectedAt);
+    return !Number.isFinite(t) || nowMs - t <= cfg.maxDataAgeDays * 864e5;
+  });
+  const outdated = comparables.length - fresh.length;
+  const valid = fresh.filter((c) => Number.isFinite(c.priceEur) && c.priceEur > 0);
   const { kept, excluded } = removeOutliers(valid);
   const listingPrices = kept.filter((c) => c.priceType === "listing").length;
   const soldPrices = kept.filter((c) => c.priceType === "sold").length;
@@ -164,7 +175,7 @@ export function valuate(
     samples,
     comparables: {
       used: kept.length,
-      excluded: excluded.length + (comparables.length - valid.length),
+      excluded: excluded.length + (fresh.length - valid.length) + outdated,
       listingPrices,
       soldPrices,
       quality: "none" as const,
@@ -180,13 +191,13 @@ export function valuate(
       method: "Keine Bewertung – zu wenige belastbare Vergleichsdaten",
       explanation:
         kept.length === 0
-          ? `${INSUFFICIENT_TEXT}. Es liegen keine Vergleichsangebote aus einer zulässigen Datenquelle vor. Du kannst selbst gefundene Vergleichsangebote hinzufügen.`
-          : `${INSUFFICIENT_TEXT}. Es liegen nur ${kept.length} verwertbare Vergleichsangebote vor (mindestens ${cfg.minComparables} erforderlich).`,
-      adjustments: [],
+          ? `${NO_COMPARABLES_TEXT} Ein Marktwert wird deshalb nicht berechnet.`
+          : `${NO_COMPARABLES_TEXT} Es liegen nur ${kept.length} verwertbare Vergleichsangebote vor (mindestens ${cfg.minComparables} erforderlich) – ein Marktwert wird deshalb nicht berechnet.`,
+      adjustments: outdated ? [`${outdated} veraltete Vergleichsdaten (älter als ${cfg.maxDataAgeDays} Tage) nicht verwendet.`] : [],
     };
   }
 
-  const adjustments: string[] = [];
+  const adjustments: string[] = outdated ? [`${outdated} veraltete Vergleichsdaten (älter als ${cfg.maxDataAgeDays} Tage) nicht verwendet.`] : [];
   let reg: ReturnType<typeof fitVehicleRegression> = null;
   if (listing.category === "vehicle" && listing.year != null && listing.mileageKm != null) {
     reg = fitVehicleRegression(kept);

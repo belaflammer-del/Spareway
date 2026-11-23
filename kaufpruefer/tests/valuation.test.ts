@@ -4,7 +4,7 @@ import type { Comparable, Listing } from "@/lib/domain/schemas";
 
 const L = (p: Partial<Listing> = {}): Listing => ({ platform: "mobile_de", category: "vehicle", images: [], provenance: {}, ...p });
 const C = (priceEur: number, p: Partial<Comparable> = {}): Comparable => ({
-  id: String(Math.random()), priceEur, priceType: "listing", source: "test", collectedAt: "2026-01-01", ...p,
+  id: String(Math.random()), priceEur, priceType: "listing", source: "test", collectedAt: new Date().toISOString(), ...p,
 });
 
 describe("valuation engine", () => {
@@ -13,7 +13,7 @@ describe("valuation engine", () => {
     expect(v.status).toBe("insufficient_data");
     expect(v.rating).toBe("insufficient_data");
     expect(v.range).toBeUndefined();
-    expect(v.explanation).toContain("nicht verlässlich bestimmbar");
+    expect(v.explanation).toContain("keine ausreichend belastbaren Vergleichsangebote");
   });
 
   it("requires a minimum number of comparables", () => {

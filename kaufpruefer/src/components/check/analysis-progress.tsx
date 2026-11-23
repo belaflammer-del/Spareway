@@ -7,7 +7,7 @@ import { LevelHero } from "@/components/home/three-views";
 import { Spinner } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 
-export function AnalysisProgress({ ai, seller }: { ai: boolean; seller: boolean }) {
+export function AnalysisProgress({ ai, seller, status }: { ai: boolean; seller: boolean; status?: string | null }) {
   const steps = [
     "Daten validieren",
     "Produkt identifizieren",
@@ -29,6 +29,7 @@ export function AnalysisProgress({ ai, seller }: { ai: boolean; seller: boolean 
         <LevelHero className="-mx-6 -mt-4 mb-2 h-32" showLabel={false} />
         <p className="text-lg font-semibold tracking-tight">Wir bringen deinen Deal ins Lot …</p>
         <p className="mt-1 text-sm text-muted">Das dauert {ai ? "meist 20–60 Sekunden" : "nur einen Moment"}. Bitte lass dieses Fenster geöffnet.</p>
+        {status && <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-sm">{status}</p>}
         <ol className="mt-6 space-y-3">
           {steps.map((s, idx) => (
             <li key={s} className={cn("flex items-center gap-3 text-sm transition", idx > i && "text-muted")}>

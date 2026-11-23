@@ -7,12 +7,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/misc";
+import { uploadVideoWithProgress } from "@/lib/client/video";
 import { cn } from "@/lib/utils";
 
 type Method = "screenshots" | "screen_recording" | "pasted_text";
 
 /** Verkäufer nachträglich prüfen – im bereits bezahlten Kaufcheck enthalten. */
-export function SellerAddon({ analysisId }: { analysisId: string }) {
+export function SellerAddon({ analysisId, existing }: { analysisId: string; existing?: number }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<Method>("screenshots");
@@ -36,12 +37,7 @@ export function SellerAddon({ analysisId }: { analysisId: string }) {
       }
       if (method === "screen_recording") {
         if (!video) return toast.error("Bitte eine Bildschirmaufnahme auswählen.");
-        setBusy("Video wird verarbeitet …");
-        const fd = new FormData();
-        fd.append("video", video);
-        const r = await fetch("/api/uploads/video", { method: "POST", body: fd });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error?.message);
+        const d = await uploadVideoWithProgress(video, (pct, msg) => setBusy(`${msg} ${pct} %`));
         imageIds = d.frameIds;
         if (d.hint) toast.message(d.hint);
       }
@@ -54,7 +50,8 @@ export function SellerAddon({ analysisId }: { analysisId: string }) {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message ?? "Verkäuferprüfung fehlgeschlagen");
-      toast.success("Verkäuferanalyse hinzugefügt");
+      toast.success(existing != null ? "Verkäuferdaten ergänzt" : "Verkäuferanalyse hinzugefügt");
+      setOpen(false);
       router.refresh();
     } catch (e) {
       toast.error((e as Error).message || "Fehler");
@@ -70,8 +67,10 @@ export function SellerAddon({ analysisId }: { analysisId: string }) {
           <Users className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold">Verkäufer zusätzlich überprüfen</p>
-          <p className="text-xs text-muted">Im Kaufcheck enthalten – kein weiterer Token.</p>
+          <p className="font-semibold">{existing != null ? "Verkäuferdaten ergänzen" : "Verkäufer jetzt überprüfen"}</p>
+          <p className="text-xs text-muted">
+            {existing != null ? `Bisher ${existing} Bewertungen erfasst – neue werden zusammengeführt, Duplikate erkannt.` : "Im Kaufcheck enthalten – kein weiterer Token."}
+          </p>
         </div>
         {!open && (
           <Button size="sm" onClick={() => setOpen(true)}>

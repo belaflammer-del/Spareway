@@ -30,6 +30,29 @@ export interface AnalysisRecord {
   fingerprint?: string;
   aiModel?: string;
   durationMs?: number;
+  /** Normalisierte Inseratskennung (Plattform + ID bzw. bereinigte URL) */
+  listingKey?: string;
+  /** Vorherige Prüfung desselben Inserats (Versionierung) */
+  previousId?: string;
+  analysisVersion?: number;
+  priceEur?: number;
+  recommendation?: string;
+  priceRating?: string;
+  /** Kleines Vorschaubild (WebP-Data-URL, ohne Metadaten) */
+  thumbnail?: string;
+  /** Gespeicherte Rückfragen an den KI-Assistenten */
+  chat?: { q: string; a: string; at: string; grounded: boolean }[];
+}
+
+export interface AnalysisQuery {
+  q?: string;
+  category?: string;
+  platform?: string;
+  status?: "completed" | "incomplete";
+  recommendation?: string;
+  sort?: "date_desc" | "date_asc" | "price_desc" | "price_asc";
+  page?: number;
+  pageSize?: number;
 }
 
 export type WalletTxType = "purchase" | "reserve" | "release" | "purchase_refund" | "admin_adjust" | "test_credit";
@@ -90,9 +113,19 @@ export interface AppConfig {
   };
   demoVisibility?: Record<string, boolean>;
   providers?: Record<string, boolean>;
-  ai?: { model?: string; dailyBudgetUsd?: number };
+  ai?: { model?: string; fastModel?: string; dailyBudgetUsd?: number };
+  limits?: {
+    perAnalysisUsd?: number;
+    perUserDayUsd?: number;
+    globalMonthUsd?: number;
+    maxCallsPerAnalysis?: number;
+    maxImagesPerUpload?: number;
+    videoMaxSeconds?: number;
+    videoMaxMb?: number;
+    chatQuestionsPerAnalysis?: number;
+  };
   /** Kategorie-Status: live = kostenpflichtiger Komplettcheck, beta = nur Schnellcheck */
-  categories?: Record<string, "live" | "beta">;
+  categories?: Record<string, "live" | "beta" | "off">;
 }
 
 export interface AdminStats {
@@ -145,6 +178,8 @@ export interface DataStore {
   getAnalysis(id: string, userId: string): Promise<AnalysisRecord | null>;
   listAnalyses(userId: string, limit?: number): Promise<AnalysisRecord[]>;
   findAnalysisByFingerprint(userId: string, fingerprint: string, since: string): Promise<AnalysisRecord | null>;
+  findLatestByListingKey(userId: string, listingKey: string): Promise<AnalysisRecord | null>;
+  queryAnalyses(userId: string, q: AnalysisQuery): Promise<{ items: AnalysisRecord[]; total: number }>;
   deleteAnalysis(id: string, userId: string): Promise<void>;
   countQuickCheck(): Promise<void>;
   /** Allgemeine Zähler (Nutzung von Funktionen, KI-Kosten pro Tag in Mikro-USD) */

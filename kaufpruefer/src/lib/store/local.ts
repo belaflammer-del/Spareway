@@ -10,6 +10,7 @@ import { newId, nowIso } from "../utils";
 import {
   WalletError,
   type AdminStats,
+  type AnalysisQuery,
   type AnalysisRecord,
   type AppConfig,
   type DataStore,
@@ -214,6 +215,39 @@ export class LocalStore implements DataStore {
   }
   getCounter(name: string) {
     return this.read((db) => db.counters[name] ?? 0);
+  }
+  findLatestByListingKey(userId: string, listingKey: string) {
+    return this.read(
+      (db) =>
+        db.analyses
+          .filter((a) => a.userId === userId && a.listingKey === listingKey && a.status === "completed")
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null,
+    );
+  }
+  queryAnalyses(userId: string, q: AnalysisQuery) {
+    return this.read((db) => {
+      const term = q.q?.trim().toLowerCase();
+      let list = db.analyses.filter(
+        (a) =>
+          a.userId === userId &&
+          (!term || a.title.toLowerCase().includes(term)) &&
+          (!q.category || a.category === q.category) &&
+          (!q.platform || a.platform === q.platform) &&
+          (!q.status || (q.status === "completed" ? a.status === "completed" : a.status !== "completed")) &&
+          (!q.recommendation || (a.recommendation ?? a.report?.score.recommendation) === q.recommendation),
+      );
+      const price = (a: AnalysisRecord) => a.priceEur ?? a.report?.listing.priceEur ?? -1;
+      const sorters: Record<string, (a: AnalysisRecord, b: AnalysisRecord) => number> = {
+        date_desc: (a, b) => b.createdAt.localeCompare(a.createdAt),
+        date_asc: (a, b) => a.createdAt.localeCompare(b.createdAt),
+        price_desc: (a, b) => price(b) - price(a),
+        price_asc: (a, b) => price(a) - price(b),
+      };
+      list = list.sort(sorters[q.sort ?? "date_desc"]);
+      const size = Math.min(50, Math.max(1, q.pageSize ?? 20));
+      const page = Math.max(1, q.page ?? 1);
+      return { items: list.slice((page - 1) * size, page * size), total: list.length };
+    });
   }
   findAnalysisByFingerprint(userId: string, fingerprint: string, since: string) {
     return this.read(

@@ -32,6 +32,8 @@ export const env = {
     provider: str("AI_PROVIDER") ?? "openai",
     openaiKey: str("OPENAI_API_KEY"),
     openaiModel: str("OPENAI_MODEL") ?? "gpt-5",
+    /** Günstigeres Modell für einfache Aufgaben (Extraktion, OCR, Texte). Leer = Hauptmodell */
+    openaiFastModel: str("OPENAI_FAST_MODEL"),
     costInputPerMTok: num("OPENAI_COST_INPUT_PER_MTOK", 1.25),
     costOutputPerMTok: num("OPENAI_COST_OUTPUT_PER_MTOK", 10),
     /** Kostenbremse: maximale KI-Kosten pro Tag (USD) */
@@ -56,6 +58,8 @@ export const env = {
     clientId: str("EBAY_CLIENT_ID"),
     clientSecret: str("EBAY_CLIENT_SECRET"),
     marketplaceId: str("EBAY_MARKETPLACE_ID") ?? "EBAY_DE",
+    /** Nur nach Freischaltung der Marketplace Insights API durch eBay */
+    insightsEnabled: str("EBAY_INSIGHTS_ENABLED") === "true",
   },
   mobileDe: { user: str("MOBILE_DE_API_USER"), password: str("MOBILE_DE_API_PASSWORD") },
   autoscout24: { apiKey: str("AUTOSCOUT24_API_KEY") },

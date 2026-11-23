@@ -116,6 +116,7 @@ describe("AI pipeline with a simulated provider", () => {
         fields: { ...emptyFields, brand: "BMW", model: "320d", priceEur: 18900, mileageKm: 120000 },
         lowConfidenceFields: [],
         conflicts: [{ field: "mileageKm", values: ["120.000 km", "128.000 km"], imageIndexes: [0, 1] }],
+        observations: [],
         images: [{ index: 0, kind: "listing_screenshot" }, { index: 1, kind: "product_photo" }],
         readabilityIssues: [],
       },
@@ -124,6 +125,35 @@ describe("AI pipeline with a simulated provider", () => {
     expect(r.patch.mileageKm).toBeUndefined();
     expect(r.conflicts[0].values).toEqual(["120.000 km", "128.000 km"]);
     expect(r.conflicts[0].images).toEqual(["up_a", "up_b"]);
+  });
+
+  it("detects 125.000 vs 152.000 km deterministically even if the AI merged them silently", async () => {
+    const ai = fakeAI({
+      listing_extraction: {
+        category: "vehicle",
+        fields: { ...emptyFields, brand: "BMW", model: "320d", mileageKm: 125000, priceEur: 19900 },
+        lowConfidenceFields: [],
+        conflicts: [], // KI hat den Widerspruch nicht gemeldet
+        observations: [
+          { field: "mileageKm", value: "125.000 km", imageIndex: 0, confidence: "high" },
+          { field: "mileageKm", value: "152.000 km", imageIndex: 1, confidence: "high" },
+          { field: "priceEur", value: "19.900 €", imageIndex: 0, confidence: "high" },
+          { field: "priceEur", value: "19900", imageIndex: 1, confidence: "medium" },
+          { field: "model", value: "320d", imageIndex: 0, confidence: "high" },
+          { field: "model", value: "320d Touring", imageIndex: 1, confidence: "high" },
+        ],
+        images: [{ index: 0, kind: "listing_screenshot" }, { index: 1, kind: "listing_screenshot" }],
+        readabilityIssues: [],
+      },
+    });
+    const r = await aiExtractListing(ai, new UsageMeter(), { images: [{ ref: "up_1", dataUrl: "d" }, { ref: "up_2", dataUrl: "d" }] });
+    const km = r.conflicts.find((c) => c.field === "mileageKm")!;
+    expect(km.values).toEqual(["125.000 km", "152.000 km"]);
+    expect(km.images).toEqual(["up_1", "up_2"]);
+    expect(r.patch.mileageKm).toBeUndefined(); // kein willkürlich gewählter Wert
+    expect(r.conflicts.some((c) => c.field === "priceEur")).toBe(false); // gleicher Preis, andere Schreibweise
+    expect(r.conflicts.some((c) => c.field === "model")).toBe(false); // Teilmenge, kein Widerspruch
+    expect(r.observations.find((o) => o.value === "152.000 km")?.source).toBe("up_2");
   });
 
   it("maps findings to evidence images, labels model knowledge as unverified and never lets AI set prices", async () => {

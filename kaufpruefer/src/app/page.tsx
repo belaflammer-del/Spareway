@@ -4,6 +4,7 @@ import { DemoCard } from "@/components/home/demo-card";
 import { FadeIn } from "@/components/home/fade-in";
 import { HeroInput } from "@/components/home/hero-input";
 import { CategoryGrid3D, LevelHero } from "@/components/home/three-views";
+import { perCheckEur } from "@/lib/config/pricing";
 import { formatEur } from "@/lib/domain/labels";
 import { listDemos } from "@/lib/demo";
 import { getStore } from "@/lib/store";
@@ -19,6 +20,7 @@ export default async function HomePage() {
   const demos = listDemos().filter((d) => vis[d.slug] !== false);
   const pricing = await getPricing();
   const single = pricing.packages.find((p) => p.tokens === 1) ?? pricing.packages[0];
+  const best = [...pricing.packages].sort((a, b) => perCheckEur(a) - perCheckEur(b))[0];
 
   return (
     <div className="overflow-x-clip">
@@ -89,8 +91,10 @@ export default async function HomePage() {
         <div className="flex items-center gap-4 rounded-2xl bg-accent p-5 text-accent-fg">
           <Shield className="size-8 shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="font-bold">Schnellcheck gratis</p>
-            <p className="text-sm opacity-75">Komplettcheck {formatEur(single.priceCents / 100)} pro Prüfung · Pakete günstiger · kein Abo</p>
+            <p className="font-bold">Einzelcheck ab {formatEur(single.priceCents / 100)}</p>
+            <p className="text-sm opacity-75">
+              {best.tokens > 1 ? `Mit Paketen schon ab ${formatEur(perCheckEur(best))} pro Check · ` : ""}Schnellcheck gratis · kein Abo
+            </p>
           </div>
           <Link href="/preise" className="shrink-0 rounded-xl bg-foreground px-3 py-2 text-sm font-semibold text-background">
             Preise

@@ -18,7 +18,7 @@ import { buildNegotiation, templateSellerMessage } from "../engine/negotiation";
 import { evaluateRisks } from "../engine/risk";
 import { computeDataQuality, computeDealScore } from "../engine/scoring";
 import { analyzeSeller, type RawReview } from "../engine/seller";
-import { valuate } from "../engine/valuation";
+import { DEFAULT_VALUATION_CONFIG, valuate } from "../engine/valuation";
 import { baseChecklist } from "../knowledge/checklists";
 import { paymentAdvice } from "../knowledge/payment";
 import { DISCLAIMER } from "../pipeline/analyze";
@@ -54,7 +54,7 @@ export function buildDemoReport(def: DemoDefinition): AnalysisReport {
     source: "Demo-Vergleichsdaten (fiktiv)",
     collectedAt: AT,
   }));
-  const market = { ...valuate(listing, comparables), collectedAt: AT };
+  const market = { ...valuate(listing, comparables, { ...DEFAULT_VALUATION_CONFIG, maxDataAgeDays: Infinity }), collectedAt: AT };
 
   const imageFindings: ImageFinding[] = def.findings.map((f, i) => ({
     id: `demo_img_${i}`,
@@ -141,6 +141,7 @@ export function buildDemoReport(def: DemoDefinition): AnalysisReport {
     market,
     product,
     seller,
+    sellerRuns: [],
     risks,
     payment: paymentAdvice(listing, risks),
     checklist: {

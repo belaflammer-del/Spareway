@@ -102,6 +102,7 @@ export async function extractKeyFrames(
   workDir: string,
   opts: FrameSelectionOptions = DEFAULT_FRAME_OPTIONS,
   maxSeconds = 90,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<{ frames: string[]; sampled: number; sceneChanges: number; hint?: string }> {
   await fs.mkdir(workDir, { recursive: true });
   await run(
@@ -126,6 +127,7 @@ export async function extractKeyFrames(
   let sceneChanges = 0;
   let stillFrames = 0;
   for (let i = 1; i < files.length; i++) {
+    if (onProgress && i % 5 === 0) onProgress(i, files.length);
     const sig = await signature(files[i]);
     const s = estimateShift(prev, sig);
     if (s === 0) stillFrames++;

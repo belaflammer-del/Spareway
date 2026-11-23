@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/lib/auth/session";
 import { errorJson, rateLimit } from "@/lib/http";
+import { getStore } from "@/lib/store";
 import { maybeCleanup, storeImage } from "@/lib/uploads/service";
 import { MAX_IMAGES_PER_REQUEST } from "@/lib/uploads/validate";
 
@@ -20,7 +21,8 @@ export async function POST(req: Request) {
   }
   const files = form.getAll("files").filter((f): f is File => f instanceof File);
   if (files.length === 0) return errorJson(400, "no_files", "Keine Dateien erhalten");
-  if (files.length > MAX_IMAGES_PER_REQUEST) return errorJson(400, "too_many", `Maximal ${MAX_IMAGES_PER_REQUEST} Bilder pro Upload`);
+  const maxImages = Math.min(30, (await getStore().getConfig()).limits?.maxImagesPerUpload ?? MAX_IMAGES_PER_REQUEST);
+  if (files.length > maxImages) return errorJson(400, "too_many", `Maximal ${maxImages} Bilder pro Upload`);
 
   const out: { id: string; name: string }[] = [];
   const errors: { name: string; message: string }[] = [];

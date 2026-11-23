@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { CopyBlock, EvidenceBadge, EvidenceImage, SeverityBadge, SourceBadge } from "./parts";
 import { ComparablesTable } from "./comparables-table";
 import { PriceLevel } from "./price-level";
+import { ReportAssistant } from "./report-assistant";
 import { SellerAddon } from "./seller-addon";
 import { ScoreBox, scoreTone, toTen } from "./score-ring";
 
@@ -99,7 +100,21 @@ function MiniScore({ label, sub }: { label: string; sub: SubScore }) {
   );
 }
 
-export function ReportView({ report, imageBase, pdfUrl, analysisId }: { report: AnalysisReport; imageBase?: string; pdfUrl?: string; analysisId?: string }) {
+export function ReportView({
+  report,
+  imageBase,
+  pdfUrl,
+  analysisId,
+  assistant,
+  previous,
+}: {
+  report: AnalysisReport;
+  imageBase?: string;
+  pdfUrl?: string;
+  analysisId?: string;
+  assistant?: { initial: { q: string; a: string; at: string; grounded: boolean }[]; limit: number; aiAvailable: boolean };
+  previous?: { id: string; createdAt: string; priceEur?: number };
+}) {
   const { listing, market, product, score, seller } = report;
   const img = (ref?: string) => (!ref ? undefined : ref.startsWith("/") ? ref : `${imageBase ?? "/api/uploads/"}${ref}`);
   const title = (listing.title ?? ([listing.brand, listing.model].filter(Boolean).join(" ") || "Angebot")).replace(/\s*\(Demo\)$/, "");
@@ -158,6 +173,13 @@ export function ReportView({ report, imageBase, pdfUrl, analysisId }: { report: 
         <div className="demo-stripes mb-4 rounded-xl border border-demo/30 px-3 py-2 text-xs">
           <span className="font-semibold text-demo">Demo</span> <span className="text-muted">– alle Daten sind fiktiv, die Bewertungslogik ist echt.</span>
         </div>
+      )}
+
+      {previous && (
+        <a href={`/analysis/${previous.id}`} className="mb-4 block rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted hover:border-accent/50">
+          Frühere Prüfung dieses Inserats vom {new Date(previous.createdAt).toLocaleDateString("de-DE")}
+          {previous.priceEur != null && <> · Preis damals {formatEur(previous.priceEur)}</>} – ansehen
+        </a>
       )}
 
       {/* Urteil */}
@@ -277,6 +299,12 @@ export function ReportView({ report, imageBase, pdfUrl, analysisId }: { report: 
         )}
       </div>
 
+      {analysisId && assistant && (
+        <div className="mt-6">
+          <ReportAssistant analysisId={analysisId} initial={assistant.initial} limit={assistant.limit} category={listing.category} aiAvailable={assistant.aiAvailable} />
+        </div>
+      )}
+
       {/* Details */}
       <h2 className="mb-2.5 mt-8 text-sm font-semibold text-muted">Details</h2>
       <div className="space-y-2.5">
@@ -388,11 +416,28 @@ export function ReportView({ report, imageBase, pdfUrl, analysisId }: { report: 
                 ))}
               </ul>
             )}
+            {seller.complaints.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                <p className="text-xs font-semibold text-muted">Originaltext wichtiger Beschwerden</p>
+                {seller.complaints.slice(0, 3).flatMap((c) => c.examples.slice(0, 1).map((e) => (
+                  <blockquote key={c.category + e.text} className="border-l-2 border-warn pl-3 text-sm italic text-muted">„{e.text}“</blockquote>
+                )))}
+              </div>
+            )}
             <p className="mt-3 text-xs text-muted">{seller.coverageNote} Bewertungen sind Aussagen anderer Nutzer, nicht überprüft.</p>
+            {(report.sellerRuns ?? []).length > 1 && (
+              <p className="mt-1 text-xs text-muted">
+                {report.sellerRuns.length} Prüfungen: {report.sellerRuns.map((r) => `${new Date(r.at).toLocaleDateString("de-DE")} +${r.newReviews} neu (${r.duplicates} Duplikate)`).join(" · ")}
+              </p>
+            )}
           </Accordion>
         )}
 
-        {!seller && analysisId && <SellerAddon analysisId={analysisId} />}
+        {analysisId && (
+          <div id={seller ? "s-seller-add" : "s-seller"} className="scroll-mt-20">
+            <SellerAddon analysisId={analysisId} existing={seller?.visibleReviewCount} />
+          </div>
+        )}
 
         <Accordion id="payment" title="Sicher bezahlen & übergeben" icon={ShieldCheck} open={!!open.payment} onToggle={() => toggle("payment")}>
           <ul className="space-y-2">

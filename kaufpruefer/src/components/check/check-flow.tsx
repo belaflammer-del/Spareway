@@ -16,6 +16,7 @@ import { CATEGORY_LABELS, CATEGORY_SUPPORT, FIELD_LABELS, FIELD_SOURCE_LABELS, f
 import type { Category, FieldSource, Listing, ListingFieldKey, MissingInfo } from "@/lib/domain/schemas";
 import type { QuickCheckResult } from "@/lib/pipeline/quick";
 import { cn } from "@/lib/utils";
+import { uploadVideoWithProgress } from "@/lib/client/video";
 import { AnalysisProgress } from "./analysis-progress";
 
 type Mode = "link" | "screenshots" | "text";
@@ -43,7 +44,11 @@ export interface CheckFlowProps {
   fullCheckCost: number;
   videoMaxSeconds: number;
   videoMaxMb: number;
-  categoryStatus: Record<string, "live" | "beta">;
+  categoryStatus: Record<string, "live" | "beta" | "off">;
+  /** Vergleichsmodus: nach der Analyse mit dieser Analyse vergleichen */
+  compareWith?: string;
+  /** Vergleichsmodus: danach dieses zweite Inserat prüfen */
+  compareNext?: string;
 }
 
 /** Deutsche Zahlenschreibweise tolerant parsen („18.900 €“, „1,5“). */
@@ -94,6 +99,15 @@ export function CheckFlow(props: CheckFlowProps) {
   const [listing, setListing] = useState<Listing | null>(null);
   const [conflicts, setConflicts] = useState<NonNullable<Draft["conflicts"]>>([]);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [acceptBeta, setAcceptBeta] = useState(false);
+  const [videoStatus, setVideoStatus] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  function confirm() {
+    setConfirmed(true);
+    setEditing(false);
+    setTimeout(() => document.getElementById("check-actions")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  }
   const [comps, setComps] = useState<Comp[]>([]);
   const [sellerOn, setSellerOn] = useState(false);
   const [sellerMethod, setSellerMethod] = useState<"screenshots" | "screen_recording" | "pasted_text">("screenshots");
@@ -127,6 +141,8 @@ export function CheckFlow(props: CheckFlowProps) {
       setDraft(data.draft);
       setListing(data.draft.listing);
       setConflicts(data.draft.conflicts ?? []);
+      setConfirmed(false);
+      setEditing(false);
       setStep("review");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
@@ -209,13 +225,10 @@ export function CheckFlow(props: CheckFlowProps) {
         let imageIds: string[] = [];
         if (sellerMethod === "screenshots") imageIds = await uploadImages(sellerFiles, setUploadPct);
         if (sellerMethod === "screen_recording" && sellerVideo) {
-          const fd = new FormData();
-          fd.append("video", sellerVideo);
-          const r = await fetch("/api/uploads/video", { method: "POST", body: fd });
-          const d = await r.json();
-          if (!r.ok) throw new Error(d.error?.message ?? "Videoverarbeitung fehlgeschlagen");
+          const d = await uploadVideoWithProgress(sellerVideo, (pct, msg) => setVideoStatus(`${msg} (${pct} %)`));
+          setVideoStatus(null);
           imageIds = d.frameIds;
-          toast.success(`${d.stats.keptFrames} relevante Bilder aus ${d.stats.durationSeconds} s Video extrahiert. Das Video wurde gelöscht.`);
+          if (d.stats) toast.success(`${d.stats.keptFrames} relevante Bilder aus ${d.stats.durationSeconds} s Video extrahiert. Das Video wurde gelöscht.`);
           if (d.hint) toast.message(d.hint);
         }
         seller = {
@@ -231,7 +244,7 @@ export function CheckFlow(props: CheckFlowProps) {
       const res = await fetch("/api/analyses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId: crypto.randomUUID(), listing: cleanListing(listing), comparables, seller }),
+        body: JSON.stringify({ requestId: crypto.randomUUID(), listing: cleanListing(listing), comparables, seller, acceptBeta }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -241,7 +254,9 @@ export function CheckFlow(props: CheckFlowProps) {
         throw new Error(data.error?.message ?? "Analyse fehlgeschlagen");
       }
       if (data.reused) toast.success("Dieses Angebot hast du bereits geprüft – kein weiterer Token verbraucht.");
-      router.push(`/analysis/${data.id}`);
+      if (props.compareNext) router.push(`/check?url=${encodeURIComponent(props.compareNext)}&compareWith=${encodeURIComponent(data.id)}`);
+      else if (props.compareWith) router.push(`/vergleich?a=${encodeURIComponent(props.compareWith)}&b=${encodeURIComponent(data.id)}`);
+      else router.push(`/analysis/${data.id}`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(null);
@@ -250,10 +265,16 @@ export function CheckFlow(props: CheckFlowProps) {
 
   /* ───────────────────────── Render ───────────────────────── */
 
-  if (busy === "full") return <AnalysisProgress ai={props.aiAvailable} seller={sellerOn} />;
+  if (busy === "full") return <AnalysisProgress ai={props.aiAvailable} seller={sellerOn} status={videoStatus} />;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      {(props.compareWith || props.compareNext) && (
+        <div className="mb-5 rounded-xl border border-accent/40 bg-accent-soft/40 px-3 py-2 text-sm">
+          <span className="font-semibold">Angebotsvergleich · </span>
+          {props.compareNext ? "Angebot 1 von 2 – danach prüfen wir das zweite Inserat." : "Zweites Angebot – danach siehst du den Vergleich."}
+        </div>
+      )}
       <Stepper step={step} />
       <AnimatePresence mode="wait">
         {step === "input" && (
@@ -348,13 +369,13 @@ export function CheckFlow(props: CheckFlowProps) {
               </Card>
             ))}
 
-            {missingNow.filter((m) => m.importance !== "helpful").length > 0 && (
+            {missingNow.filter((m) => m.importance === "critical").length > 0 && (
               <Card className="p-5">
-                <h2 className="font-semibold">Nur noch kurz ergänzen</h2>
-                <p className="mt-0.5 text-sm text-muted">Diese Angaben brauchen wir für eine belastbare Bewertung.</p>
+                <h2 className="font-semibold">Damit wir bewerten können</h2>
+                <p className="mt-0.5 text-sm text-muted">Fehlt eine Angabe, wird die betroffene Teilbewertung als „nicht verfügbar“ markiert – wir erfinden nichts.</p>
                 <div className="mt-4 grid gap-4">
                   {missingNow
-                    .filter((m) => m.importance !== "helpful")
+                    .filter((m) => m.importance === "critical")
                     .slice(0, 4)
                     .map((m) => (
                       <div key={m.field}>
@@ -366,7 +387,23 @@ export function CheckFlow(props: CheckFlowProps) {
               </Card>
             )}
 
-            <Optional title="Alle Angaben ansehen & bearbeiten" subtitle="Kategorie, technische Daten, Beschreibung">
+            {!confirmed && (
+              <Card className="p-4">
+                <p className="font-semibold">Sind diese Angaben korrekt?</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button onClick={confirm} disabled={conflicts.length > 0}>
+                    Alles korrekt
+                  </Button>
+                  <Button variant="outline" onClick={() => setEditing((e) => !e)}>
+                    Angaben bearbeiten
+                  </Button>
+                </div>
+                {conflicts.length > 0 && <p className="mt-2 text-xs text-warn">Bitte zuerst die unterschiedlichen Angaben oben auswählen.</p>}
+              </Card>
+            )}
+
+            {editing && (
+            <Card className="p-4">
               <div className="grid gap-1.5">
                 <Label htmlFor="cat">Kategorie</Label>
                 <Select id="cat" value={listing.category} onChange={(e) => setField("category", e.target.value)}>
@@ -389,7 +426,15 @@ export function CheckFlow(props: CheckFlowProps) {
                   />
                 ))}
               </div>
-            </Optional>
+              <Button className="mt-4 w-full" onClick={confirm} disabled={conflicts.length > 0}>
+                Fertig – weiter
+              </Button>
+            </Card>
+            )}
+
+            {confirmed && (
+              <>
+            <Optional title="Mehr Genauigkeit (optional)" subtitle="Fotos, eigene Vergleichsangebote, Verkäufer prüfen">
 
             <Card className="p-5">
               <div className="flex items-center justify-between">
@@ -500,9 +545,11 @@ export function CheckFlow(props: CheckFlowProps) {
               )}
             </Card>
 
+            </Optional>
+
             {error && <Alert tone="bad">{error}</Alert>}
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div id="check-actions" className="grid gap-3 sm:grid-cols-2">
               <Card className="flex flex-col p-5">
                 <p className="font-semibold">Kostenloser Schnellcheck</p>
                 <p className="mt-1 flex-1 text-sm text-muted">Grundinformationen, fehlende Angaben und bis zu drei Risikohinweise.</p>
@@ -518,11 +565,19 @@ export function CheckFlow(props: CheckFlowProps) {
                 <p className="mt-1 flex-1 text-sm text-muted">
                   Marktwert, {props.aiAvailable ? "KI-Bildanalyse, " : ""}Schwachstellen, Verkäuferanalyse, Deal-Score, Checkliste & PDF.
                 </p>
-                {props.categoryStatus[listing.category] === "beta" ? (
-                  <p className="mt-4 rounded-xl bg-surface-2 px-3 py-2.5 text-center text-sm text-muted">Beta-Kategorie – der Komplettcheck folgt bald. Nutze den kostenlosen Schnellcheck.</p>
+                {props.categoryStatus[listing.category] === "beta" && (
+                  <label className="mt-3 flex items-start gap-2 rounded-xl bg-warn-soft/60 p-3 text-xs">
+                    <input type="checkbox" className="mt-0.5 size-4 accent-[var(--accent)]" checked={acceptBeta} onChange={(e) => setAcceptBeta(e.target.checked)} />
+                    <span>
+                      <span className="font-semibold">Beta: </span>Diese Produktkategorie befindet sich noch in der Entwicklung. Einzelne Prüfungen können eingeschränkt sein. Ich habe das verstanden.
+                    </span>
+                  </label>
+                )}
+                {props.categoryStatus[listing.category] === "off" ? (
+                  <p className="mt-4 rounded-xl bg-surface-2 px-3 py-2.5 text-center text-sm text-muted">Diese Kategorie ist derzeit nicht verfügbar.</p>
                 ) : props.loggedIn ? (
                   props.balance >= props.fullCheckCost ? (
-                    <Button className="mt-4" onClick={runFull} disabled={!!busy}>
+                    <Button className="mt-4" onClick={runFull} disabled={!!busy || (props.categoryStatus[listing.category] === "beta" && !acceptBeta)}>
                       <Sparkles /> Jetzt vollständig prüfen
                     </Button>
                   ) : (
@@ -538,6 +593,8 @@ export function CheckFlow(props: CheckFlowProps) {
                 {props.loggedIn && <p className="mt-2 text-center text-xs text-muted">Guthaben: {props.balance} Token · Bei Fehlern wird nichts abgebucht.</p>}
               </Card>
             </div>
+              </>
+            )}
           </motion.div>
         )}
 
@@ -716,9 +773,15 @@ function Optional({ title, subtitle, children, defaultOpen = false }: { title: s
 
 /** Kompakte Zusammenfassung des erkannten Angebots mit Herkunftsmarkierung. */
 function RecognizedCard({ listing, aiAvailable, notes, beta }: { listing: Listing; aiAvailable: boolean; notes: string[]; beta: boolean }) {
-  const facts = CATEGORY_PROFILES[listing.category].fields
-    .map((f) => f.field)
-    .filter((f) => !["priceEur", "brand", "model", "description"].includes(f))
+  const KEY_FACTS: Record<string, ListingFieldKey[]> = {
+    vehicle: ["year", "mileageKm", "fuel", "transmission", "powerKw", "condition"],
+    electronics: ["storageGb", "batteryHealthPct", "condition", "activationLockFree", "accessories"],
+    fashion: ["size", "condition", "material", "purchaseReceipt"],
+    watches_jewelry: ["year", "condition", "boxAndPapers", "serialNumber"],
+    gaming_collectibles: ["variant", "condition", "accessories"],
+    other: ["condition", "year"],
+  };
+  const facts = (KEY_FACTS[listing.category] ?? ["condition"])
     .map((f) => ({ f, v: (listing as Record<string, unknown>)[f] }))
     .filter((x) => x.v != null && x.v !== "")
     .slice(0, 6);

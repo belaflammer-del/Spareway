@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ReportView } from "@/components/report/report-view";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
+import { providerEnabled } from "@/lib/config/providers";
 import { getStore } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Prüfbericht", robots: { index: false } };
@@ -26,5 +27,15 @@ export default async function AnalysisPage({ params }: PageProps<"/analysis/[id]
       </div>
     );
   }
-  return <ReportView report={a.report} pdfUrl={`/api/analyses/${id}/pdf`} analysisId={id} />;
+  const store = getStore();
+  const [cfg, prev, aiOn] = await Promise.all([store.getConfig(), a.previousId ? store.getAnalysis(a.previousId, user.id) : null, providerEnabled("ai")]);
+  return (
+    <ReportView
+      report={a.report}
+      pdfUrl={`/api/analyses/${id}/pdf`}
+      analysisId={id}
+      assistant={{ initial: a.chat ?? [], limit: cfg.limits?.chatQuestionsPerAnalysis ?? 5, aiAvailable: aiOn }}
+      previous={prev ? { id: prev.id, createdAt: prev.createdAt, priceEur: prev.priceEur ?? prev.report?.listing.priceEur } : undefined}
+    />
+  );
 }

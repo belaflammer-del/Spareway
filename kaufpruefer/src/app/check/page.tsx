@@ -15,6 +15,8 @@ export default async function CheckPage({ searchParams }: PageProps<"/check">) {
   const [balance, pricing, aiOn] = await Promise.all([user ? getStore().getBalance(user.id) : 0, getPricing(), providerEnabled("ai")]);
   const cats = Object.keys(CATEGORY_LABELS);
   const statuses = Object.fromEntries(await Promise.all(cats.map(async (c) => [c, await categoryStatus(c)] as const)));
+  const compareWith = typeof sp.compareWith === "string" && /^(an_[a-f0-9]{8,40}|demo:[a-z0-9-]{2,40})$/.test(sp.compareWith) ? sp.compareWith : undefined;
+  const compareNext = typeof sp.compareNext === "string" ? sp.compareNext.slice(0, 2000) : undefined;
   const url = typeof sp.url === "string" ? sp.url.slice(0, 2000) : undefined;
   const mode = sp.mode === "screenshots" ? "screenshots" : sp.mode === "text" ? "text" : "link";
   return (
@@ -28,6 +30,8 @@ export default async function CheckPage({ searchParams }: PageProps<"/check">) {
       videoMaxSeconds={env.videoMaxSeconds}
       videoMaxMb={env.videoMaxMb}
       categoryStatus={statuses}
+      compareWith={compareWith}
+      compareNext={compareNext}
     />
   );
 }

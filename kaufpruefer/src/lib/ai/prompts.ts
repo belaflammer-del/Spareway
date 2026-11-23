@@ -23,6 +23,7 @@ Aufgabe: Extrahiere die Angaben eines Verkaufsinserats aus den bereitgestellten 
 - priceEur: nur den geforderten Preis in Euro (Zahl ohne Währungszeichen). VB-Hinweis in condition oder description ergänzen.
 - mileageKm, powerKw, storageGb, batteryHealthPct, year, previousOwners: nur als Zahl.
 - Trage in lowConfidenceFields alle Felder ein, die schwer lesbar oder unsicher sind.
+- observations: Trage JEDEN Wert, den du für priceEur, mileageKm, year, firstRegistration, model, variant, storageGb, batteryHealthPct, condition, powerKw, engine, fuel, transmission, previousOwners liest, einzeln mit imageIndex ein (null, wenn aus dem eingefügten Text) – auch wenn derselbe Wert auf mehreren Bildern steht. value wörtlich wie gelesen.
 - Mehrere Screenshots gehören zum selben Inserat: Führe die Angaben zusammen, doppelte Angaben nur einmal.
 - Stehen auf verschiedenen Bildern bzw. im Text UNTERSCHIEDLICHE Werte für dasselbe Feld (z. B. zwei Kilometerstände), trage sie in conflicts ein (field = Feldname aus fields, values = die gefundenen Werte wörtlich, imageIndexes = Bildnummern) und setze das Feld auf null. Nicht selbst entscheiden.
 - Klassifiziere jedes Bild (index beginnt bei 0) als product_photo, listing_screenshot, review_screenshot oder other.

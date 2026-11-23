@@ -1,20 +1,24 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import sharp from "sharp";
+import { parseListingUrl } from "../import/adapters";
+import { cleanUrl } from "../import/share-text";
 import type { z } from "zod";
 import { categoryStatus, getActiveAI, providerEnabled } from "../config/providers";
 import type { AnalysisRequestSchema } from "../api/schemas";
 import { env } from "../config/env";
 import type { AnalysisReport } from "../domain/schemas";
-import { EbayMarketProvider } from "../market/ebay";
+import { EbayMarketProvider, EbaySoldPricesProvider } from "../market/ebay";
 import { LicensedHttpMarketProvider, userComparables, type MarketDataProvider } from "../market/providers";
 import { getStore } from "../store";
 import type { AnalysisRecord } from "../store/types";
-import { toDataUrl, deleteUpload } from "../uploads/service";
+import { deleteUpload, loadOwnedUpload, toDataUrl } from "../uploads/service";
 import { nowIso } from "../utils";
 import { getPricing, withTokenReservation } from "../wallet/service";
 import { applySellerToReport, runAnalysisPipeline, runSellerStep } from "./analyze";
 import { UsageMeter } from "../ai/provider";
-import { assertAiBudget, recordAiSpend } from "../ai/budget";
+import { assertAiBudget } from "../ai/budget";
+import { guard } from "../ai/guard";
 
 export class AnalysisError extends Error {
   constructor(public code: "insufficient_balance" | "invalid_upload" | "pipeline_failed", message: string) {
@@ -40,10 +44,44 @@ export function analysisIdFor(userId: string, requestId: string) {
  * Idempotent über requestId: Doppelte Absendungen führen nicht zu doppelter Abbuchung.
  */
 /** Fingerabdruck der fachlich relevanten Eingaben (ohne Upload-IDs, die sich bei jedem Upload ändern). */
+/** Version der Analyse-Logik – ändert sie sich, werden alte Ergebnisse nicht wiederverwendet. */
+export const ANALYSIS_VERSION = 3;
+
 export function analysisFingerprint(req: z.infer<typeof AnalysisRequestSchema>): string {
   const { images: _i, provenance: _p, ...core } = req.listing;
-  const norm = JSON.stringify({ core: Object.fromEntries(Object.entries(core).sort(([a], [b]) => a.localeCompare(b))), images: req.listing.images.length, comps: req.comparables, seller: !!req.seller });
+  const norm = JSON.stringify({
+    v: ANALYSIS_VERSION,
+    core: Object.fromEntries(Object.entries(core).sort(([a], [b]) => a.localeCompare(b))),
+    images: req.listing.images.length,
+    comps: req.comparables,
+    seller: !!req.seller,
+  });
   return createHash("sha256").update(norm).digest("hex").slice(0, 32);
+}
+
+/**
+ * Normalisierte Inseratskennung: Plattform + Inserats-ID, sonst bereinigte URL.
+ * Zwei verschiedene Inserate desselben Modells haben nie denselben Schlüssel.
+ */
+export function listingKeyFor(l: { platform: string; externalId?: string; url?: string }): string | undefined {
+  if (l.externalId) return `${l.platform}:${l.externalId}`;
+  if (l.url) {
+    const u = parseListingUrl(cleanUrl(l.url));
+    if (u) return `${l.platform}:${u.hostname.replace(/^(www|m)\./, "")}${u.pathname.replace(/\/$/, "")}${u.search}`;
+  }
+  return undefined;
+}
+
+/** Kleines Vorschaubild für die Historie (ohne Metadaten). */
+async function makeThumbnail(ref: string | undefined, userId: string): Promise<string | undefined> {
+  if (!ref) return undefined;
+  try {
+    const { data } = await loadOwnedUpload(ref, [userId]);
+    const buf = await sharp(data).resize(160, 160, { fit: "cover" }).webp({ quality: 60 }).toBuffer();
+    return `data:image/webp;base64,${buf.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
 }
 
 const REUSE_DAYS = 7;
@@ -63,8 +101,13 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
       return { id: prev.id, reused: true };
     }
   }
-  if ((await categoryStatus(req.listing.category)) !== "live")
-    throw new AnalysisError("pipeline_failed", "Diese Kategorie ist noch in der Beta-Phase. Der kostenlose Schnellcheck ist verfügbar, der Komplettcheck folgt.");
+  // Versionierung: frühere Prüfung desselben Inserats (z. B. vor einer Preisänderung)
+  const listingKey = listingKeyFor(req.listing);
+  const previous = listingKey ? await store.findLatestByListingKey(userId, listingKey) : null;
+  const catStatus = await categoryStatus(req.listing.category);
+  if (catStatus === "off") throw new AnalysisError("pipeline_failed", "Diese Produktkategorie ist derzeit nicht verfügbar.");
+  if (catStatus === "beta" && !req.acceptBeta)
+    throw new AnalysisError("pipeline_failed", "Diese Produktkategorie befindet sich noch in der Entwicklung. Bitte bestätige die Einschränkungen vor dem Start.");
 
   const imageIds = [...req.listing.images.map((i) => i.ref), ...(req.seller?.imageIds ?? [])];
   await assertOwnedUploads(imageIds, userId);
@@ -73,8 +116,10 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
   const balance = await store.getBalance(userId);
   if (balance < pricing.fullCheckCost) throw new AnalysisError("insufficient_balance", "Für den vollständigen Kaufcheck benötigst du einen Token.");
 
-  const ai = await getActiveAI();
-  await assertAiBudget(ai);
+  const rawAi = await getActiveAI("main");
+  await assertAiBudget(rawAi, userId);
+  const ai = guard(rawAi, { userId, scope: "analysis" });
+  const aiFast = guard(await getActiveAI("fast"), { userId, scope: "analysis" });
   const t0 = Date.now();
   const record: AnalysisRecord = {
     id,
@@ -91,6 +136,10 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
     mode: ai ? "live_ai" : "rules_only",
     fingerprint,
     aiModel: ai?.model,
+    analysisVersion: ANALYSIS_VERSION,
+    listingKey,
+    previousId: previous?.id,
+    priceEur: req.listing.priceEur,
   };
   await store.createAnalysis(record);
 
@@ -99,7 +148,7 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
       await store.updateAnalysis(id, { reservationId });
       const marketProviders: MarketDataProvider[] = [];
       if (await providerEnabled("market_licensed")) marketProviders.push(new LicensedHttpMarketProvider({ url: env.market.apiUrl, apiKey: env.market.apiKey }));
-      if (await providerEnabled("ebay_api")) marketProviders.push(new EbayMarketProvider(env.ebay));
+      if (await providerEnabled("ebay_api")) marketProviders.push(new EbayMarketProvider(env.ebay), new EbaySoldPricesProvider(env.ebay));
       const { report, meter } = await runAnalysisPipeline(
         {
           id,
@@ -109,7 +158,7 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
             ? { method: req.seller.method, imageRefs: req.seller.imageIds, pastedText: req.seller.pastedText, platformTotalClaimed: req.seller.platformTotalClaimed }
             : undefined,
         },
-        { ai, loadImage: (ref) => toDataUrl(ref, [userId]), marketProviders },
+        { ai, aiFast, loadImage: (ref) => toDataUrl(ref, [userId]), marketProviders },
       );
       const total = meter.total;
       await store.updateAnalysis(id, {
@@ -120,8 +169,10 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
         aiInputTokens: total.inputTokens,
         aiOutputTokens: total.outputTokens,
         durationMs: Date.now() - t0,
+        recommendation: report.score.recommendation,
+        priceRating: report.market.rating,
+        thumbnail: await makeThumbnail(req.listing.images.find((i) => i.kind === "product_photo")?.ref ?? req.listing.images[0]?.ref, userId),
       });
-      await recordAiSpend(total.costUsd);
       return report;
     });
 
@@ -134,6 +185,7 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
   } catch (e) {
     const raw = (e as { code?: string }).code;
     const code = raw === "insufficient_balance" || raw === "invalid_upload" || raw === "ai_budget" ? raw : "pipeline_failed";
+    if (code === "ai_budget") await store.countEvent("ai_limit_hit").catch(() => undefined);
     await store.updateAnalysis(id, { status: "failed", errorCode: code, completedAt: nowIso() });
     if (code === "insufficient_balance") throw new AnalysisError("insufficient_balance", "Nicht genügend Tokens.");
     if (code === "ai_budget") throw Object.assign(new Error((e as Error).message), { code });
@@ -154,22 +206,22 @@ export async function addSellerToAnalysis(
   const store = getStore();
   const a = await store.getAnalysis(analysisId, userId);
   if (!a?.report || a.status !== "completed") throw new AnalysisError("pipeline_failed", "Analyse nicht gefunden.");
-  if (a.report.seller) throw new AnalysisError("pipeline_failed", "Für diese Analyse liegt bereits eine Verkäuferprüfung vor.");
   await assertOwnedUploads(input.imageIds, userId);
-  const ai = await getActiveAI();
-  await assertAiBudget(ai);
+  const ai = await getActiveAI("fast");
+  await assertAiBudget(ai, userId);
   const meter = new UsageMeter();
-  const seller = await runSellerStep(
+  const { seller, submitted } = await runSellerStep(
     { method: input.method, imageRefs: input.imageIds, pastedText: input.pastedText, platformTotalClaimed: input.platformTotalClaimed },
-    { ai, loadImage: (ref) => toDataUrl(ref, [userId]) },
+    { ai: guard(ai, { userId, scope: "seller" }), loadImage: (ref) => toDataUrl(ref, [userId]) },
     meter,
+    a.report.seller,
   );
-  if (seller.visibleReviewCount === 0) throw new AnalysisError("pipeline_failed", seller.coverageNote);
-  const report = applySellerToReport(a.report, seller);
+  if (submitted === 0) throw new AnalysisError("pipeline_failed", "Es konnten keine Bewertungen erkannt werden. Bitte lade besser lesbare Screenshots hoch oder scrolle in der Aufnahme langsamer.");
+  const report = applySellerToReport(a.report, seller, new Date(), { method: input.method, submitted });
   const t = meter.total;
-  await recordAiSpend(t.costUsd);
   await store.updateAnalysis(analysisId, {
     report,
+    recommendation: report.score.recommendation,
     aiCostUsd: a.aiCostUsd + t.costUsd,
     aiInputTokens: a.aiInputTokens + t.inputTokens,
     aiOutputTokens: a.aiOutputTokens + t.outputTokens,

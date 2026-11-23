@@ -18,6 +18,7 @@ import { LISTING_FIELDS, type Checklist, type ImageFinding, type Listing, type L
 import type { KnowledgeEntry } from "../knowledge/weaknesses";
 import type { RawReview } from "../engine/seller";
 import { sanitizeUntrustedText, wrapUntrusted } from "../security/untrusted";
+import { mergeObservations, type Observation } from "./observations";
 import { newId, nowIso } from "../utils";
 
 export interface DraftConflict {
@@ -50,7 +51,7 @@ export async function aiExtractListing(
   ai: AIProvider,
   meter: UsageMeter,
   input: { images: AIImage[]; pastedText?: string; hint?: Partial<Listing> },
-): Promise<{ patch: Partial<Listing>; imageKinds: Record<string, ListingImage["kind"]>; lowConfidence: string[]; issues: string[]; conflicts: DraftConflict[] }> {
+): Promise<{ patch: Partial<Listing>; imageKinds: Record<string, ListingImage["kind"]>; lowConfidence: string[]; issues: string[]; conflicts: DraftConflict[]; observations: Observation[] }> {
   const parts: AIPart[] = [];
   if (input.hint) parts.push({ type: "text", text: `Bereits bekannt (aus Link): ${JSON.stringify({ platform: input.hint.platform, title: input.hint.title })}` });
   if (input.pastedText) parts.push({ type: "text", text: wrapUntrusted("inseratstext", input.pastedText) });
@@ -81,13 +82,26 @@ export async function aiExtractListing(
     const ref = input.images[im.index]?.ref;
     if (ref) imageKinds[ref] = im.kind === "other" ? "product_photo" : im.kind;
   }
+  // Deterministische Zusammenführung der Einzelbeobachtungen – Widersprüche nie automatisch entscheiden
+  const observations: Observation[] = (data.observations ?? []).map((o) => ({
+    field: o.field,
+    value: sanitizeUntrustedText(o.value, 120),
+    source: o.imageIndex != null ? (input.images[o.imageIndex]?.ref ?? "text") : "text",
+    confidence: o.confidence,
+  }));
+  const merged = mergeObservations(observations);
+  for (const [k, v] of Object.entries(merged.values)) if ((patch as Record<string, unknown>)[k] == null) (patch as Record<string, unknown>)[k] = v;
+
   const known = new Set<string>(LISTING_FIELDS);
-  const conflicts: DraftConflict[] = data.conflicts
+  const aiConflicts: DraftConflict[] = data.conflicts
     .filter((c) => known.has(c.field) && c.values.length >= 2)
     .map((c) => ({ field: c.field, values: [...new Set(c.values.map((v) => sanitizeUntrustedText(v, 120)))].slice(0, 4), images: c.imageIndexes.map((i) => input.images[i]?.ref).filter((x): x is string => !!x) }))
     .filter((c) => c.values.length >= 2);
+  const conflicts: DraftConflict[] = [...merged.conflicts];
+  for (const c of aiConflicts) if (!conflicts.some((x) => x.field === c.field)) conflicts.push(c);
   for (const c of conflicts) delete (patch as Record<string, unknown>)[c.field];
-  return { patch, imageKinds, lowConfidence: data.lowConfidenceFields, issues: data.readabilityIssues, conflicts };
+  const lowConfidence = [...new Set([...data.lowConfidenceFields, ...observations.filter((o) => o.confidence === "low").map((o) => o.field)])];
+  return { patch, imageKinds, lowConfidence, issues: data.readabilityIssues, conflicts, observations };
 }
 
 /* ── 2) Produkt- und Bildanalyse ────────────────────────────── */

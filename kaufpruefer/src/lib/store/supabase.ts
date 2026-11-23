@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   WalletError,
   type AdminStats,
+  type AnalysisQuery,
   type AnalysisRecord,
   type AppConfig,
   type DataStore,
@@ -47,6 +48,14 @@ const toAnalysis = (r: Row): AnalysisRecord => ({
   fingerprint: r.fingerprint ?? undefined,
   aiModel: r.ai_model ?? undefined,
   durationMs: r.duration_ms ?? undefined,
+  listingKey: r.listing_key ?? undefined,
+  previousId: r.previous_id ?? undefined,
+  analysisVersion: r.analysis_version ?? undefined,
+  priceEur: r.price_eur != null ? Number(r.price_eur) : undefined,
+  recommendation: r.recommendation ?? undefined,
+  priceRating: r.price_rating ?? undefined,
+  thumbnail: r.thumbnail ?? undefined,
+  chat: r.chat ?? undefined,
 });
 const fromAnalysis = (a: Partial<AnalysisRecord>): Row => {
   const m: Record<string, string> = {
@@ -54,6 +63,8 @@ const fromAnalysis = (a: Partial<AnalysisRecord>): Row => {
     createdAt: "created_at", completedAt: "completed_at", report: "report", errorCode: "error_code", reservationId: "reservation_id",
     aiCostUsd: "ai_cost_usd", aiInputTokens: "ai_input_tokens", aiOutputTokens: "ai_output_tokens", mode: "mode",
     fingerprint: "fingerprint", aiModel: "ai_model", durationMs: "duration_ms",
+    listingKey: "listing_key", previousId: "previous_id", analysisVersion: "analysis_version", priceEur: "price_eur",
+    recommendation: "recommendation", priceRating: "price_rating", thumbnail: "thumbnail", chat: "chat",
   };
   return Object.fromEntries(Object.entries(a).filter(([k]) => m[k]).map(([k, v]) => [m[k], v]));
 };
@@ -152,6 +163,33 @@ export class SupabaseStore implements DataStore {
   async getCounter(name: string) {
     const r = check(await this.db.from("counters").select("value").eq("name", name).maybeSingle()) as Row | null;
     return Number(r?.value ?? 0);
+  }
+  async findLatestByListingKey(userId: string, listingKey: string) {
+    const r = check(
+      await this.db.from("analyses").select("*").eq("user_id", userId).eq("listing_key", listingKey).eq("status", "completed").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    );
+    return r ? toAnalysis(r as Row) : null;
+  }
+  async queryAnalyses(userId: string, q: AnalysisQuery) {
+    const size = Math.min(50, Math.max(1, q.pageSize ?? 20));
+    const page = Math.max(1, q.page ?? 1);
+    let query = this.db
+      .from("analyses")
+      .select("id,user_id,status,tier,category,platform,title,created_at,completed_at,error_code,mode,ai_cost_usd,ai_input_tokens,ai_output_tokens,price_eur,recommendation,price_rating,thumbnail,listing_key,report->score", { count: "exact" })
+      .eq("user_id", userId);
+    if (q.q?.trim()) query = query.ilike("title", `%${q.q.trim().replace(/[%_]/g, "")}%`);
+    if (q.category) query = query.eq("category", q.category);
+    if (q.platform) query = query.eq("platform", q.platform);
+    if (q.status === "completed") query = query.eq("status", "completed");
+    if (q.status === "incomplete") query = query.neq("status", "completed");
+    if (q.recommendation) query = query.eq("recommendation", q.recommendation);
+    const sort = q.sort ?? "date_desc";
+    query = sort.startsWith("price")
+      ? query.order("price_eur", { ascending: sort === "price_asc", nullsFirst: false })
+      : query.order("created_at", { ascending: sort === "date_asc" });
+    const res = await query.range((page - 1) * size, page * size - 1);
+    const rows = check(res) as Row[];
+    return { items: rows.map((x) => ({ ...toAnalysis(x), report: x.score ? ({ score: x.score } as never) : undefined })), total: res.count ?? rows.length };
   }
   async findAnalysisByFingerprint(userId: string, fingerprint: string, since: string) {
     const r = check(

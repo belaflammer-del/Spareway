@@ -42,3 +42,18 @@ export function resolvePricing(cfg: AppConfig): PricingConfig {
 export function pricePerToken(p: TokenPackage): number {
   return p.priceCents / p.tokens;
 }
+
+/** Effektiver Preis pro Check in Euro, kaufmännisch auf Cent gerundet. */
+export function perCheckEur(p: TokenPackage): number {
+  return Math.round(p.priceCents / p.tokens) / 100;
+}
+
+/** Was im vollständigen Kaufcheck enthalten ist – zentral für alle Preisdarstellungen. */
+export const INCLUDED_SERVICES = [
+  "Marktwert mit Vergleichsangeboten",
+  "KI-Bildanalyse mit Belegbildern",
+  "Schwachstellen & Risiken",
+  "Verkäuferprüfung (auch nachträglich)",
+  "Deal-Score, Checkliste, PDF",
+  "Rückfragen an den KI-Assistenten",
+];

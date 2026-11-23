@@ -4,10 +4,11 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
 import { errorJson, rateLimit } from "@/lib/http";
 import { localTmpDir } from "@/lib/storage/files";
-import { storeImage } from "@/lib/uploads/service";
+import { getStore } from "@/lib/store";
 import { detectFileType } from "@/lib/uploads/validate";
 import { newId } from "@/lib/utils";
-import { extractKeyFrames, ffmpegAvailable, probeDuration } from "@/lib/video/frames";
+import { ffmpegAvailable } from "@/lib/video/frames";
+import { startVideoJob } from "@/lib/video/jobs";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -24,14 +25,17 @@ export async function POST(req: Request) {
   if (!rl.allowed) return errorJson(429, "rate_limited", "Zu viele Videos. Bitte versuche es später erneut.");
   if (!(await ffmpegAvailable())) return errorJson(503, "ffmpeg_missing", "Die Videoverarbeitung ist auf diesem Server nicht verfügbar. Bitte nutze Screenshots.");
 
-  const maxBytes = env.videoMaxMb * 1024 * 1024;
+  const lim = (await getStore().getConfig()).limits;
+  const maxMb = lim?.videoMaxMb ?? env.videoMaxMb;
+  const maxSeconds = lim?.videoMaxSeconds ?? env.videoMaxSeconds;
+  const maxBytes = maxMb * 1024 * 1024;
   const len = Number(req.headers.get("content-length") ?? 0);
-  if (len > maxBytes + 1024 * 64) return errorJson(413, "too_large", `Das Video ist größer als ${env.videoMaxMb} MB.`);
+  if (len > maxBytes + 1024 * 64) return errorJson(413, "too_large", `Das Video ist größer als ${maxMb} MB.`);
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("video");
   if (!(file instanceof File)) return errorJson(400, "no_file", "Kein Video erhalten");
-  if (file.size > maxBytes) return errorJson(413, "too_large", `Das Video ist größer als ${env.videoMaxMb} MB.`);
+  if (file.size > maxBytes) return errorJson(413, "too_large", `Das Video ist größer als ${maxMb} MB.`);
 
   const buf = Buffer.from(await file.arrayBuffer());
   const t = detectFileType(buf);
@@ -42,23 +46,11 @@ export async function POST(req: Request) {
   try {
     await fs.mkdir(work, { recursive: true });
     await fs.writeFile(videoPath, buf);
-    const duration = await probeDuration(videoPath);
-    if (duration > env.videoMaxSeconds + 1)
-      return errorJson(413, "too_long", `Das Video ist ${Math.round(duration)} s lang. Erlaubt sind maximal ${env.videoMaxSeconds} s.`);
-    const { frames, sampled, hint } = await extractKeyFrames(videoPath, path.join(work, "frames"), undefined, env.videoMaxSeconds);
-    if (frames.length === 0) return errorJson(422, "no_frames", "Aus dem Video konnten keine Bilder gelesen werden. Bitte nimm es erneut auf.");
-    const ids: string[] = [];
-    for (const f of frames) ids.push((await storeImage(user.id, await fs.readFile(f), "frame")).id);
-    return Response.json({
-      frameIds: ids,
-      stats: { durationSeconds: Math.round(duration), sampledFrames: sampled, keptFrames: ids.length },
-      note: "Das Video wurde nach der Frame-Extraktion gelöscht.",
-      hint,
-    });
-  } catch (e) {
-    console.error("[video] failed", (e as Error).message);
-    return errorJson(500, "processing_failed", "Das Video konnte nicht verarbeitet werden. Bitte versuche eine kürzere Aufnahme oder Screenshots.");
-  } finally {
+  } catch {
     await fs.rm(work, { recursive: true, force: true }).catch(() => undefined);
+    return errorJson(500, "processing_failed", "Das Video konnte nicht gespeichert werden.");
   }
+  // Verarbeitung im Hintergrund – Fortschritt über GET /api/uploads/video/{jobId}
+  const job = startVideoJob({ ownerId: user.id, workDir: work, videoPath, maxSeconds });
+  return Response.json({ jobId: job.id, status: job.stage }, { status: 202 });
 }

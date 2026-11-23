@@ -51,6 +51,8 @@ export interface SellerInput {
 
 export interface PipelineDeps {
   ai: AIProvider | null;
+  /** Günstigeres Modell für OCR/Texte – Standard: ai */
+  aiFast?: AIProvider | null;
   loadImage: (ref: string) => Promise<string>; // → data URL
   marketProviders: MarketDataProvider[];
   knowledge?: KnowledgeEntry[];
@@ -209,7 +211,7 @@ export async function runAnalysisPipeline(input: PipelineInput, deps: PipelineDe
           if (!ai) throw new Error("Texterkennung aus Bildern benötigt einen KI-Provider – bitte Bewertungstexte einfügen");
           const imgs: AIImage[] = [];
           for (const ref of s.imageRefs.slice(0, 30)) imgs.push({ ref, dataUrl: await deps.loadImage(ref) });
-          const r = await aiReadReviews(ai, meter, imgs);
+          const r = await aiReadReviews(deps.aiFast ?? ai, meter, imgs);
           raw = [...raw, ...r.raw];
           unreadable = r.unreadable;
           platformTotal = platformTotal ?? r.platformTotal;
@@ -264,7 +266,7 @@ export async function runAnalysisPipeline(input: PipelineInput, deps: PipelineDe
       "compose",
       "Nachrichten & Zusammenfassung formulieren (KI)",
       () =>
-        aiCompose(ai, meter, {
+        aiCompose(deps.aiFast ?? ai, meter, {
           listing,
           questions: checklist.questionsForSeller.slice(0, 5),
           negotiation,
@@ -301,6 +303,7 @@ export async function runAnalysisPipeline(input: PipelineInput, deps: PipelineDe
     market,
     product,
     seller,
+    sellerRuns: seller ? [{ at: nowIso(), method: seller.inputMethod, submitted: seller.visibleReviewCount + seller.duplicatesRemoved, newReviews: seller.visibleReviewCount, duplicates: seller.duplicatesRemoved, total: seller.visibleReviewCount }] : [],
     risks,
     payment,
     checklist,
@@ -341,7 +344,12 @@ function defaultSummary(overall: number | null, market: AnalysisReport["market"]
  * Ergänzt einen bestehenden Bericht um eine Verkäuferanalyse und berechnet
  * Risiken, Datenqualität und Score neu – ohne erneute Produkt-/Bildanalyse.
  */
-export function applySellerToReport(report: AnalysisReport, seller: SellerAnalysis, now = new Date()): AnalysisReport {
+export function applySellerToReport(
+  report: AnalysisReport,
+  seller: SellerAnalysis,
+  now = new Date(),
+  run?: { method: string; submitted: number },
+): AnalysisReport {
   const listing = report.listing;
   const external = report.risks.filter((r) => r.rule.startsWith("ai."));
   const risks = evaluateRisks({ listing, market: report.market, seller, externalFindings: external, currentYear: now.getFullYear() });
@@ -355,12 +363,27 @@ export function applySellerToReport(report: AnalysisReport, seller: SellerAnalys
     dataQuality,
     score,
     payment: paymentAdvice(listing, risks),
-    pipeline: [...report.pipeline, { step: "seller", label: "Verkäuferbewertungen nachträglich ausgewertet", status: "ok", durationMs: 0, note: `${seller.visibleReviewCount} Bewertungen` }],
+    sellerRuns: [
+      ...(report.sellerRuns ?? []),
+      {
+        at: now.toISOString(),
+        method: run?.method ?? seller.inputMethod,
+        submitted: run?.submitted ?? seller.visibleReviewCount,
+        newReviews: seller.visibleReviewCount - (report.seller?.visibleReviewCount ?? 0),
+        duplicates: seller.duplicatesRemoved,
+        total: seller.visibleReviewCount,
+      },
+    ],
+    pipeline: [...report.pipeline, { step: "seller", label: report.seller ? "Verkäuferdaten ergänzt" : "Verkäuferbewertungen nachträglich ausgewertet", status: "ok", durationMs: 0, note: `${seller.visibleReviewCount} Bewertungen` }],
   });
 }
 
-/** Verkäuferanalyse aus Text und/oder Bildern (OCR per KI). */
-export async function runSellerStep(input: SellerInput, deps: Pick<PipelineDeps, "ai" | "loadImage">, meter: UsageMeter): Promise<SellerAnalysis> {
+/** Rohbewertungen aus Text und/oder Bildern (OCR per KI) erfassen. */
+export async function collectRawReviews(
+  input: SellerInput,
+  deps: Pick<PipelineDeps, "ai" | "loadImage">,
+  meter: UsageMeter,
+): Promise<{ raw: RawReview[]; unreadable: number; platformTotal?: number }> {
   let raw: RawReview[] = [];
   let unreadable = 0;
   let platformTotal = input.platformTotalClaimed;
@@ -374,5 +397,28 @@ export async function runSellerStep(input: SellerInput, deps: Pick<PipelineDeps,
     unreadable = r.unreadable;
     platformTotal = platformTotal ?? r.platformTotal;
   }
-  return analyzeSeller({ raw, inputMethod: input.method === "pasted_text" ? "pasted_text" : input.method, unreadableSegments: unreadable, platformTotalClaimed: platformTotal });
+  return { raw, unreadable, platformTotal };
+}
+
+/** Verkäuferanalyse; bereits erfasste Bewertungen werden zusammengeführt und dedupliziert. */
+export async function runSellerStep(
+  input: SellerInput,
+  deps: Pick<PipelineDeps, "ai" | "loadImage">,
+  meter: UsageMeter,
+  previous?: SellerAnalysis,
+): Promise<{ seller: SellerAnalysis; submitted: number }> {
+  const { raw, unreadable, platformTotal } = await collectRawReviews(input, deps, meter);
+  const prior: RawReview[] = (previous?.reviews ?? []).map((r) => ({
+    text: r.text,
+    sentiment: r.sentimentSource === "explicit" ? r.sentiment : undefined,
+    date: r.date,
+    evidenceRef: r.evidenceRef,
+  }));
+  const seller = analyzeSeller({
+    raw: [...prior, ...raw],
+    inputMethod: input.method === "pasted_text" ? "pasted_text" : input.method,
+    unreadableSegments: (previous?.unreadableSegments ?? 0) + unreadable,
+    platformTotalClaimed: platformTotal ?? previous?.platformTotalClaimed,
+  });
+  return { seller, submitted: raw.length };
 }

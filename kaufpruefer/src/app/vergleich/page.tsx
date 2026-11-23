@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ScoreBox } from "@/components/report/score-ring";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Select } from "@/components/ui/input";
+import { Input, Select } from "@/components/ui/input";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDemoReport, listDemos } from "@/lib/demo";
 import { formatEur, PRICE_RATING_LABELS, RECOMMENDATION_LABELS } from "@/lib/domain/labels";
@@ -74,6 +74,25 @@ export default async function ComparePage({ searchParams }: PageProps<"/vergleic
         <Button type="submit">Vergleichen</Button>
       </form>
       {!user && <p className="mt-2 text-xs text-muted"><Link href="/login?next=/vergleich" className="underline">Melde dich an</Link>, um deine eigenen Prüfungen zu vergleichen.</p>}
+
+      <details className="mt-4 rounded-2xl border border-border bg-surface p-4" open={!a && !b && mine.length === 0}>
+        <summary className="cursor-pointer font-semibold">Neue Inserate vergleichen</summary>
+        <form action="/vergleich/start" className="mt-3 space-y-2.5">
+          {typeof sp.a === "string" && sp.a ? (
+            <>
+              <input type="hidden" name="with" value={sp.a} />
+              <p className="text-sm text-muted">Mit Angebot A vergleichen:</p>
+            </>
+          ) : (
+            <Input name="url1" placeholder="Link zu Angebot 1" inputMode="url" aria-label="Link Angebot 1" />
+          )}
+          <Input name="url2" placeholder={typeof sp.a === "string" && sp.a ? "Link zum neuen Angebot" : "Link zu Angebot 2"} inputMode="url" aria-label="Link Angebot 2" required />
+          <p className="text-xs text-muted">
+            Tokenverbrauch: <span className="font-semibold text-foreground">{typeof sp.a === "string" && sp.a ? "1 Token" : "2 Tokens"}</span> (je neuem vollständigem Check). Bereits geprüfte, unveränderte Inserate werden ohne neuen Token wiederverwendet. Der Vergleich selbst ist kostenlos.
+          </p>
+          <Button type="submit" className="w-full">Prüfen & vergleichen</Button>
+        </form>
+      </details>
 
       {a && b && result && (
         <>
