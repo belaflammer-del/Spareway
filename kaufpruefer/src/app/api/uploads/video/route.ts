@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     const duration = await probeDuration(videoPath);
     if (duration > env.videoMaxSeconds + 1)
       return errorJson(413, "too_long", `Das Video ist ${Math.round(duration)} s lang. Erlaubt sind maximal ${env.videoMaxSeconds} s.`);
-    const { frames, sampled } = await extractKeyFrames(videoPath, path.join(work, "frames"), undefined, env.videoMaxSeconds);
+    const { frames, sampled, hint } = await extractKeyFrames(videoPath, path.join(work, "frames"), undefined, env.videoMaxSeconds);
     if (frames.length === 0) return errorJson(422, "no_frames", "Aus dem Video konnten keine Bilder gelesen werden. Bitte nimm es erneut auf.");
     const ids: string[] = [];
     for (const f of frames) ids.push((await storeImage(user.id, await fs.readFile(f), "frame")).id);
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
       frameIds: ids,
       stats: { durationSeconds: Math.round(duration), sampledFrames: sampled, keptFrames: ids.length },
       note: "Das Video wurde nach der Frame-Extraktion gelöscht.",
+      hint,
     });
   } catch (e) {
     console.error("[video] failed", (e as Error).message);

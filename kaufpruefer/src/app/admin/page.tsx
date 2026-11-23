@@ -3,10 +3,12 @@ import { PricingForm } from "@/components/dashboard/pricing-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { toggleDemoAction, toggleProviderAction } from "@/lib/admin/actions";
+import { AiConfigForm } from "@/components/dashboard/ai-config-form";
+import { toggleCategoryAction, toggleDemoAction, toggleProviderAction } from "@/lib/admin/actions";
+import { aiSpendKey, dailyBudgetUsd } from "@/lib/ai/budget";
 import { requireAdmin } from "@/lib/auth/session";
-import { features } from "@/lib/config/env";
-import { PROVIDER_INFO, type ProviderKey } from "@/lib/config/providers";
+import { env, features } from "@/lib/config/env";
+import { DEFAULT_CATEGORY_STATUS, PROVIDER_INFO, type ProviderKey } from "@/lib/config/providers";
 import { DEMO_DEFINITIONS } from "@/lib/demo/definitions";
 import { CATEGORY_LABELS, formatEur } from "@/lib/domain/labels";
 import type { Category } from "@/lib/domain/schemas";
@@ -29,7 +31,8 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
 export default async function AdminPage() {
   await requireAdmin();
   const store = getStore();
-  const [s, cfg, pricing] = await Promise.all([store.adminStats(), store.getConfig(), getPricing()]);
+  const [s, cfg, pricing, spentMicro, budget] = await Promise.all([store.adminStats(), store.getConfig(), getPricing(), store.getCounter(aiSpendKey()), dailyBudgetUsd()]);
+  const spentToday = spentMicro / 1_000_000;
   const usdToEur = 0.92; // Näherung nur für die Wirtschaftlichkeitsanzeige
   const netRevenue = (s.revenueCents - s.refundsCents) / 100;
   const aiCostEur = s.aiCostUsdTotal * usdToEur;
@@ -52,6 +55,10 @@ export default async function AdminPage() {
         <Kpi label="Umsatz (netto Erstattungen)" value={formatEur(netRevenue)} sub={`Erstattungen ${formatEur(s.refundsCents / 100)}`} />
         <Kpi label="KI-Kosten gesamt" value={`$${s.aiCostUsdTotal.toFixed(2)}`} sub={`≈ ${formatEur(aiCostEur)}`} />
         <Kpi label="KI-Kosten pro Analyse" value={`$${s.aiCostUsdAvg.toFixed(3)}`} />
+        <Kpi label="Aktive Nutzer (30 Tage)" value={String(s.activeUsers30d)} />
+        <Kpi label="Verkäuferprüfungen" value={String(s.sellerChecks)} sub={`Vergleiche: ${s.comparisons} · wiederverwendet: ${s.reusedAnalyses}`} />
+        <Kpi label="Ø Dauer pro Analyse" value={s.avgDurationMs ? `${(s.avgDurationMs / 1000).toFixed(1)} s` : "–"} />
+        <Kpi label="KI-Kosten heute" value={`$${spentToday.toFixed(2)}`} sub={`Budget $${budget.toFixed(2)} / Tag`} />
         <Kpi label="Deckungsbeitrag pro Token" value={formatEur(margin)} sub="Ø Erlös/Token − Ø KI-Kosten (ohne Zahlungsgebühren)" />
       </section>
 
@@ -83,7 +90,8 @@ export default async function AdminPage() {
               ))}
             </ul>
           )}
-          <p className="mt-3 text-xs text-muted">Fehlgeschlagene Analysen werden automatisch zurückgebucht.</p>
+          {s.topErrors.length > 0 && <p className="mt-3 text-xs text-muted">Häufigste Fehler: {s.topErrors.map((e) => `${e.code} (${e.count})`).join(" · ")}</p>}
+          <p className="mt-1 text-xs text-muted">Fehlgeschlagene Analysen werden automatisch zurückgebucht.</p>
         </Card>
       </div>
 
@@ -122,6 +130,34 @@ export default async function AdminPage() {
                   <form action={toggleDemoAction}>
                     <input type="hidden" name="slug" value={d.slug} />
                     <Button size="sm" variant={visible ? "outline" : "subtle"}>{visible ? "Sichtbar" : "Ausgeblendet"}</Button>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="p-5">
+          <h2 className="font-semibold">KI-Modell & Kostenlimit</h2>
+          <p className="mt-1 text-sm text-muted">Bei erreichtem Tagesbudget werden keine KI-Aufrufe mehr gestartet.</p>
+          <div className="mt-4">
+            <AiConfigForm model={cfg.ai?.model} defaultModel={env.ai.openaiModel} budget={budget} />
+          </div>
+        </Card>
+        <Card className="p-5">
+          <h2 className="font-semibold">Produktkategorien</h2>
+          <p className="mt-1 text-sm text-muted">„Beta“ = nur kostenloser Schnellcheck, kein kostenpflichtiger Komplettcheck.</p>
+          <ul className="mt-3 space-y-2">
+            {(Object.keys(CATEGORY_LABELS) as Category[]).map((c) => {
+              const st = cfg.categories?.[c] ?? DEFAULT_CATEGORY_STATUS[c] ?? "beta";
+              return (
+                <li key={c} className="flex items-center justify-between gap-3 text-sm">
+                  <span>{CATEGORY_LABELS[c]}</span>
+                  <form action={toggleCategoryAction}>
+                    <input type="hidden" name="category" value={c} />
+                    <Button size="sm" variant={st === "live" ? "outline" : "subtle"}>{st === "live" ? "Live" : "Beta"}</Button>
                   </form>
                 </li>
               );

@@ -153,9 +153,15 @@ export function valuate(
   const listingPrices = kept.filter((c) => c.priceType === "listing").length;
   const soldPrices = kept.filter((c) => c.priceType === "sold").length;
 
+  // Relevanteste Vergleiche für die Anzeige (nach Ähnlichkeit, Verkaufspreise bevorzugt)
+  const samples = [...kept]
+    .map((c) => ({ ...c, similarity: Math.round(similarityWeight(c, listing) * (c.priceType === "sold" ? 1.1 : 1) * 100) / 100 }))
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, 10);
   const base = {
     offerPriceEur: listing.priceEur,
     collectedAt,
+    samples,
     comparables: {
       used: kept.length,
       excluded: excluded.length + (comparables.length - valid.length),

@@ -10,7 +10,8 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "eval": "RUN_AI_EVAL=1 vitest run tests/eval"
   },
   "engines": {
     "node": ">=20.9"

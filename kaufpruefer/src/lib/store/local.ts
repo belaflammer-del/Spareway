@@ -44,7 +44,7 @@ interface DB {
   uploads: UploadRecord[];
   rate: Record<string, { count: number; resetAt: string }>;
   config: AppConfig;
-  counters: { quickChecks: number };
+  counters: { quickChecks: number; [k: string]: number };
 }
 
 const empty = (): DB => ({
@@ -206,6 +206,22 @@ export class LocalStore implements DataStore {
     return this.tx((db) => {
       db.counters.quickChecks++;
     });
+  }
+  countEvent(name: string, by = 1) {
+    return this.tx((db) => {
+      db.counters[name] = (db.counters[name] ?? 0) + by;
+    });
+  }
+  getCounter(name: string) {
+    return this.read((db) => db.counters[name] ?? 0);
+  }
+  findAnalysisByFingerprint(userId: string, fingerprint: string, since: string) {
+    return this.read(
+      (db) =>
+        db.analyses
+          .filter((a) => a.userId === userId && a.fingerprint === fingerprint && a.status === "completed" && a.createdAt >= since)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null,
+    );
   }
 
   // ── Wallet ───────────────────────────────────────────────
@@ -383,6 +399,20 @@ export class LocalStore implements DataStore {
           .slice(0, 10)
           .map((a) => ({ id: a.id, createdAt: a.createdAt, category: a.category, errorCode: a.errorCode ?? "unknown" })),
         purchasesByPackage,
+        activeUsers30d: new Set(db.analyses.filter((a) => a.createdAt >= new Date(Date.now() - 30 * 864e5).toISOString()).map((a) => a.userId)).size,
+        sellerChecks: db.analyses.filter((a) => a.report?.seller).length,
+        comparisons: db.counters.comparisons ?? 0,
+        reusedAnalyses: db.counters.reused_analysis ?? 0,
+        avgDurationMs: (() => {
+          const d = completed.map((a) => a.durationMs ?? 0).filter((x) => x > 0);
+          return d.length ? d.reduce((x, y) => x + y, 0) / d.length : 0;
+        })(),
+        topErrors: Object.entries(
+          db.analyses.filter((a) => a.status === "failed").reduce<Record<string, number>>((acc, a) => ((acc[a.errorCode ?? "unknown"] = (acc[a.errorCode ?? "unknown"] ?? 0) + 1), acc), {}),
+        )
+          .map(([code, count]) => ({ code, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5),
       };
     });
   }

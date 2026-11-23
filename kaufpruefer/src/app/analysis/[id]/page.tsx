@@ -26,5 +26,5 @@ export default async function AnalysisPage({ params }: PageProps<"/analysis/[id]
       </div>
     );
   }
-  return <ReportView report={a.report} pdfUrl={`/api/analyses/${id}/pdf`} />;
+  return <ReportView report={a.report} pdfUrl={`/api/analyses/${id}/pdf`} analysisId={id} />;
 }

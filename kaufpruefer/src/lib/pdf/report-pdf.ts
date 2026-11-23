@@ -165,6 +165,13 @@ export async function renderReportPdf(report: AnalysisReport): Promise<Uint8Arra
     w.text("Marktwert derzeit nicht verlässlich bestimmbar.", { bold: true });
     w.text(market.explanation, { size: 9, color: MUTED });
   }
+  if (market.samples.length) {
+    w.text("Vergleichsangebote", { bold: true, gap: 1 });
+    for (const c of market.samples.slice(0, 8)) {
+      const props = [c.year, c.mileageKm != null ? `${c.mileageKm.toLocaleString("de-DE")} km` : null].filter(Boolean).join(", ");
+      w.bullet(`${formatEur(c.priceEur)} (${c.priceType === "sold" ? "verkauft" : "Angebot"}) – ${c.title ?? props ?? "Vergleich"}${c.title && props ? `, ${props}` : ""} · ${c.source}, ${new Date(c.collectedAt).toLocaleDateString("de-DE")}`);
+    }
+  }
 
   w.heading("Risiken & Plausibilität");
   if (report.risks.length === 0) w.text("Keine Auffälligkeiten durch die Regelprüfung (keine Garantie).", { color: MUTED });

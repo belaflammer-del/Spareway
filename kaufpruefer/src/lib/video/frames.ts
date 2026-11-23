@@ -102,7 +102,7 @@ export async function extractKeyFrames(
   workDir: string,
   opts: FrameSelectionOptions = DEFAULT_FRAME_OPTIONS,
   maxSeconds = 90,
-): Promise<{ frames: string[]; sampled: number }> {
+): Promise<{ frames: string[]; sampled: number; sceneChanges: number; hint?: string }> {
   await fs.mkdir(workDir, { recursive: true });
   await run(
     "ffmpeg",
@@ -118,15 +118,19 @@ export async function extractKeyFrames(
     120_000,
   );
   const files = (await fs.readdir(workDir)).filter((f) => f.startsWith("f_")).sort().map((f) => path.join(workDir, f));
-  if (files.length === 0) return { frames: [], sampled: 0 };
+  if (files.length === 0) return { frames: [], sampled: 0, sceneChanges: 0, hint: "Aus dem Video konnten keine Bilder gelesen werden." };
 
   const kept: string[] = [files[0]];
   let prev = await signature(files[0]);
   let accumulated = 0;
+  let sceneChanges = 0;
+  let stillFrames = 0;
   for (let i = 1; i < files.length; i++) {
     const sig = await signature(files[i]);
     const s = estimateShift(prev, sig);
+    if (s === 0) stillFrames++;
     if (s === null) {
+      sceneChanges++;
       kept.push(files[i]); // Szenenwechsel → behalten
       accumulated = 0;
     } else {
@@ -147,5 +151,13 @@ export async function extractKeyFrames(
     const step = frames.length / opts.maxFrames;
     frames = Array.from({ length: opts.maxFrames }, (_, i) => kept[Math.floor(i * step)]);
   }
-  return { frames, sampled: files.length };
+  // Hinweise zur Aufnahmequalität: zu schnelles Scrollen erzeugt viele „Sprünge“
+  const jumpRatio = sceneChanges / Math.max(1, files.length - 1);
+  const hint =
+    jumpRatio > 0.3
+      ? "Bitte scrolle etwas langsamer und gleichmäßiger, damit alle Bewertungen vollständig erkannt werden."
+      : stillFrames / Math.max(1, files.length - 1) > 0.85
+        ? "In der Aufnahme wurde kaum gescrollt. Bitte langsam durch alle Bewertungen scrollen."
+        : undefined;
+  return { frames, sampled: files.length, sceneChanges, hint };
 }

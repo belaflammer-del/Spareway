@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "../auth/session";
-import { PROVIDER_INFO, type ProviderKey } from "../config/providers";
+import { DEFAULT_CATEGORY_STATUS, PROVIDER_INFO, type ProviderKey } from "../config/providers";
 import { DEMO_DEFINITIONS } from "../demo/definitions";
 import { getStore } from "../store";
 import type { FormState } from "../auth/actions";
@@ -48,5 +48,28 @@ export async function toggleProviderAction(fd: FormData) {
   const p = { ...(cfg.providers ?? {}) };
   p[key] = p[key] === false;
   await getStore().setConfig({ providers: p });
+  revalidatePath("/admin");
+}
+
+const AiForm = z.object({
+  model: z.string().trim().max(80).regex(/^[a-zA-Z0-9._:-]*$/, "Ungültiger Modellname"),
+  dailyBudgetUsd: z.coerce.number().min(0).max(10000),
+});
+
+export async function saveAiConfigAction(_: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const parsed = AiForm.safeParse({ model: fd.get("model") ?? "", dailyBudgetUsd: String(fd.get("dailyBudgetUsd") ?? "").replace(",", ".") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  await getStore().setConfig({ ai: { model: parsed.data.model || undefined, dailyBudgetUsd: parsed.data.dailyBudgetUsd } });
+  revalidatePath("/admin");
+  return { ok: true, message: "KI-Einstellungen gespeichert." };
+}
+
+export async function toggleCategoryAction(fd: FormData) {
+  await requireAdmin();
+  const key = String(fd.get("category"));
+  const cfg = await getStore().getConfig();
+  const current = cfg.categories?.[key] ?? DEFAULT_CATEGORY_STATUS[key] ?? "beta";
+  await getStore().setConfig({ categories: { ...(cfg.categories ?? {}), [key]: current === "live" ? "beta" : "live" } });
   revalidatePath("/admin");
 }

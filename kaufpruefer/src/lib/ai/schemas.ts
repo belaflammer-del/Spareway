@@ -45,6 +45,8 @@ export const ExtractionOutputSchema = z.object({
     paymentMethods: s(),
   }),
   lowConfidenceFields: z.array(z.string()),
+  /** Widersprüchliche Werte für dasselbe Feld auf verschiedenen Bildern/Texten */
+  conflicts: z.array(z.object({ field: z.string(), values: z.array(z.string()), imageIndexes: z.array(z.number().int()) })),
   images: z.array(
     z.object({
       index: z.number().int(),

@@ -27,6 +27,9 @@ export function AnalysisList({ items }: { items: AnalysisRecord[] }) {
                 <p className="mt-0.5 truncate text-xs text-muted">
                   {new Date(a.createdAt).toLocaleDateString("de-DE")} · {PLATFORM_LABELS[a.platform]} · {CATEGORY_LABELS[a.category]}
                 </p>
+                {a.status === "completed" && Date.now() - Date.parse(a.createdAt) > 30 * 864e5 && (
+                  <p className="text-[11px] text-warn">Marktdaten älter als 30 Tage – evtl. veraltet</p>
+                )}
               </div>
               {a.status === "completed" && score ? (
                 <Badge tone={score.recommendation === "elevated_risk" ? "bad" : score.recommendation === "interesting" ? "good" : "neutral"} className="hidden sm:inline-flex">

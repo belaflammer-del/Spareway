@@ -1,33 +1,33 @@
-# Entwicklungsstand
+# DEAL-NIVO – Entwicklungsstand (V2)
 
-## Implementiert (Phase 1 vollständig, Teile von Phase 2–4)
+## Fertig implementiert und getestet
+- **KI-Pipeline (OpenAI, austauschbar):** Extraktion aus Screenshots/Text, Bildbefunde mit Evidenzstufen und Markierung, Text-Bild-Widersprüche, unverifizierte Modell-Hinweise klar gekennzeichnet, OCR von Bewertungen, Texte. Zod-Validierung (doppelt), Timeouts + 2 Wiederholungen, Logging ohne Inhalte, Fallback auf Regelmodus bei KI-Fehlern.
+- **Kostenkontrolle:** KI-Kosten pro Analyse (Modell, Tokens, Dauer), Tages-Kostenbremse (`AI_DAILY_BUDGET_USD`, im Admin änderbar), Modell im Admin umstellbar.
+- **Link-Import:** Teilen-Texte der Apps, Tracking-Entfernung, eBay-Kurzlinks, eBay Browse API (mit Schlüssel).
+- **Screenshot-Workflow:** Mehrfachupload mit Fortschritt, KI führt Screenshots zusammen, **Konflikte** (z. B. zwei Kilometerstände) werden zur Auswahl angezeigt statt geraten.
+- **Bestätigungsschritt:** „Angebot erkannt“-Karte, nur fehlende Pflichtangaben, Rest aufklappbar.
+- **Marktpreis:** Valuation-Engine (IQR, gewichtete Quartile, Regression, Angebot vs. Verkauf), **Liste der Vergleichsangebote** mit Quelle/Datum/Link, **eBay-Vergleichsangebote** über Browse API (mit Schlüssel), lizenzierter HTTP-Provider vorbereitet.
+- **Ergebnisseite:** Produktbild, Score-Kasten, Preis-Wasserwaage, „Lohnt sich eine Besichtigung?“, realistischer Preis, separate Karten (Preis, Zustand, Schwachstellen, Risiken, Verkäufer, Bezahlung, Checkliste, Nachricht, Datenqualität), **Checkliste in drei Phasen**, Hinweis auf veraltete Marktdaten.
+- **Verkäuferprüfung nachträglich** zu bezahlten Analysen – ohne weiteren Token. Screenshots, Bildschirmaufnahme oder Text.
+- **Video:** Frame-Auswahl nach Scrollbewegung, Hinweis bei zu schnellem/zu wenig Scrollen, sofortige Löschung.
+- **Angebotsvergleich** (`/vergleich`): eigene Analysen und Demos, nur aus Berichtsdaten, kostenlos.
+- **Token:** Reservierung/Verbuchung/Freigabe, Idempotenz, **Wiederverwendung identischer Analysen (7 Tage) ohne neuen Token**, klare Einzelpreis-Kommunikation.
+- **Historie:** Suche, Kategorie-Filter, Veraltet-Hinweis.
+- **Kategorien:** Status live/beta im Admin; Beta = nur Schnellcheck.
+- **Admin:** aktive Nutzer, Verkäuferprüfungen, Vergleiche, Wiederverwendungen, Ø Dauer, häufigste Fehler, KI-Kosten heute vs. Budget.
+- **Tests:** 60 automatisierte Tests inkl. simuliertem KI-Durchlauf; KI-Qualitätsmessung (`npm run eval`) mit Referenz-Inseraten, Genauigkeit ≥ 90 %, Halluzinationsrate ≤ 5 %.
 
-- Startseite, Beispielanalysen (6 Demos, fiktive Daten, echte Engines, PDF), Methodik-, Preis- und Rechtsseiten (Entwürfe)
-- Konten: Registrierung, Login, Passwort-Reset, E-Mail-Bestätigung (Supabase Auth oder Lokalmodus), Dashboard, Historie, Einstellungen, Datenexport, Kontolöschung
-- Prüf-Flow: Link / Screenshots / Text → Entwurf mit Feldherkunft → gezielte Nachfragen → Schnellcheck (gratis, limitiert) oder Komplettcheck (1 Token)
-- Engines: Marktwert (IQR, gewichtete Quartile, Regression aus Vergleichsdaten, Inserat vs. Verkauf), Risiken, Datenqualität, Deal-Score mit Deckelungen, Verhandlung, Verkäuferanalyse
-- KI (OpenAI): Extraktion aus Screenshots, Bildbefunde mit Evidenzstufen und Markierung, Text-Bild-Widersprüche, Echtheitsmerkmale, OCR von Bewertungen, Nachrichten
-- Video: Upload, FFmpeg-Frame-Auswahl nach Scrollbewegung, sofortige Löschung
-- Wallet: Reservierung/Verbuchung/Freigabe, Idempotenz, Stripe Checkout + Webhook (Testmodus), Erstattungen, Transaktionsprotokoll, Test-Gutschriften im Dev
-- Admin: KPIs, Umsatz, KI-Kosten pro Analyse, Fehler, Kategorien, Preise, Demo-Sichtbarkeit, Provider an/aus
-- Sicherheit/Datenschutz: RLS, serverseitige Prüfung, Rate Limits, Magic-Byte-Validierung, EXIF-Entfernung, Löschfristen, Prompt-Injection-Schutz, gehashte IPs
-- PWA: Manifest, Icons, Service Worker (keine Caches für personenbezogene Inhalte)
+## Teilweise (braucht Zugänge)
+- Echte KI-Analysen → `OPENAI_API_KEY`
+- Dauerhafte Daten, E-Mail-Bestätigung → Supabase (Migrationen `0001_init.sql` und `0002_v2.sql`)
+- eBay-Import und eBay-Vergleichspreise → `EBAY_CLIENT_ID/SECRET`
+- Fahrzeug-Marktwerte mit Verkaufspreisen → lizenzierter Datenanbieter
+- Zahlungen → Stripe (bewusst später)
 
-## Bekannte Einschränkungen
-
-- Ohne Marktdatenanbieter gibt es Marktwerte nur aus vom Nutzer eingetragenen Vergleichsangeboten.
-- Wissensdatenbank leer – modellspezifische Schwachstellen nur als nicht verifizierte KI-Hinweise.
-- Komplettanalyse läuft synchron im Request (bis ~60 s mit KI); für Skalierung → Job-Queue.
-- Lokalmodus nur für Entwicklung (eine Instanz, JSON-Datei, keine E-Mails).
-- HEIC wird nicht verarbeitet (sharp-Prebuilds ohne HEVC).
-- KI-Pfad und Supabase-/Stripe-Pfad sind gegen echte Dienste noch nicht live getestet (keine Schlüssel in dieser Umgebung); SQL-Migration wurde gegen PostgreSQL 16 getestet.
-- Rechtstexte sind Entwürfe und juristisch zu prüfen.
-
-## Nächste Schritte
-
-1. Supabase-Projekt + Stripe-Testkonto anbinden, Ende-zu-Ende mit echten Schlüsseln testen
-2. OpenAI-Pfad mit realen Inseraten evaluieren (Golden-Set, Halluzinationsrate der Bildbefunde)
-3. Marktdatenanbieter vertraglich klären und Adapter schreiben
-4. Wissensdatenbank redaktionell aufbauen (DB-Tabelle + Admin-Pflege)
-5. Analysen asynchron (Queue, Status-Polling), Monitoring (Sentry/OpenTelemetry)
-6. Native Apps (Capacitor/Expo) inkl. In-App-Käufe
+## Noch offen
+- Videoanalyse asynchron mit Fortschrittsanzeige (läuft derzeit synchron im Request, max. 90 s Video)
+- Analysen über Job-Queue statt im Request (für viele parallele Nutzer)
+- Wissensdatenbank mit geprüften Schwachstellen befüllen
+- mobile.de/AutoScout24-Import (nur mit Partnervertrag)
+- Monitoring/Alerting (z. B. Sentry), Lasttests
+- Native Apps inkl. „Teilen → DEAL-NIVO“

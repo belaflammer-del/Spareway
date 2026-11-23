@@ -14,12 +14,12 @@ export async function POST(req: Request) {
   const parsed = AnalysisRequestSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return errorJson(400, "invalid_request", parsed.error.issues[0]?.message ?? "Ungültige Angaben");
   try {
-    const { id } = await startFullAnalysis(user.id, parsed.data);
-    return Response.json({ id });
+    const { id, reused } = await startFullAnalysis(user.id, parsed.data);
+    return Response.json({ id, reused: !!reused });
   } catch (e) {
     const code = (e as { code?: string }).code;
-    if (code === "insufficient_balance" || code === "invalid_upload" || code === "pipeline_failed") {
-      const status = code === "insufficient_balance" ? 402 : code === "invalid_upload" ? 400 : 500;
+    if (code === "insufficient_balance" || code === "invalid_upload" || code === "pipeline_failed" || code === "ai_budget") {
+      const status = code === "insufficient_balance" ? 402 : code === "invalid_upload" ? 400 : code === "ai_budget" ? 503 : 500;
       return errorJson(status, code, (e as Error).message);
     }
     console.error("[analyses] unexpected", (e as Error).message);

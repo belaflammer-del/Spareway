@@ -9,7 +9,7 @@ import type { Listing, MissingInfo, StepLog } from "../domain/schemas";
 import { detectMissingInfo } from "../engine/missing-info";
 import { importFromUrl, guessCategory, type ImportContext } from "../import/adapters";
 import { sanitizeUntrustedText } from "../security/untrusted";
-import { aiExtractListing } from "./ai-steps";
+import { aiExtractListing, type DraftConflict } from "./ai-steps";
 import { emptyListing, mergeListing } from "./merge";
 
 export interface DraftResult {
@@ -17,6 +17,7 @@ export interface DraftResult {
   missingInfo: MissingInfo[];
   notes: string[];
   lowConfidence: string[];
+  conflicts: DraftConflict[];
   log: StepLog[];
   aiCostUsd: number;
 }
@@ -30,6 +31,7 @@ export async function buildDraft(
   const meter = new UsageMeter();
   let listing = emptyListing();
   let lowConfidence: string[] = [];
+  let conflicts: DraftConflict[] = [];
 
   if (input.url) {
     const t0 = Date.now();
@@ -63,6 +65,7 @@ export async function buildDraft(
       listing = mergeListing(listing, keepCategory ? { ...r.patch, category: undefined } : r.patch, "ai_extraction");
       listing.images = listing.images.map((im) => ({ ...im, kind: r.imageKinds[im.ref] ?? im.kind }));
       lowConfidence = r.lowConfidence;
+      conflicts = r.conflicts;
       if (r.issues.length) notes.push(...r.issues.map((i) => `Lesbarkeit: ${i}`));
       log.push({ step: "extract", label: "Daten extrahieren (KI)", status: "ok", durationMs: Date.now() - t0 });
     } catch (e) {
@@ -75,5 +78,5 @@ export async function buildDraft(
   }
 
   if (listing.category === "other" && listing.title) listing.category = guessCategory(listing.title);
-  return { listing, missingInfo: detectMissingInfo(listing), notes, lowConfidence, log, aiCostUsd: meter.total.costUsd };
+  return { listing, missingInfo: detectMissingInfo(listing), notes, lowConfidence, conflicts, log, aiCostUsd: meter.total.costUsd };
 }

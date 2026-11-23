@@ -26,6 +26,10 @@ export interface AnalysisRecord {
   aiInputTokens: number;
   aiOutputTokens: number;
   mode: AnalysisReport["mode"];
+  /** Fingerabdruck der Eingaben – identische Prüfungen werden wiederverwendet */
+  fingerprint?: string;
+  aiModel?: string;
+  durationMs?: number;
 }
 
 export type WalletTxType = "purchase" | "reserve" | "release" | "purchase_refund" | "admin_adjust" | "test_credit";
@@ -86,6 +90,9 @@ export interface AppConfig {
   };
   demoVisibility?: Record<string, boolean>;
   providers?: Record<string, boolean>;
+  ai?: { model?: string; dailyBudgetUsd?: number };
+  /** Kategorie-Status: live = kostenpflichtiger Komplettcheck, beta = nur Schnellcheck */
+  categories?: Record<string, "live" | "beta">;
 }
 
 export interface AdminStats {
@@ -104,6 +111,12 @@ export interface AdminStats {
   byMode: Record<string, number>;
   recentFailures: { id: string; createdAt: string; category: string; errorCode: string }[];
   purchasesByPackage: Record<string, number>;
+  activeUsers30d: number;
+  sellerChecks: number;
+  comparisons: number;
+  reusedAnalyses: number;
+  avgDurationMs: number;
+  topErrors: { code: string; count: number }[];
 }
 
 export class WalletError extends Error {
@@ -131,8 +144,12 @@ export interface DataStore {
   updateAnalysis(id: string, patch: Partial<AnalysisRecord>): Promise<void>;
   getAnalysis(id: string, userId: string): Promise<AnalysisRecord | null>;
   listAnalyses(userId: string, limit?: number): Promise<AnalysisRecord[]>;
+  findAnalysisByFingerprint(userId: string, fingerprint: string, since: string): Promise<AnalysisRecord | null>;
   deleteAnalysis(id: string, userId: string): Promise<void>;
   countQuickCheck(): Promise<void>;
+  /** Allgemeine Zähler (Nutzung von Funktionen, KI-Kosten pro Tag in Mikro-USD) */
+  countEvent(name: string, by?: number): Promise<void>;
+  getCounter(name: string): Promise<number>;
 
   // Wallet (atomar, idempotent)
   getBalance(userId: string): Promise<number>;

@@ -14,11 +14,17 @@ import {
   type ProductOutput,
 } from "../ai/schemas";
 import { CATEGORY_LABELS } from "../domain/labels";
-import type { Checklist, ImageFinding, Listing, ListingImage, Negotiation, RiskFinding, Weakness } from "../domain/schemas";
+import { LISTING_FIELDS, type Checklist, type ImageFinding, type Listing, type ListingImage, type Negotiation, type RiskFinding, type Weakness } from "../domain/schemas";
 import type { KnowledgeEntry } from "../knowledge/weaknesses";
 import type { RawReview } from "../engine/seller";
 import { sanitizeUntrustedText, wrapUntrusted } from "../security/untrusted";
 import { newId, nowIso } from "../utils";
+
+export interface DraftConflict {
+  field: string;
+  values: string[];
+  images: string[];
+}
 
 export interface AIImage {
   ref: string;
@@ -44,7 +50,7 @@ export async function aiExtractListing(
   ai: AIProvider,
   meter: UsageMeter,
   input: { images: AIImage[]; pastedText?: string; hint?: Partial<Listing> },
-): Promise<{ patch: Partial<Listing>; imageKinds: Record<string, ListingImage["kind"]>; lowConfidence: string[]; issues: string[] }> {
+): Promise<{ patch: Partial<Listing>; imageKinds: Record<string, ListingImage["kind"]>; lowConfidence: string[]; issues: string[]; conflicts: DraftConflict[] }> {
   const parts: AIPart[] = [];
   if (input.hint) parts.push({ type: "text", text: `Bereits bekannt (aus Link): ${JSON.stringify({ platform: input.hint.platform, title: input.hint.title })}` });
   if (input.pastedText) parts.push({ type: "text", text: wrapUntrusted("inseratstext", input.pastedText) });
@@ -75,7 +81,13 @@ export async function aiExtractListing(
     const ref = input.images[im.index]?.ref;
     if (ref) imageKinds[ref] = im.kind === "other" ? "product_photo" : im.kind;
   }
-  return { patch, imageKinds, lowConfidence: data.lowConfidenceFields, issues: data.readabilityIssues };
+  const known = new Set<string>(LISTING_FIELDS);
+  const conflicts: DraftConflict[] = data.conflicts
+    .filter((c) => known.has(c.field) && c.values.length >= 2)
+    .map((c) => ({ field: c.field, values: [...new Set(c.values.map((v) => sanitizeUntrustedText(v, 120)))].slice(0, 4), images: c.imageIndexes.map((i) => input.images[i]?.ref).filter((x): x is string => !!x) }))
+    .filter((c) => c.values.length >= 2);
+  for (const c of conflicts) delete (patch as Record<string, unknown>)[c.field];
+  return { patch, imageKinds, lowConfidence: data.lowConfidenceFields, issues: data.readabilityIssues, conflicts };
 }
 
 /* ── 2) Produkt- und Bildanalyse ────────────────────────────── */

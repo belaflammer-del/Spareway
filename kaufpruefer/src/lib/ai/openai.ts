@@ -31,6 +31,7 @@ export class OpenAIProvider implements AIProvider {
       store: false,
     });
     const parsed = response.output_parsed;
+    console.info(`[ai] ${req.task} model=${this.model} in=${response.usage?.input_tokens ?? 0} out=${response.usage?.output_tokens ?? 0}`);
     if (parsed == null) throw new Error("KI lieferte keine verwertbare strukturierte Antwort");
     // Zweite, unabhängige Validierung
     const data = req.schema.parse(parsed);

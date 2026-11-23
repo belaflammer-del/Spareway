@@ -50,6 +50,15 @@ describe("token wallet", () => {
     expect(await store.getBalance("u1")).toBe(0);
   });
 
+  it("finds a recent identical analysis by fingerprint (no second token)", async () => {
+    const base = { userId: "u1", status: "completed" as const, tier: "full" as const, category: "vehicle" as const, platform: "ebay" as const, title: "x", aiCostUsd: 0, aiInputTokens: 0, aiOutputTokens: 0, mode: "rules_only" as const };
+    await store.createAnalysis({ ...base, id: "an_old", createdAt: "2020-01-01T00:00:00Z", fingerprint: "fp1" });
+    await store.createAnalysis({ ...base, id: "an_new", createdAt: new Date().toISOString(), fingerprint: "fp1" });
+    const since = new Date(Date.now() - 7 * 864e5).toISOString();
+    expect((await store.findAnalysisByFingerprint("u1", "fp1", since))?.id).toBe("an_new");
+    expect(await store.findAnalysisByFingerprint("u2", "fp1", since)).toBeNull();
+  });
+
   it("refund debit never goes below zero", async () => {
     await store.creditTokens("u1", 3, "purchase", "k1");
     const r = await store.reserveTokens("u1", "an1", 2, "an1:reserve");

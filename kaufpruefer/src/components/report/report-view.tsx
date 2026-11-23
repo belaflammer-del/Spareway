@@ -13,6 +13,7 @@ import {
   Sparkles,
   Users,
   Workflow,
+  Wrench,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
@@ -32,11 +33,13 @@ import {
 } from "@/lib/domain/labels";
 import { LISTING_FIELDS, type AnalysisReport, type FieldSource, type ListingFieldKey, type SubScore } from "@/lib/domain/schemas";
 import { cn } from "@/lib/utils";
-import { CopyBlock, EvidenceBadge, EvidenceImage, PriceGauge, SeverityBadge, SourceBadge } from "./parts";
+import { CopyBlock, EvidenceBadge, EvidenceImage, SeverityBadge, SourceBadge } from "./parts";
+import { ComparablesTable } from "./comparables-table";
 import { PriceLevel } from "./price-level";
+import { SellerAddon } from "./seller-addon";
 import { ScoreBox, scoreTone, toTen } from "./score-ring";
 
-type SectionId = "price" | "product" | "risks" | "seller" | "payment" | "checklist" | "messages" | "data" | "method";
+type SectionId = "price" | "product" | "weak" | "risks" | "seller" | "payment" | "checklist" | "messages" | "data" | "method";
 
 /** Erster Satz eines Textes – für das Kurzfazit. */
 function firstSentence(s: string): string {
@@ -96,7 +99,7 @@ function MiniScore({ label, sub }: { label: string; sub: SubScore }) {
   );
 }
 
-export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisReport; imageBase?: string; pdfUrl?: string }) {
+export function ReportView({ report, imageBase, pdfUrl, analysisId }: { report: AnalysisReport; imageBase?: string; pdfUrl?: string; analysisId?: string }) {
   const { listing, market, product, score, seller } = report;
   const img = (ref?: string) => (!ref ? undefined : ref.startsWith("/") ? ref : `${imageBase ?? "/api/uploads/"}${ref}`);
   const title = (listing.title ?? ([listing.brand, listing.model].filter(Boolean).join(" ") || "Angebot")).replace(/\s*\(Demo\)$/, "");
@@ -108,6 +111,32 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
     setTimeout(() => document.getElementById(`s-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   };
 
+  const cmpId = analysisId ?? (report.isDemo ? `demo:${report.id.replace(/^demo_/, "")}` : undefined);
+  const heroImg = img(listing.images.find((i) => i.kind === "product_photo")?.ref ?? listing.images[0]?.ref);
+  const stale = !report.isDemo && Date.now() - Date.parse(market.collectedAt) > 30 * 864e5;
+  const visit =
+    score.recommendation === "interesting"
+      ? { t: "Ja – Besichtigung lohnt sich", d: "Die Prüfung ergab keine wesentlichen Warnsignale. Kläre die offenen Punkte und prüfe vor Ort.", tone: "good" as const }
+      : score.recommendation === "inspect_further"
+        ? { t: "Ja, aber gut vorbereitet", d: "Kläre die Punkte unten vorab mit dem Verkäufer und prüfe vor Ort gezielt.", tone: "warn" as const }
+        : score.recommendation === "elevated_risk"
+          ? { t: "Nur mit großer Vorsicht", d: "Es gibt deutliche Warnsignale. Keine Anzahlung, nur persönliche Übergabe mit Prüfung.", tone: "bad" as const }
+          : { t: "Erst Informationen einholen", d: "Für eine Empfehlung fehlen wichtige Angaben. Frag den Verkäufer zuerst danach.", tone: "neutral" as const };
+  const fairPrice =
+    market.status === "ok" && market.range
+      ? report.negotiation.suggestedOpeningEur
+        ? `Verhandlungsziel ca. ${formatEur(report.negotiation.suggestedOpeningEur)} – Markt ${formatEur(market.range.low, { compact: true })}–${formatEur(market.range.high, { compact: true })}`
+        : `Marktbereich ${formatEur(market.range.low, { compact: true })}–${formatEur(market.range.high, { compact: true })}`
+      : "Ohne Marktdaten keine verlässliche Preisaussage";
+  const phases = [
+    { key: "before", label: "Vor der Besichtigung klären", items: report.checklist.questionsForSeller.slice(0, 6) },
+    { key: "visit", label: "Bei der Besichtigung prüfen", items: report.checklist.inspection.slice(0, 7) },
+    {
+      key: "pay",
+      label: "Vor der Bezahlung erledigen",
+      items: [...report.checklist.documents.slice(0, 4).map((d) => `Vorlegen lassen: ${d}`), ...report.payment.filter((p) => p.kind === "avoid" || p.kind === "documents").map((p) => p.title)].slice(0, 7),
+    },
+  ];
   const seriousRisks = report.risks.filter((r) => r.severity === "high" || r.severity === "medium");
   const visibleFindings = product.imageFindings.filter((f) => f.evidenceLevel === "visible" && f.severity !== "info");
 
@@ -132,7 +161,15 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
       )}
 
       {/* Urteil */}
-      <div className="rounded-3xl border border-border bg-surface p-4 shadow-card sm:p-5">
+      <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
+        {heroImg && (
+          <div className="relative h-40 bg-surface-2 sm:h-52">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={heroImg} alt="" className="size-full object-cover" />
+            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-surface to-transparent" />
+          </div>
+        )}
+        <div className="p-4 sm:p-5">
         <div className="flex items-start gap-4">
           <ScoreBox score={score.overall} />
           <div className="min-w-0 flex-1">
@@ -155,6 +192,7 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
           <PriceLevel market={market} />
         </div>
         {report.mode === "rules_only" && <p className="mt-2 text-xs text-muted">Ohne KI-Bildanalyse erstellt.</p>}
+        </div>
       </div>
 
       {/* Auf einen Blick */}
@@ -192,6 +230,21 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
           sub={seller ? `${seller.positive}👍 · ${seller.negative}👎 von ${seller.visibleReviewCount}` : "Im Komplettcheck möglich"}
           onClick={() => (seller ? jump("seller") : undefined)}
         />
+      </div>
+
+      {/* Kaufempfehlung */}
+      <div className="mt-6 rounded-2xl border border-border bg-surface p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Lohnt sich eine Besichtigung?</p>
+        <p className={cn("mt-1 text-lg font-bold", visit.tone === "good" && "text-good", visit.tone === "warn" && "text-warn", visit.tone === "bad" && "text-bad")}>{visit.t}</p>
+        <p className="mt-0.5 text-sm text-muted">{visit.d}</p>
+        <div className="mt-3 flex items-start gap-2 rounded-xl bg-surface-2/70 px-3 py-2.5 text-sm">
+          <Banknote className="mt-0.5 size-4 shrink-0 text-accent" />
+          <span>
+            <span className="font-semibold">Realistischer Preis: </span>
+            {fairPrice}
+          </span>
+        </div>
+        {stale && <p className="mt-2 text-xs text-warn">Marktdaten vom {new Date(market.collectedAt).toLocaleDateString("de-DE")} – möglicherweise veraltet.</p>}
       </div>
 
       {/* Worauf achten */}
@@ -234,17 +287,20 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
                 <KV k="Angebot" v={formatEur(market.offerPriceEur)} />
                 <KV k="Marktwert" v={`${formatEur(market.range.low, { compact: true })} – ${formatEur(market.range.high, { compact: true })}`} />
               </div>
-              <PriceGauge market={market} />
               <p className="text-sm text-muted">
                 {market.deviationPct != null && `${market.deviationPct > 0 ? "+" : ""}${market.deviationPct} % zum Mittelwert · `}
                 {market.comparables.used} Vergleiche ({market.comparables.soldPrices} echte Verkäufe)
               </p>
+              <ComparablesTable market={market} />
             </>
           ) : (
-            <p className="text-sm">
-              <span className="font-semibold">Marktwert derzeit nicht verlässlich bestimmbar.</span>{" "}
-              <span className="text-muted">Zu wenige echte Vergleichsdaten – wir erfinden keine Preise.</span>
-            </p>
+            <>
+              <p className="text-sm">
+                <span className="font-semibold">Marktwert derzeit nicht verlässlich bestimmbar.</span>{" "}
+                <span className="text-muted">Zu wenige echte Vergleichsdaten – wir erfinden keine Preise.</span>
+              </p>
+              {market.samples.length > 0 && <ComparablesTable market={market} />}
+            </>
           )}
         </Accordion>
 
@@ -269,27 +325,31 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
           ) : (
             <p className="text-sm text-muted">{report.mode === "rules_only" ? "Keine Bildanalyse (KI nicht aktiv)." : "Keine Auffälligkeiten auf den Bildern erkannt."}</p>
           )}
-          {product.weaknesses.length > 0 && (
-            <div className="mt-4">
-              <p className="mb-2 text-sm font-semibold">Bekannte Schwachstellen</p>
-              <ul className="space-y-2">
-                {product.weaknesses.map((w) => (
-                  <li key={w.id} className="rounded-xl bg-surface-2/70 p-3 text-sm">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-medium">{w.title}</span>
-                      <SourceBadge claim={w.claim} />
-                    </div>
-                    {w.checkAdvice && <p className="mt-1 text-muted">{w.checkAdvice}</p>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
           {product.missingViews.length > 0 && <p className="mt-3 text-sm text-muted">Fehlende Fotos: {product.missingViews.join(", ")}</p>}
           {product.authenticity?.applicable && <p className="mt-3 rounded-xl bg-accent-soft/50 p-3 text-sm">{product.authenticity.recommendation}</p>}
         </Accordion>
 
-        <Accordion id="risks" title="Risiken" icon={AlertTriangle} open={!!open.risks} onToggle={() => toggle("risks")} badge={<MiniBadge text={String(report.risks.length)} tone={riskTone} />}>
+        <Accordion id="weak" title="Technische Schwachstellen" icon={Wrench} open={!!open.weak} onToggle={() => toggle("weak")} badge={<MiniBadge text={String(product.weaknesses.length)} tone={product.weaknesses.some((w) => w.severity === "high") ? "warn" : "neutral"} />}>
+          {product.weaknesses.length === 0 ? (
+            <p className="text-sm text-muted">Für diese Variante liegen keine geprüften Einträge vor. Wir nennen bewusst keine unbelegten Schwachstellen.</p>
+          ) : (
+            <ul className="space-y-2">
+              {product.weaknesses.map((w) => (
+                <li key={w.id} className="rounded-xl bg-surface-2/70 p-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-medium">{w.title}</span>
+                    <SourceBadge claim={w.claim} />
+                  </div>
+                  <p className="mt-1 text-muted">{w.detail}</p>
+                  <p className="mt-1 text-xs text-muted">Gilt für: {w.appliesTo}</p>
+                  {w.checkAdvice && <p className="mt-1"><span className="font-medium">Prüfen:</span> {w.checkAdvice}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Accordion>
+
+        <Accordion id="risks" title="Betrugs- & Plausibilitätsrisiken" icon={AlertTriangle} open={!!open.risks} onToggle={() => toggle("risks")} badge={<MiniBadge text={String(report.risks.length)} tone={riskTone} />}>
           {report.risks.length === 0 ? (
             <p className="text-sm text-muted">Keine Auffälligkeiten – das ist keine Garantie.</p>
           ) : (
@@ -332,6 +392,8 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
           </Accordion>
         )}
 
+        {!seller && analysisId && <SellerAddon analysisId={analysisId} />}
+
         <Accordion id="payment" title="Sicher bezahlen & übergeben" icon={ShieldCheck} open={!!open.payment} onToggle={() => toggle("payment")}>
           <ul className="space-y-2">
             {report.payment.slice(0, 5).map((p) => (
@@ -346,17 +408,14 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
         </Accordion>
 
         <Accordion id="checklist" title="Checkliste" icon={ClipboardList} open={!!open.checklist} onToggle={() => toggle("checklist")}>
-          {(
-            [
-              ["questionsForSeller", "Fragen an den Verkäufer"],
-              ["inspection", "Bei der Besichtigung"],
-              ["documents", "Unterlagen"],
-            ] as const
-          ).map(([k, label]) => (
+          {phases.map(({ key: k, label, items }) => (
             <div key={k} className="mb-4 last:mb-0">
-              <p className="mb-1 text-sm font-semibold">{label}</p>
+              <p className="mb-1 flex items-center gap-2 text-sm font-semibold">
+                <span className="flex size-5 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-accent-fg">{phases.findIndex((p) => p.key === k) + 1}</span>
+                {label}
+              </p>
               <ul>
-                {report.checklist[k].slice(0, 6).map((item) => {
+                {items.map((item) => {
                   const key = `${k}:${item}`;
                   return (
                     <li key={key}>
@@ -404,7 +463,7 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
           </dl>
         </Accordion>
 
-        <Accordion id="method" title="So wurde geprüft" icon={Workflow} open={!!open.method} onToggle={() => toggle("method")}>
+        <Accordion id="method" title="Datenqualität & Methode" icon={Workflow} open={!!open.method} onToggle={() => toggle("method")}>
           <div className="mb-3 grid grid-cols-2 gap-2">
             <MiniScore label="Preis" sub={score.price} />
             <MiniScore label="Zustand" sub={score.product} />
@@ -417,6 +476,12 @@ export function ReportView({ report, imageBase, pdfUrl }: { report: AnalysisRepo
           {score.caps.length > 0 && <p className="mt-2 text-xs text-muted">Begrenzt: {score.caps.join(" · ")}</p>}
         </Accordion>
       </div>
+
+      {cmpId && (
+        <Button asChild variant="outline" className="mt-5 w-full">
+          <Link href={`/vergleich?a=${encodeURIComponent(cmpId)}`}>Mit anderem Angebot vergleichen</Link>
+        </Button>
+      )}
 
       <p className="mt-6 text-center text-xs leading-relaxed text-muted">
         Orientierungshilfe, keine Garantie für Zustand, Echtheit oder Seriosität.{" "}

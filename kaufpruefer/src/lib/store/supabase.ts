@@ -44,12 +44,16 @@ const toAnalysis = (r: Row): AnalysisRecord => ({
   aiInputTokens: r.ai_input_tokens ?? 0,
   aiOutputTokens: r.ai_output_tokens ?? 0,
   mode: r.mode,
+  fingerprint: r.fingerprint ?? undefined,
+  aiModel: r.ai_model ?? undefined,
+  durationMs: r.duration_ms ?? undefined,
 });
 const fromAnalysis = (a: Partial<AnalysisRecord>): Row => {
   const m: Record<string, string> = {
     id: "id", userId: "user_id", status: "status", tier: "tier", category: "category", platform: "platform", title: "title",
     createdAt: "created_at", completedAt: "completed_at", report: "report", errorCode: "error_code", reservationId: "reservation_id",
     aiCostUsd: "ai_cost_usd", aiInputTokens: "ai_input_tokens", aiOutputTokens: "ai_output_tokens", mode: "mode",
+    fingerprint: "fingerprint", aiModel: "ai_model", durationMs: "duration_ms",
   };
   return Object.fromEntries(Object.entries(a).filter(([k]) => m[k]).map(([k, v]) => [m[k], v]));
 };
@@ -141,6 +145,19 @@ export class SupabaseStore implements DataStore {
   }
   async countQuickCheck() {
     await this.db.rpc("counter_inc", { p_name: "quick_checks" });
+  }
+  async countEvent(name: string, by = 1) {
+    await this.db.rpc("counter_add", { p_name: name, p_by: Math.round(by) });
+  }
+  async getCounter(name: string) {
+    const r = check(await this.db.from("counters").select("value").eq("name", name).maybeSingle()) as Row | null;
+    return Number(r?.value ?? 0);
+  }
+  async findAnalysisByFingerprint(userId: string, fingerprint: string, since: string) {
+    const r = check(
+      await this.db.from("analyses").select("*").eq("user_id", userId).eq("fingerprint", fingerprint).eq("status", "completed").gte("created_at", since).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    );
+    return r ? toAnalysis(r as Row) : null;
   }
 
   async getBalance(userId: string) {
@@ -235,7 +252,7 @@ export class SupabaseStore implements DataStore {
     const [users, users7, analyses, purchases, counters, failures] = await Promise.all([
       this.db.from("profiles").select("id", { count: "exact", head: true }),
       this.db.from("profiles").select("id", { count: "exact", head: true }).gte("created_at", weekAgo),
-      this.db.from("analyses").select("status,category,mode,ai_cost_usd").limit(10000),
+      this.db.from("analyses").select("status,category,mode,ai_cost_usd,user_id,created_at,duration_ms,error_code,report->seller->visibleReviewCount").limit(10000),
       this.db.from("purchases").select("package_id,tokens,amount_cents,status,provider").in("status", ["paid", "refunded"]).limit(10000),
       this.db.from("counters").select("name,value"),
       this.db.from("analyses").select("id,created_at,category,error_code").eq("status", "failed").order("created_at", { ascending: false }).limit(10),
@@ -268,6 +285,18 @@ export class SupabaseStore implements DataStore {
       byMode,
       recentFailures: ((failures.data ?? []) as Row[]).map((f) => ({ id: f.id, createdAt: f.created_at, category: f.category, errorCode: f.error_code ?? "unknown" })),
       purchasesByPackage,
+      activeUsers30d: new Set(a.filter((x) => x.created_at >= new Date(Date.now() - 30 * 864e5).toISOString()).map((x) => x.user_id)).size,
+      sellerChecks: a.filter((x) => x.visibleReviewCount != null).length,
+      comparisons: Number(((counters.data ?? []) as Row[]).find((c) => c.name === "comparisons")?.value ?? 0),
+      reusedAnalyses: Number(((counters.data ?? []) as Row[]).find((c) => c.name === "reused_analysis")?.value ?? 0),
+      avgDurationMs: (() => {
+        const d = a.map((x) => Number(x.duration_ms ?? 0)).filter((x) => x > 0);
+        return d.length ? d.reduce((x, y) => x + y, 0) / d.length : 0;
+      })(),
+      topErrors: Object.entries(a.filter((x) => x.status === "failed").reduce<Record<string, number>>((acc, x) => ((acc[x.error_code ?? "unknown"] = (acc[x.error_code ?? "unknown"] ?? 0) + 1), acc), {}))
+        .map(([code, count]) => ({ code, count }))
+        .sort((x, y) => y.count - x.count)
+        .slice(0, 5),
     };
   }
 }

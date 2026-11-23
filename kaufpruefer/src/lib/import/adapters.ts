@@ -9,6 +9,7 @@
  * – falls vorhanden – Schlagwörter aus dem URL-Pfad abgeleitet.
  */
 import type { Category, Listing, Platform } from "../domain/schemas";
+import { getEbayToken } from "../market/ebay";
 import { extractListingLink, resolveShortLink } from "./share-text";
 
 export interface ImportContext {
@@ -57,14 +58,7 @@ const ebayAdapter: PlatformAdapter = {
   canAutoImport: (ctx) => !!(ctx.ebay?.clientId && ctx.ebay?.clientSecret),
   async autoImport(_url, id, ctx) {
     const f = ctx.fetchImpl ?? fetch;
-    const creds = Buffer.from(`${ctx.ebay!.clientId}:${ctx.ebay!.clientSecret}`).toString("base64");
-    const tokenRes = await f("https://api.ebay.com/identity/v1/oauth2/token", {
-      method: "POST",
-      headers: { Authorization: `Basic ${creds}`, "Content-Type": "application/x-www-form-urlencoded" },
-      body: "grant_type=client_credentials&scope=https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope",
-    });
-    if (!tokenRes.ok) throw new Error(`eBay OAuth fehlgeschlagen (${tokenRes.status})`);
-    const { access_token } = (await tokenRes.json()) as { access_token: string };
+    const access_token = await getEbayToken(ctx.ebay!, f);
     const itemRes = await f(`https://api.ebay.com/buy/browse/v1/item/get_item_by_legacy_id?legacy_item_id=${encodeURIComponent(id)}`, {
       headers: { Authorization: `Bearer ${access_token}`, "X-EBAY-C-MARKETPLACE-ID": ctx.ebay!.marketplaceId },
     });

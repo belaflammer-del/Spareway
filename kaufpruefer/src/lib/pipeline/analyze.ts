@@ -336,3 +336,43 @@ function defaultSummary(overall: number | null, market: AnalysisReport["market"]
   if (dq === "low" || dq === "insufficient") parts.push("Die Datenlage ist dünn; das Ergebnis ist nur eine grobe Orientierung.");
   return parts.join(" ");
 }
+
+/**
+ * Ergänzt einen bestehenden Bericht um eine Verkäuferanalyse und berechnet
+ * Risiken, Datenqualität und Score neu – ohne erneute Produkt-/Bildanalyse.
+ */
+export function applySellerToReport(report: AnalysisReport, seller: SellerAnalysis, now = new Date()): AnalysisReport {
+  const listing = report.listing;
+  const external = report.risks.filter((r) => r.rule.startsWith("ai."));
+  const risks = evaluateRisks({ listing, market: report.market, seller, externalFindings: external, currentYear: now.getFullYear() });
+  const imagesAnalyzed = report.mode === "live_ai" && listing.images.some((i) => i.kind === "product_photo" || i.kind === "listing_screenshot");
+  const dataQuality = computeDataQuality({ listing, market: report.market, seller, imagesAnalyzed });
+  const score = computeDealScore({ listing, market: report.market, product: report.product, seller, risks, dataQuality, imagesAnalyzed });
+  return AnalysisReportSchema.parse({
+    ...report,
+    seller,
+    risks,
+    dataQuality,
+    score,
+    payment: paymentAdvice(listing, risks),
+    pipeline: [...report.pipeline, { step: "seller", label: "Verkäuferbewertungen nachträglich ausgewertet", status: "ok", durationMs: 0, note: `${seller.visibleReviewCount} Bewertungen` }],
+  });
+}
+
+/** Verkäuferanalyse aus Text und/oder Bildern (OCR per KI). */
+export async function runSellerStep(input: SellerInput, deps: Pick<PipelineDeps, "ai" | "loadImage">, meter: UsageMeter): Promise<SellerAnalysis> {
+  let raw: RawReview[] = [];
+  let unreadable = 0;
+  let platformTotal = input.platformTotalClaimed;
+  if (input.pastedText) raw.push(...parsePastedReviews(input.pastedText));
+  if (input.imageRefs?.length) {
+    if (!deps.ai) throw new Error("Texterkennung aus Bildern benötigt einen KI-Provider – bitte Bewertungstexte einfügen");
+    const imgs: AIImage[] = [];
+    for (const ref of input.imageRefs.slice(0, 30)) imgs.push({ ref, dataUrl: await deps.loadImage(ref) });
+    const r = await aiReadReviews(deps.ai, meter, imgs);
+    raw = [...raw, ...r.raw];
+    unreadable = r.unreadable;
+    platformTotal = platformTotal ?? r.platformTotal;
+  }
+  return analyzeSeller({ raw, inputMethod: input.method === "pasted_text" ? "pasted_text" : input.method, unreadableSegments: unreadable, platformTotalClaimed: platformTotal });
+}

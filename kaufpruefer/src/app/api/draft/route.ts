@@ -1,3 +1,4 @@
+import { assertAiBudget, recordAiSpend } from "@/lib/ai/budget";
 import { getActiveAI, providerEnabled } from "@/lib/config/providers";
 import { DraftRequestSchema } from "@/lib/api/schemas";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -30,6 +31,13 @@ export async function POST(req: Request) {
     }
   }
 
+  if (usesAi) {
+    try {
+      await assertAiBudget(ai);
+    } catch (e) {
+      return errorJson(503, "ai_budget", (e as Error).message);
+    }
+  }
   const draft = await buildDraft(
     { url, imageRefs: imageIds, pastedText },
     {
@@ -38,5 +46,6 @@ export async function POST(req: Request) {
       loadImage: (ref) => toDataUrl(ref, user ? [user.id] : []),
     },
   );
+  await recordAiSpend(draft.aiCostUsd);
   return Response.json({ draft, aiAvailable: !!ai });
 }

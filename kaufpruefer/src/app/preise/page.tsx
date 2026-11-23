@@ -27,7 +27,7 @@ export default async function PricingPage() {
           <Card key={p.id} className="p-6">
             <p className="text-sm text-muted">{p.label}</p>
             <p className="tabular mt-1 text-3xl font-semibold">{formatEur(p.priceCents / 100)}</p>
-            <p className="tabular mt-2 text-sm text-muted">{formatEur(p.priceCents / p.tokens / 100)} pro Kaufcheck</p>
+            <p className="tabular mt-2 text-sm text-muted">{p.tokens === 1 ? "Einzelcheck" : `${p.tokens} Kaufchecks · entspricht ${formatEur(p.priceCents / p.tokens / 100)} je Check`}</p>
             <Button asChild className="mt-6 w-full"><Link href="/dashboard/wallet">Auswählen</Link></Button>
           </Card>
         ))}

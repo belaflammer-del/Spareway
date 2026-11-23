@@ -18,7 +18,7 @@ export default async function HomePage() {
   const vis = (await getStore().getConfig()).demoVisibility ?? {};
   const demos = listDemos().filter((d) => vis[d.slug] !== false);
   const pricing = await getPricing();
-  const cheapest = Math.min(...pricing.packages.map((p) => p.priceCents / p.tokens));
+  const single = pricing.packages.find((p) => p.tokens === 1) ?? pricing.packages[0];
 
   return (
     <div className="overflow-x-clip">
@@ -90,7 +90,7 @@ export default async function HomePage() {
           <Shield className="size-8 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-bold">Schnellcheck gratis</p>
-            <p className="text-sm opacity-75">Komplettcheck ab {formatEur(cheapest / 100)} – kein Abo.</p>
+            <p className="text-sm opacity-75">Komplettcheck {formatEur(single.priceCents / 100)} pro Prüfung · Pakete günstiger · kein Abo</p>
           </div>
           <Link href="/preise" className="shrink-0 rounded-xl bg-foreground px-3 py-2 text-sm font-semibold text-background">
             Preise

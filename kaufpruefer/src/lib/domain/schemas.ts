@@ -220,6 +220,8 @@ export const MarketValuationSchema = z.object({
   method: z.string(),
   explanation: z.string(),
   adjustments: z.array(z.string()).default([]),
+  /** Die relevantesten Vergleichsangebote (max. 10) – nur echte Daten bzw. gekennzeichnete Demo-Daten */
+  samples: z.array(ComparableSchema.extend({ similarity: z.number().optional() })).default([]),
   collectedAt: z.string(),
 });
 export type MarketValuation = z.infer<typeof MarketValuationSchema>;

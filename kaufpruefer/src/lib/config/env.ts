@@ -34,6 +34,8 @@ export const env = {
     openaiModel: str("OPENAI_MODEL") ?? "gpt-5",
     costInputPerMTok: num("OPENAI_COST_INPUT_PER_MTOK", 1.25),
     costOutputPerMTok: num("OPENAI_COST_OUTPUT_PER_MTOK", 10),
+    /** Kostenbremse: maximale KI-Kosten pro Tag (USD) */
+    dailyBudgetUsd: num("AI_DAILY_BUDGET_USD", 20),
   },
 
   supabase: {

@@ -62,7 +62,7 @@ export function BuyTokens({ packages, stripeEnabled, stripeTest, testCredits }: 
               {best && <span className="absolute -top-2.5 right-3 rounded-full bg-accent px-2 py-0.5 text-[11px] font-medium text-accent-fg">Bester Preis</span>}
               <p className="text-sm text-muted">{p.label}</p>
               <p className="tabular mt-1 text-2xl font-semibold">{formatEur(p.priceCents / 100)}</p>
-              <p className="tabular mt-1 text-xs text-muted">{formatEur(per)} pro Check</p>
+              <p className="tabular mt-1 text-xs text-muted">{p.tokens === 1 ? "Einzelcheck" : `entspricht ${formatEur(per)} je Check`}</p>
             </button>
           );
         })}
