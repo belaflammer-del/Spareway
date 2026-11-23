@@ -74,7 +74,7 @@ export function CategoryGrid3D() {
     Promise.all([import("./three-scenes"), import("./three-objects")]).then(([{ createGridScene }, objs]) => {
       if (cancelled) return;
       const list = items
-        .map((it, i) => ({ el: tiles.current[i] as HTMLElement, make: objs[it.object] }))
+        .map((it, i) => ({ el: tiles.current[i] as HTMLElement, make: objs[it.object] as (m: import("./three-objects").Mats) => import("three").Group }))
         .filter((x) => x.el);
       handle = createGridScene(host, list, { reducedMotion: reduced() });
       setHas3d(true);

@@ -318,3 +318,76 @@ export function parcel(m: Mats) {
   g.add(tape);
   return g;
 }
+
+/** Gesteppte Daunenjacke. */
+export function jacket(m: Mats, color = 0x1d2a44) {
+  const s = new THREE.Shape();
+  s.moveTo(-0.2, 0.95);
+  s.quadraticCurveTo(0, 0.85, 0.2, 0.95);
+  s.lineTo(0.55, 0.86);
+  s.quadraticCurveTo(0.78, 0.7, 0.88, 0.2);
+  s.lineTo(1.0, -0.75);
+  s.lineTo(0.74, -0.8);
+  s.lineTo(0.58, -0.05);
+  s.lineTo(0.55, -0.95);
+  s.lineTo(-0.55, -0.95);
+  s.lineTo(-0.58, -0.05);
+  s.lineTo(-0.74, -0.8);
+  s.lineTo(-1.0, -0.75);
+  s.quadraticCurveTo(-0.78, 0.7, -0.55, 0.86);
+  s.lineTo(-0.2, 0.95);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 0.36, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.08, bevelSegments: 6, curveSegments: 16 });
+  geo.center();
+  const fabric = new THREE.MeshPhysicalMaterial({ color, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.25, sheen: 0.6 });
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(geo, fabric));
+  // Steppnähte
+  const seam = new THREE.MeshStandardMaterial({ color: 0x0d1424, roughness: 0.8 });
+  for (let i = 0; i < 6; i++) {
+    const y = 0.62 - i * 0.28;
+    const w = 1.08 - Math.max(0, 0.62 - y) * 0;
+    const band = new THREE.Mesh(new RoundedBoxGeometry(w, 0.025, 0.04, 2, 0.01), seam);
+    band.position.set(0, y, 0.31);
+    g.add(band);
+  }
+  const zip = new THREE.Mesh(new RoundedBoxGeometry(0.035, 1.75, 0.03, 2, 0.01), m.metal);
+  zip.position.set(0, -0.05, 0.32);
+  g.add(zip);
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.07, 16, 32, Math.PI), fabric);
+  collar.position.set(0, 0.86, 0.05);
+  g.add(collar);
+  const patch = new THREE.Mesh(new THREE.CircleGeometry(0.08, 24), new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.5 }));
+  patch.position.set(0.74, 0.25, 0.27);
+  patch.rotation.y = 0.5;
+  g.add(patch);
+  return g;
+}
+
+/** Spielmodul (Retro-Cartridge) mit Etikett. */
+export function cartridge(m: Mats) {
+  const g = new THREE.Group();
+  const shell = new THREE.MeshPhysicalMaterial({ color: 0x3b3f48, roughness: 0.45, clearcoat: 0.5 });
+  g.add(new THREE.Mesh(new RoundedBoxGeometry(1.2, 1.3, 0.2, 4, 0.06), shell));
+  const label = canvasTexture(512, 400, (c) => {
+    const grd = c.createLinearGradient(0, 0, 512, 400);
+    grd.addColorStop(0, "#1f9d5c");
+    grd.addColorStop(1, "#0d5b36");
+    c.fillStyle = grd;
+    c.fillRect(0, 0, 512, 400);
+    c.fillStyle = "rgba(255,255,255,0.18)";
+    c.beginPath();
+    c.arc(256, 170, 110, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "#eafff3";
+    c.font = `900 66px ${FONT}`;
+    c.textAlign = "center";
+    c.fillText("SMARAGD", 256, 340);
+  });
+  const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.98, 0.76), new THREE.MeshStandardMaterial({ map: label, roughness: 0.4 }));
+  lab.position.set(0, 0.12, 0.106);
+  g.add(lab);
+  const grip = new THREE.Mesh(new RoundedBoxGeometry(1.0, 0.12, 0.06, 2, 0.03), m.black);
+  grip.position.set(0, -0.5, 0.1);
+  g.add(grip);
+  return g;
+}

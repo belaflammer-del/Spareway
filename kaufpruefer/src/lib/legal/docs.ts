@@ -21,6 +21,13 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
         h: "Verbraucherstreitbeilegung",
         p: ["[Angabe, ob Bereitschaft oder Verpflichtung zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle besteht.]"],
       },
+      {
+        h: "Bildnachweise",
+        p: [
+          "Fahrzeug-Symbolbilder in den Beispielberichten: gerendert aus „Car Concept“ (Khronos glTF Sample Assets), © 2024 Darmstadt Graphics Group GmbH, Modell und Texturen von Eric Chadwick, lizenziert unter CC BY 4.0 (creativecommons.org/licenses/by/4.0). Basierend auf einem gemeinfreien (CC0) Modell von „Unity Fan“. Geändert: Lackfarbe, Verglasung, entfernte Logos/Kennzeichen, Beleuchtung und Bildausschnitt.",
+          "Übrige 3D-Darstellungen: eigene Erstellung.",
+        ],
+      },
     ],
   },
   datenschutz: {
