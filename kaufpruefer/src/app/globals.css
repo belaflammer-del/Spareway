@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ── Design-Tokens ───────────────────────────────────────── */
-/* Markenfarben: Schwarz + Libellen-Gelb (Wasserwaage). Ampel-Farben bleiben semantisch. */
+/* Markenfarben: Schwarz + Gelb. Ampel-Farben bleiben semantisch. */
 :root {
   --background: oklch(0.985 0.002 60);
   --surface: oklch(1 0 0);
@@ -152,4 +152,15 @@
     color-mix(in oklch, var(--demo) 10%, transparent) 0 8px,
     transparent 8px 16px
   );
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

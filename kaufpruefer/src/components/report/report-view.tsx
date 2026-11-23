@@ -35,7 +35,7 @@ import { LISTING_FIELDS, type AnalysisReport, type FieldSource, type ListingFiel
 import { cn } from "@/lib/utils";
 import { CopyBlock, EvidenceBadge, EvidenceImage, SeverityBadge, SourceBadge } from "./parts";
 import { ComparablesTable } from "./comparables-table";
-import { PriceLevel } from "./price-level";
+import { PriceScale } from "./price-scale";
 import { ReportAssistant } from "./report-assistant";
 import { SellerAddon } from "./seller-addon";
 import { ScoreBox, scoreTone, toTen } from "./score-ring";
@@ -210,8 +210,8 @@ export function ReportView({
         </div>
         <p className="mt-4 text-[15px] leading-relaxed">{firstSentence(report.summary)}</p>
         <div className="mt-5 rounded-2xl bg-surface-2/60 p-3.5">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Preis-Niveau</p>
-          <PriceLevel market={market} />
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Preis-Check</p>
+          <PriceScale market={market} />
         </div>
         {report.mode === "rules_only" && <p className="mt-2 text-xs text-muted">Ohne KI-Bildanalyse erstellt.</p>}
         </div>

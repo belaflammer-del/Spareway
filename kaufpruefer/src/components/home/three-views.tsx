@@ -14,43 +14,33 @@ function webglAvailable() {
 }
 const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** 3D-Wasserwaage mit Live-Anzeige, wohin die Libelle zeigt. */
-export function LevelHero({ className, showLabel = true }: { className?: string; showLabel?: boolean }) {
+/** 3D-Karussell: Produkte kreisen um den Prüf-Ring; das vordere wird „geprüft“. */
+export function OrbitHero({ className, showLabel = true }: { className?: string; showLabel?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [zone, setZone] = useState<"cheap" | "fair" | "expensive">("fair");
-  const [ready, setReady] = useState(false);
+  const [front, setFront] = useState<number | null>(null);
+  const [labels, setLabels] = useState<string[]>([]);
   useEffect(() => {
     const el = ref.current;
     if (!el || !webglAvailable()) return;
     let handle: { dispose(): void } | null = null;
     let cancelled = false;
-    import("./three-scenes").then(({ createLevelScene }) => {
+    import("./three-scenes").then(({ createOrbitScene, ORBIT_LABELS }) => {
       if (cancelled) return;
-      handle = createLevelScene(el, {
-        reducedMotion: reduced(),
-        onBubble: (x) => setZone(x > 0.3 ? "expensive" : x < -0.3 ? "cheap" : "fair"),
-      });
-      setReady(true);
+      setLabels(ORBIT_LABELS);
+      handle = createOrbitScene(el, { reducedMotion: reduced(), onFront: setFront });
     });
     return () => {
       cancelled = true;
       handle?.dispose();
     };
   }, []);
-  const label = { cheap: "Verdächtig günstig?", fair: "Fairer Preis", expensive: "Zu teuer" }[zone];
   return (
     <div className={cn("relative", className)}>
       <div ref={ref} aria-hidden className="absolute inset-0" />
-      {showLabel && (
-        <div className={cn("pointer-events-none absolute inset-x-0 bottom-0 flex justify-center transition-opacity duration-500", ready ? "opacity-100" : "opacity-0")}>
-          <span
-            className={cn(
-              "rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider transition-colors duration-300",
-              zone === "fair" ? "bg-accent text-accent-fg" : zone === "expensive" ? "bg-bad text-white" : "bg-warn text-[oklch(0.18_0.03_60)]",
-            )}
-            aria-live="off"
-          >
-            {label}
+      {showLabel && front != null && labels[front] && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-1 flex justify-center">
+          <span key={front} className="animate-[fadeUp_.4s_ease-out] rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-wider text-accent-fg shadow-lg shadow-accent/20">
+            {labels[front]} geprüft ✓
           </span>
         </div>
       )}

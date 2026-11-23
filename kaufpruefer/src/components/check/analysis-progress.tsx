@@ -3,7 +3,7 @@
 import { Check } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { LevelHero } from "@/components/home/three-views";
+import { OrbitHero } from "@/components/home/three-views";
 import { Spinner } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +26,8 @@ export function AnalysisProgress({ ai, seller, status }: { ai: boolean; seller: 
   return (
     <div className="mx-auto flex min-h-[70dvh] max-w-md flex-col justify-center px-4 py-16" role="status" aria-live="polite">
       <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-border bg-surface p-6 shadow-card">
-        <LevelHero className="-mx-6 -mt-4 mb-2 h-32" showLabel={false} />
-        <p className="text-lg font-semibold tracking-tight">Wir bringen deinen Deal ins Lot …</p>
+        <OrbitHero className="-mx-6 -mt-4 mb-2 h-40" showLabel={false} />
+        <p className="text-lg font-semibold tracking-tight">Dein Angebot wird geprüft …</p>
         <p className="mt-1 text-sm text-muted">Das dauert {ai ? "meist 20–60 Sekunden" : "nur einen Moment"}. Bitte lass dieses Fenster geöffnet.</p>
         {status && <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-sm">{status}</p>}
         <ol className="mt-6 space-y-3">

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { DemoCard } from "@/components/home/demo-card";
 import { FadeIn } from "@/components/home/fade-in";
 import { HeroInput } from "@/components/home/hero-input";
-import { CategoryGrid3D, LevelHero } from "@/components/home/three-views";
+import { CategoryGrid3D, OrbitHero } from "@/components/home/three-views";
 import { perCheckEur } from "@/lib/config/pricing";
 import { formatEur } from "@/lib/domain/labels";
 import { listDemos } from "@/lib/demo";
@@ -33,11 +33,11 @@ export default async function HomePage() {
                 Prüfe deinen Deal, <span className="text-accent">bevor du kaufst.</span>
               </h1>
             </FadeIn>
-            {/* Wasserwaage – am Handy direkt unter der Überschrift */}
-            <LevelHero className="-mx-5 h-40 md:hidden" />
+            {/* 3D-Karussell – am Handy direkt unter der Überschrift */}
+            <OrbitHero className="-mx-5 mt-1 h-64 md:hidden" />
             <FadeIn delay={0.1}>
               <p className="mt-3 max-w-md text-[17px] leading-relaxed text-muted text-pretty md:mt-6">
-                Link einfügen – wir prüfen <span className="font-semibold text-foreground">Preis, Zustand, Risiken und Verkäufer</span> und zeigen dir, ob der Deal im Lot ist.
+                Link einfügen – wir prüfen <span className="font-semibold text-foreground">Preis, Zustand, Risiken und Verkäufer</span> und sagen dir klar, ob sich der Kauf lohnt.
               </p>
               <ul className="mt-5 flex flex-wrap gap-2.5">
                 {CHIPS.map((c) => (
@@ -59,7 +59,7 @@ export default async function HomePage() {
               ))}
             </ul>
           </div>
-          <LevelHero className="hidden h-[22rem] md:block" />
+          <OrbitHero className="hidden h-[26rem] md:block" />
         </div>
       </section>
 

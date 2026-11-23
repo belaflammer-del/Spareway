@@ -1,12 +1,12 @@
 /**
  * 3D-Szenen:
- *  - createLevelScene: 3D-Wasserwaage, deren Libelle pendelt (Hero, Warte-Bildschirm)
+ *  - createOrbitScene: Produkte kreisen um einen Prüf-Ring (Hero, Warte-Bildschirm)
  *  - createGridScene: je ein drehendes 3D-Objekt in den Kategorie-Kacheln
  * Beide pausieren außerhalb des Sichtbereichs und respektieren „Bewegung reduzieren“.
  */
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { materials, spiritLevel, type Mats } from "./three-objects";
+import { badge, carKey, coin, gamepad, materials, phone, tshirt, watch, type Mats } from "./three-objects";
 
 export interface SceneHandle {
   dispose(): void;
@@ -61,93 +61,114 @@ function runLoop(container: HTMLElement, frame: (t: number) => void, reducedMoti
   };
 }
 
-/* ── Wasserwaage ───────────────────────────────────────────── */
+/* ── 3D-Karussell: Produkte kreisen um den Prüf-Ring ─────────── */
 
-export function createLevelScene(
+export const ORBIT_LABELS = ["Smartphone", "Uhr", "Auto", "Mode", "Konsole", "Preis", "Deal"];
+
+export function createOrbitScene(
   container: HTMLElement,
-  opts: { reducedMotion: boolean; onBubble?: (x: number) => void },
+  opts: { reducedMotion: boolean; onFront?: (index: number) => void },
 ): SceneHandle {
-  const { renderer, scene, pmrem } = setup(container);
-  const rim = new THREE.PointLight(0xf0dc1c, 18, 14);
-  rim.position.set(-3, -2, 3);
+  const { renderer, scene, pmrem, mobile } = setup(container);
+  const rim = new THREE.PointLight(0xf0dc1c, 26, 16);
+  rim.position.set(0, -1.5, 3);
   scene.add(rim);
-  const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-  camera.position.set(0, 0.6, 12);
-  camera.lookAt(0, 0, 0);
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
 
-  const level = spiritLevel(materials());
-  scene.add(level);
-  const bubble = level.getObjectByName("bubble") as THREE.Mesh;
+  const m = materials();
+  const makers = [phone, watch, carKey, tshirt, gamepad, coin, badge];
+  const R = 2.6;
+  const carousel = new THREE.Group();
+  scene.add(carousel);
+  const items = makers.map((make, i) => {
+    const obj = make(m);
+    // auf Einheitsgröße normieren
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = box.getSize(new THREE.Vector3());
+    obj.position.sub(box.getCenter(new THREE.Vector3()));
+    const holder = new THREE.Group();
+    holder.add(obj);
+    const unit = 1.75 / Math.max(size.x, size.y, 0.001);
+    const a = (i / makers.length) * Math.PI * 2;
+    holder.position.set(Math.sin(a) * R, 0, Math.cos(a) * R);
+    carousel.add(holder);
+    return { holder, unit, angle: a, phase: i * 0.8 };
+  });
+
+  // Prüf-Ring in der Mitte + Scan-Strahl
+  const ringMat = new THREE.MeshPhysicalMaterial({ color: 0xf0dc1c, emissive: 0xf0dc1c, emissiveIntensity: 0.6, roughness: 0.2, clearcoat: 1 });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.07, 24, 96), ringMat);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = -1.05;
+  scene.add(ring);
+  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(R, 0.012, 8, 160), new THREE.MeshBasicMaterial({ color: 0xf0dc1c, transparent: true, opacity: 0.25 }));
+  ring2.rotation.x = Math.PI / 2;
+  ring2.position.y = -0.9;
+  scene.add(ring2);
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xf0dc1c, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false });
+  const beam = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.035), beamMat);
+  beam.position.set(0, 0, R + 0.05);
+  scene.add(beam);
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48), new THREE.MeshBasicMaterial({ color: 0xf0dc1c, transparent: true, opacity: 0.08, depthWrite: false }));
+  glow.rotation.x = -Math.PI / 2;
+  glow.position.y = -1.08;
+  scene.add(glow);
 
   const resize = () => {
     const w = container.clientWidth;
     const h = container.clientHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    // Wasserwaage passt immer in die Breite
-    const fitDist = (camera.aspect > 1 ? 2.9 : 3.4) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / camera.aspect;
-    camera.position.z = Math.max(7, fitDist);
+    // Karussell passt immer in die Breite
+    const dist = Math.max(6.2, (R + 0.7) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1, camera.aspect));
+    camera.position.set(0, mobile ? 1.3 : 1.6, dist);
+    camera.lookAt(0, -0.15, 0);
     camera.updateProjectionMatrix();
   };
   resize();
   const ro = new ResizeObserver(resize);
   ro.observe(container);
 
-  const pointer = { x: 0, tx: 0, active: 0 };
-  const onPointer = (e: PointerEvent) => {
-    const r = container.getBoundingClientRect();
-    pointer.tx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
-    pointer.active = 1;
-  };
-  window.addEventListener("pointermove", onPointer, { passive: true });
+  let spinBoost = 0;
+  const onPointer = () => (spinBoost = 1);
+  container.parentElement?.addEventListener("pointerdown", onPointer);
 
-  // Kippfolge: teuer → günstig → leicht → fair (Pause) – Schleife alle 8 s
-  const keys: [number, number][] = [
-    [0, 0],
-    [1.0, 0.11],
-    [2.2, -0.09],
-    [3.2, 0.035],
-    [4.0, 0],
-    [8.0, 0],
-  ];
-  const tiltAt = (t: number) => {
-    const c = t % 8;
-    for (let i = 0; i < keys.length - 1; i++) {
-      const [t0, a0] = keys[i];
-      const [t1, a1] = keys[i + 1];
-      if (c >= t0 && c <= t1) {
-        const k = (c - t0) / (t1 - t0);
-        const e = k * k * (3 - 2 * k);
-        return a0 + (a1 - a0) * e;
-      }
-    }
-    return 0;
-  };
-
-  let bubbleX = 0;
-  let bubbleV = 0;
+  let lastFront = -1;
+  let rot = 0;
   let lastT = 0;
-  let lastReport = 0;
   const frame = (t: number) => {
     const dt = Math.min(0.05, t - lastT || 0.016);
     lastT = t;
-    pointer.x += (pointer.tx - pointer.x) * 0.06;
-    pointer.active *= 0.995;
-    const auto = tiltAt(t);
-    const tilt = auto * (1 - pointer.active * 0.7) + -pointer.x * 0.1 * pointer.active;
-    level.rotation.z = tilt;
-    level.rotation.y = Math.sin(t * 0.35) * 0.18 - 0.08;
-    level.rotation.x = 0.12 + Math.sin(t * 0.5) * 0.03;
-    level.position.y = Math.sin(t * 0.8) * 0.06;
-    // Blase: gedämpfte Feder, läuft zum höheren Ende
-    const target = Math.max(-0.42, Math.min(0.42, tilt * 4.2));
-    bubbleV += (target - bubbleX) * 40 * dt;
-    bubbleV *= Math.pow(0.02, dt);
-    bubbleX += bubbleV * dt;
-    bubble.position.x = bubbleX;
-    if (opts.onBubble && t - lastReport > 0.15) {
-      lastReport = t;
-      opts.onBubble(bubbleX / 0.42);
+    spinBoost *= 0.97;
+    rot += dt * (0.32 + spinBoost * 1.6);
+    carousel.rotation.y = opts.reducedMotion ? 0.3 : rot;
+
+    let front = 0;
+    let bestZ = -Infinity;
+    items.forEach((it, i) => {
+      const worldA = it.angle + carousel.rotation.y;
+      const z = Math.cos(worldA); // 1 = vorne
+      if (z > bestZ) {
+        bestZ = z;
+        front = i;
+      }
+      // Auftauchen beim Laden (gestaffelt), vorne leicht größer
+      const appear = opts.reducedMotion ? 1 : Math.min(1, Math.max(0, (t - 0.15 - i * 0.12) / 0.6));
+      const pop = appear < 1 ? 1 - Math.pow(1 - appear, 3) * Math.cos(appear * 6) : 1;
+      const s = it.unit * (0.85 + Math.max(0, z) * 0.3) * pop;
+      it.holder.scale.setScalar(Math.max(0.0001, s));
+      it.holder.position.y = Math.sin(t * 1.1 + it.phase) * 0.12 + (z > 0.9 ? 0.15 : 0);
+      it.holder.rotation.y = -carousel.rotation.y + Math.sin(t * 0.6 + it.phase) * 0.5 + 0.4;
+      it.holder.rotation.x = 0.12 + Math.sin(t * 0.8 + it.phase) * 0.08;
+    });
+    // Scan-Strahl gleitet über das vordere Objekt
+    beam.position.y = Math.sin(t * 2.2) * 0.75;
+    beamMat.opacity = 0.1 + Math.max(0, bestZ) * 0.15;
+    ring.rotation.z = t * 0.4;
+    ringMat.emissiveIntensity = 0.45 + Math.sin(t * 2) * 0.15;
+    if (front !== lastFront && bestZ > 0.97) {
+      lastFront = front;
+      opts.onFront?.(front);
     }
     renderer.render(scene, camera);
   };
@@ -157,7 +178,7 @@ export function createLevelScene(
     dispose() {
       stop();
       ro.disconnect();
-      window.removeEventListener("pointermove", onPointer);
+      container.parentElement?.removeEventListener("pointerdown", onPointer);
       disposeScene(scene, renderer, pmrem);
     },
   };
