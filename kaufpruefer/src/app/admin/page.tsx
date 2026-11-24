@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AiConfigForm } from "@/components/dashboard/ai-config-form";
+import { AkteConfigForm } from "@/components/dashboard/akte-config-form";
+import { akteLimits } from "@/lib/akte/limits";
 import { toggleCategoryAction, toggleDemoAction, toggleProviderAction } from "@/lib/admin/actions";
 import { aiSpendKey, dailyBudgetUsd } from "@/lib/ai/budget";
 import { resolveLimits, spendKeys } from "@/lib/ai/guard";
@@ -189,6 +191,22 @@ export default async function AdminPage() {
           </ul>
         </Card>
       </div>
+
+      <Card className="p-5">
+        <h2 className="font-semibold">Kaufakte: Limits, Löschfristen & Kosten</h2>
+        <p className="mt-1 text-sm text-muted">
+          Nutzung: {s.v4?.chatChecks ?? 0} Chatprüfungen · {s.v4?.inspections ?? 0} Besichtigungen · {s.v4?.imageMatches ?? 0} Bildabgleiche · {s.v4?.watches ?? 0} Beobachtungen
+        </p>
+        <div className="mt-4">
+          <AkteConfigForm
+            {...(({ retention, ...l }) => ({ ...l, ...retention }))(akteLimits(cfg))}
+            costTable={JSON.stringify(cfg.costTable ?? [], null, 1)}
+            guardianEnabled={!!cfg.guardian?.enabled}
+            guardianPrice={(cfg.guardian?.priceCents ?? 1499) / 100}
+            guardianChatChecks={cfg.guardian?.chatChecks ?? 3}
+          />
+        </div>
+      </Card>
 
       <Card className="p-5">
         <h2 className="font-semibold">Tokenpreise & Verbrauch</h2>

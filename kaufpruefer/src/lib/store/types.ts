@@ -171,6 +171,8 @@ export interface AdminStats {
   sellerChecks: number;
   comparisons: number;
   reusedAnalyses: number;
+  /** V4-Nutzung (Zähler) */
+  v4?: { chatChecks: number; inspections: number; imageMatches: number; watches: number };
   avgDurationMs: number;
   topErrors: { code: string; count: number }[];
 }

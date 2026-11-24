@@ -107,6 +107,7 @@ export function ReportView({
   analysisId,
   assistant,
   previous,
+  akte,
 }: {
   report: AnalysisReport;
   imageBase?: string;
@@ -114,6 +115,8 @@ export function ReportView({
   analysisId?: string;
   assistant?: { initial: { q: string; a: string; at: string; grounded: boolean }[]; limit: number; aiAvailable: boolean };
   previous?: { id: string; createdAt: string; priceEur?: number };
+  /** V4: Kaufakte (Chat, Besichtigung, Kosten, Preisverlauf, Bilder) */
+  akte?: React.ReactNode;
 }) {
   const { listing, market, product, score, seller } = report;
   const img = (ref?: string) => (!ref ? undefined : ref.startsWith("/") ? ref : `${imageBase ?? "/api/uploads/"}${ref}`);
@@ -304,6 +307,8 @@ export function ReportView({
           <ReportAssistant analysisId={analysisId} initial={assistant.initial} limit={assistant.limit} category={listing.category} aiAvailable={assistant.aiAvailable} />
         </div>
       )}
+
+      {akte}
 
       {/* Details */}
       <h2 className="mb-2.5 mt-8 text-sm font-semibold text-muted">Details</h2>

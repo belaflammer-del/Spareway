@@ -248,7 +248,7 @@ export function summarizeInspection(data: InspectionData, previous: Recommendati
   let riskText: string;
   if (highConspicuous > 0 || conspicuous >= 3) {
     risk = "high";
-    riskText = `${conspicuous} auffällige Prüfpunkte${highConspicuous ? `, davon ${highConspicuous} wichtige` : ""}. Vor dem Kauf klären oder Fachbetrieb hinzuziehen.`;
+    riskText = `${conspicuous} auffällige${conspicuous === 1 ? "r Prüfpunkt" : " Prüfpunkte"}${highConspicuous ? (conspicuous === 1 ? " (wichtig)" : `, davon ${highConspicuous} wichtige`) : ""}. Vor dem Kauf klären oder Fachbetrieb hinzuziehen.`;
   } else if (conspicuous > 0) {
     risk = "medium";
     riskText = `${conspicuous} auffälliger Prüfpunkt. Klären und ggf. im Preis berücksichtigen.`;

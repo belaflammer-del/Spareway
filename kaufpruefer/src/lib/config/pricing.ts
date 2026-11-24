@@ -56,4 +56,19 @@ export const INCLUDED_SERVICES = [
   "Verkäuferprüfung (auch nachträglich)",
   "Deal-Score, Checkliste, PDF",
   "Rückfragen an den KI-Assistenten",
+  "Kaufakte: Verkäuferchat-Prüfung, Besichtigungsassistent",
+  "Gesamtkosten, Bildabgleich, Preisverlauf",
+];
+
+/**
+ * Guardian-Paket – PRODUKTKONZEPT. Nur Anzeige, wenn der Admin es einblendet.
+ * Es existiert kein Zahlungsweg dafür (Checkout lehnt unbekannte Pakete ab).
+ */
+export const GUARDIAN_SERVICES = [
+  "Vollständiger Deal-Check",
+  "Verkäuferprüfung",
+  "Mehrere Verkäuferchat-Prüfungen",
+  "Besichtigungsassistent mit KI-Fotoprüfung",
+  "Gesamtkostenanalyse",
+  "Kaufakte mit Preisbeobachtung",
 ];

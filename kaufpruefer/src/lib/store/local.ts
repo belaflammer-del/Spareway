@@ -478,6 +478,7 @@ export class LocalStore implements DataStore {
         sellerChecks: db.analyses.filter((a) => a.report?.seller).length,
         comparisons: db.counters.comparisons ?? 0,
         reusedAnalyses: db.counters.reused_analysis ?? 0,
+        v4: { chatChecks: db.counters.chat_check ?? 0, inspections: db.counters.inspection_finished ?? 0, imageMatches: db.counters.image_match ?? 0, watches: db.counters.watch_started ?? 0 },
         avgDurationMs: (() => {
           const d = completed.map((a) => a.durationMs ?? 0).filter((x) => x > 0);
           return d.length ? d.reduce((x, y) => x + y, 0) / d.length : 0;

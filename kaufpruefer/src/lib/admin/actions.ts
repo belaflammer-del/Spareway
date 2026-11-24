@@ -72,9 +72,11 @@ export async function saveAiConfigAction(_: FormState, fd: FormData): Promise<Fo
   const parsed = AiForm.safeParse({ model: "", fastModel: "", ...raw });
   if (!parsed.success) return { error: `${parsed.error.issues[0].path.join(".")}: ${parsed.error.issues[0].message}` };
   const d = parsed.data;
+  const prev = (await getStore().getConfig()).limits ?? {};
   await getStore().setConfig({
     ai: { model: d.model || undefined, fastModel: d.fastModel || undefined, dailyBudgetUsd: d.dailyBudgetUsd },
     limits: {
+      ...prev,
       perAnalysisUsd: d.perAnalysisUsd,
       perUserDayUsd: d.perUserDayUsd,
       globalMonthUsd: d.globalMonthUsd,
@@ -97,4 +99,65 @@ export async function toggleCategoryAction(fd: FormData) {
   const next = current === "live" ? "beta" : current === "beta" ? "off" : "live";
   await getStore().setConfig({ categories: { ...(cfg.categories ?? {}), [key]: next } });
   revalidatePath("/admin");
+}
+
+const int = (min: number, max: number) => z.coerce.number().int().min(min).max(max);
+const AkteForm = z.object({
+  chatChecksPerAnalysis: int(0, 20),
+  chatScreenshotsMax: int(1, 30),
+  inspectionPhotosMax: int(0, 100),
+  inspectionPhotoAiMax: int(0, 50),
+  imageMatchPerAnalysis: int(0, 50),
+  watchesPerUser: int(0, 100),
+  watchMinIntervalHours: int(1, 168),
+  watchManualUpdatesPerDay: int(0, 50),
+  notificationsPerUserDay: int(0, 200),
+  chatDays: int(1, 365),
+  inspectionDays: int(1, 730),
+  imageHashDays: int(1, 730),
+  snapshotDays: int(1, 730),
+  costTable: z.string().max(50_000),
+  guardianEnabled: z.enum(["on", "off"]).default("off"),
+  guardianPrice: z.coerce.number().min(0).max(1000),
+  guardianChatChecks: int(0, 20),
+});
+
+/** V4: Limits, Löschfristen, Kostentabelle und Guardian-Konzept (ohne Zahlungsaktivierung). */
+export async function saveAkteConfigAction(_: FormState, fd: FormData): Promise<FormState> {
+  await requireAdmin();
+  const raw = Object.fromEntries([...fd.entries()].map(([k, v]) => [k, typeof v === "string" && k !== "costTable" ? v.replace(",", ".") : v]));
+  const parsed = AkteForm.safeParse({ guardianEnabled: fd.get("guardianEnabled") ? "on" : "off", ...raw });
+  if (!parsed.success) return { error: `${parsed.error.issues[0].path.join(".")}: ${parsed.error.issues[0].message}` };
+  const d = parsed.data;
+  let costTable: unknown = [];
+  try {
+    costTable = d.costTable.trim() ? JSON.parse(d.costTable) : [];
+  } catch {
+    return { error: "Kostentabelle: ungültiges JSON." };
+  }
+  const { validCostEntries } = await import("../costs/table");
+  if (!Array.isArray(costTable)) return { error: "Kostentabelle muss eine Liste sein." };
+  const valid = validCostEntries(costTable as never);
+  if (valid.length !== costTable.length) return { error: `Kostentabelle: ${costTable.length - valid.length} Eintrag/Einträge ohne gültige Quelle, Datum oder Betrag. Es werden nur belegte Einträge gespeichert.` };
+  const cfg = await getStore().getConfig();
+  await getStore().setConfig({
+    limits: {
+      ...(cfg.limits ?? {}),
+      chatChecksPerAnalysis: d.chatChecksPerAnalysis,
+      chatScreenshotsMax: d.chatScreenshotsMax,
+      inspectionPhotosMax: d.inspectionPhotosMax,
+      inspectionPhotoAiMax: d.inspectionPhotoAiMax,
+      imageMatchPerAnalysis: d.imageMatchPerAnalysis,
+      watchesPerUser: d.watchesPerUser,
+      watchMinIntervalHours: d.watchMinIntervalHours,
+      watchManualUpdatesPerDay: d.watchManualUpdatesPerDay,
+      notificationsPerUserDay: d.notificationsPerUserDay,
+    },
+    retention: { chatDays: d.chatDays, inspectionDays: d.inspectionDays, imageHashDays: d.imageHashDays, snapshotDays: d.snapshotDays },
+    costTable: valid,
+    // Guardian ist ein Produktkonzept: Die Anzeige lässt sich schalten, eine Zahlung wird NICHT aktiviert.
+    guardian: { enabled: d.guardianEnabled === "on", priceCents: Math.round(d.guardianPrice * 100), chatChecks: d.guardianChatChecks },
+  });
+  revalidatePath("/admin");
+  return { ok: true, message: "Kaufakte-Einstellungen gespeichert." };
 }

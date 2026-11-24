@@ -4,7 +4,7 @@ import type { ImageMatchData, MatchClass } from "../akte/schemas";
 import { PLATFORM_LABELS } from "../domain/labels";
 import { AnalysisError } from "../pipeline/service";
 import { getStore } from "../store";
-import type { ImageHashRecord } from "../store/akte-types";
+import type { ImageHashRecord, ModuleRecord } from "../store/akte-types";
 import type { AnalysisRecord } from "../store/types";
 import { loadOwnedUpload } from "../uploads/service";
 import { newId, nowIso } from "../utils";
@@ -71,13 +71,13 @@ export function transparencyText(scope: ImageMatchData["scope"]): string {
 export const MATCH_CAVEAT =
   "Ein gleiches Bild ist kein Betrugsnachweis: Hersteller- und Katalogbilder oder ein erneut eingestelltes Inserat desselben Verkäufers sind häufige, harmlose Gründe. Ähnlichkeitswerte können auch bei verschiedenen Objekten auftreten.";
 
-export async function runImageMatch(userId: string, analysisId: string, opts: { force?: boolean } = {}) {
+export async function runImageMatch(userId: string, analysisId: string, opts: { force?: boolean } = {}): Promise<ModuleRecord<ImageMatchData>> {
   const store = getStore();
   const a = await store.getAnalysis(analysisId, userId);
   if (!a?.report || a.status !== "completed") throw new AnalysisError("pipeline_failed", "Kaufakte nicht gefunden.");
   const lim = akteLimits(await store.getConfig());
   const previous = await store.listModules(analysisId, userId, "image_match");
-  if (!opts.force && previous.length) return previous.at(-1)!;
+  if (!opts.force && previous.length) return previous.at(-1)! as ModuleRecord<ImageMatchData>;
   if (previous.length >= lim.imageMatchPerAnalysis) throw new AnalysisError("pipeline_failed", `Pro Kaufakte sind ${lim.imageMatchPerAnalysis} Bildabgleiche enthalten.`);
 
   const own = await hashListingImages(a);

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AkteView } from "@/components/akte/akte-view";
 import { ReportView } from "@/components/report/report-view";
+import { getAkte } from "@/lib/akte/service";
+import { toViewModel } from "@/lib/akte/view-model";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/session";
 import { providerEnabled } from "@/lib/config/providers";
@@ -28,7 +31,8 @@ export default async function AnalysisPage({ params }: PageProps<"/analysis/[id]
     );
   }
   const store = getStore();
-  const [cfg, prev, aiOn] = await Promise.all([store.getConfig(), a.previousId ? store.getAnalysis(a.previousId, user.id) : null, providerEnabled("ai")]);
+  const [cfg, prev, aiOn, akte] = await Promise.all([store.getConfig(), a.previousId ? store.getAnalysis(a.previousId, user.id) : null, providerEnabled("ai"), getAkte(user.id, id)]);
+  const vm = akte ? await toViewModel(akte) : null;
   return (
     <ReportView
       report={a.report}
@@ -36,6 +40,7 @@ export default async function AnalysisPage({ params }: PageProps<"/analysis/[id]
       analysisId={id}
       assistant={{ initial: a.chat ?? [], limit: cfg.limits?.chatQuestionsPerAnalysis ?? 5, aiAvailable: aiOn }}
       previous={prev ? { id: prev.id, createdAt: prev.createdAt, priceEur: prev.priceEur ?? prev.report?.listing.priceEur } : undefined}
+      akte={vm ? <AkteView vm={vm} /> : undefined}
     />
   );
 }

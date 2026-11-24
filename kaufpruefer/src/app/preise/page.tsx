@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/misc";
-import { INCLUDED_SERVICES, perCheckEur } from "@/lib/config/pricing";
+import { GUARDIAN_SERVICES, INCLUDED_SERVICES, perCheckEur } from "@/lib/config/pricing";
+import { getStore } from "@/lib/store";
 import { formatEur } from "@/lib/domain/labels";
 import { getPricing } from "@/lib/wallet/service";
 
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
   const pricing = await getPricing();
+  const guardian = (await getStore().getConfig()).guardian;
   const packages = [...pricing.packages].sort((a, b) => a.tokens - b.tokens);
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
@@ -60,6 +62,22 @@ export default async function PricingPage() {
           Alle Preise inkl. MwSt. Externe Fahrzeughistorien (per FIN) wären eine separate Zusatzleistung ({formatEur(pricing.vehicleHistoryPriceCents / 100)}), sobald ein Datenanbieter angebunden ist. Keine Streichpreise, keine automatischen Verlängerungen.
         </p>
       </Card>
+      {guardian?.enabled && (
+        <Card className="mt-6 border-dashed p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold">Guardian – dein Kaufbegleiter</p>
+            <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs text-muted">In Vorbereitung · noch nicht buchbar</span>
+          </div>
+          <p className="mt-1 text-sm text-muted">Geplant: ca. {formatEur((guardian.priceCents ?? 1499) / 100)} pro Kaufakte, inkl. {guardian.chatChecks ?? 3} Chatprüfungen.</p>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+            {GUARDIAN_SERVICES.map((i) => (
+              <li key={i} className="flex items-center gap-2 text-sm">
+                <Check className="size-4 text-accent" /> {i}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 }

@@ -389,6 +389,10 @@ export class SupabaseStore implements DataStore {
       sellerChecks: a.filter((x) => x.visibleReviewCount != null).length,
       comparisons: Number(((counters.data ?? []) as Row[]).find((c) => c.name === "comparisons")?.value ?? 0),
       reusedAnalyses: Number(((counters.data ?? []) as Row[]).find((c) => c.name === "reused_analysis")?.value ?? 0),
+      v4: (() => {
+        const c = (n: string) => Number(((counters.data ?? []) as Row[]).find((x) => x.name === n)?.value ?? 0);
+        return { chatChecks: c("chat_check"), inspections: c("inspection_finished"), imageMatches: c("image_match"), watches: c("watch_started") };
+      })(),
       avgDurationMs: (() => {
         const d = a.map((x) => Number(x.duration_ms ?? 0)).filter((x) => x > 0);
         return d.length ? d.reduce((x, y) => x + y, 0) / d.length : 0;

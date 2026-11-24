@@ -10,6 +10,10 @@ import { getDemoReport, listDemos } from "@/lib/demo";
 import { formatEur, PRICE_RATING_LABELS, RECOMMENDATION_LABELS } from "@/lib/domain/labels";
 import type { AnalysisReport } from "@/lib/domain/schemas";
 import { compareReports } from "@/lib/engine/compare";
+import type { CostAnalysisData, InspectionData } from "@/lib/akte/schemas";
+import { compareTotalCosts, computeCosts } from "@/lib/costs/analyze";
+import { demoCosts } from "@/lib/costs/service";
+import { validCostEntries } from "@/lib/costs/table";
 import { getStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +41,20 @@ export default async function ComparePage({ searchParams }: PageProps<"/vergleic
   const [a, b] = await Promise.all([load(sp.a), load(sp.b)]);
   const result = a && b ? compareReports(a, b) : null;
   if (result) await store.countEvent("comparisons");
+
+  // Gesamtkosten je Angebot (gespeicherte Kaufakte bzw. frisch berechnet, ohne KI)
+  async function costsFor(v: unknown, r: AnalysisReport | null): Promise<CostAnalysisData | null> {
+    if (!r || typeof v !== "string") return null;
+    if (v.startsWith("demo:")) return demoCosts(r);
+    if (!user) return null;
+    const mods = await store.listModules(v, user.id);
+    const stored = mods.filter((m) => m.kind === "costs").at(-1)?.data as CostAnalysisData | undefined;
+    if (stored) return stored;
+    const insp = mods.filter((m) => m.kind === "inspection").at(-1)?.data as InspectionData | undefined;
+    return computeCosts(r, { table: validCostEntries((await store.getConfig()).costTable), inspection: insp, now: new Date().toISOString() });
+  }
+  const [ca, cb] = result ? await Promise.all([costsFor(sp.a, a), costsFor(sp.b, b)]) : [null, null];
+  const costCmp = a && b && ca && cb ? compareTotalCosts({ title: "Angebot 1", costs: ca }, { title: "Angebot 2", costs: cb }) : null;
 
   const rows: { label: string; get: (r: AnalysisReport) => string }[] = [
     { label: "Preis", get: (r) => formatEur(r.listing.priceEur) },
@@ -119,6 +137,21 @@ export default async function ComparePage({ searchParams }: PageProps<"/vergleic
               </div>
             ))}
           </Card>
+
+          {costCmp && (
+            <Card className="mt-3 p-4">
+              <p className="font-semibold">Gesamtkosten statt nur Kaufpreis</p>
+              <ul className="mt-2 space-y-1.5 text-sm">
+                {costCmp.points.map((p) => (
+                  <li key={p} className="flex gap-2"><span className="text-accent">›</span>{p}</li>
+                ))}
+              </ul>
+              <p className="mt-3 rounded-xl bg-surface-2 p-3 text-sm font-medium">{costCmp.text}</p>
+              <p className="mt-2 text-xs text-muted">
+                Nur bezifferte Kosten mit Quelle fließen ein; mögliche Risiken sind nicht eingerechnet.{(ca?.usesDemoTable || cb?.usesDemoTable) && " Demo: fiktive Richtwerte."}
+              </p>
+            </Card>
+          )}
 
           <Card className="mt-3 p-4">
             <p className="flex items-center gap-2 font-semibold">

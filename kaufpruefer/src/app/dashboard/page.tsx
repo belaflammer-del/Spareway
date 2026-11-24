@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AnalysisList } from "@/components/dashboard/analysis-list";
+import { NotificationsPanel } from "@/components/dashboard/notifications";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert } from "@/components/ui/misc";
@@ -13,7 +14,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const user = await requireUser();
   const sp = await searchParams;
   const store = getStore();
-  const [balance, analyses] = await Promise.all([store.getBalance(user.id), store.listAnalyses(user.id, 5)]);
+  const [balance, analyses, notifications, watches] = await Promise.all([store.getBalance(user.id), store.listAnalyses(user.id, 5), store.listNotifications(user.id, 20), store.listWatches(user.id)]);
+  const watched = (await Promise.all(watches.map(async (w) => ({ w, a: await store.getAnalysis(w.analysisId, user.id) })))).filter((x) => x.a);
   return (
     <div className="space-y-6">
       <div>
@@ -42,6 +44,22 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
           </Button>
         </Card>
       </div>
+      <NotificationsPanel items={notifications} />
+      {watched.length > 0 && (
+        <div>
+          <h2 className="mb-3 font-semibold">Beobachtete Angebote</h2>
+          <ul className="space-y-2">
+            {watched.map(({ w, a }) => (
+              <li key={w.id}>
+                <Link href={`/analysis/${w.analysisId}#s-watch`} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3 text-sm">
+                  <span className="min-w-0 truncate font-medium">{a!.title}</span>
+                  <span className="shrink-0 text-xs text-muted">{w.mode === "auto" ? "automatisch" : "manuell"}{w.lastCheckedAt ? ` · ${new Date(w.lastCheckedAt).toLocaleDateString("de-DE")}` : ""}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">Letzte Analysen</h2>

@@ -50,6 +50,17 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
         ],
       },
       {
+        h: "3a. Kaufakte (Verkäuferchat, Besichtigung, Bildabgleich, Beobachtung) [juristisch prüfen]",
+        p: [
+          "Verkäuferchat: Hochgeladene Chat-Screenshots werden nach der Auswertung gelöscht. Gespeichert werden nur die erkannten Nachrichten – auf Wunsch (voreingestellt) mit geschwärzten Telefonnummern, E-Mail-Adressen, IBANs und Anschriften. Löschung automatisch nach der konfigurierten Frist (Standard 30 Tage) oder jederzeit durch dich. Lade nur Chats hoch, an denen du selbst beteiligt bist.",
+          "Besichtigung: Fotos und Notizen werden der Kaufakte zugeordnet und mit ihr gespeichert (Standard 180 Tage). Notizen werden für die Offline-Nutzung zusätzlich lokal auf deinem Gerät zwischengespeichert.",
+          "Bildabgleich: Von Produktfotos werden ausschließlich mathematische Bild-Fingerabdrücke (Hashes) gespeichert, keine Bilder (Standard 180 Tage). Treffer zeigen anderen Nutzern weder deine Person noch deine Kaufakte – nur Plattform, Datum und ggf. den öffentlichen Inseratslink. Rechtsgrundlage: berechtigtes Interesse an Betrugsprävention, Art. 6 Abs. 1 lit. f DSGVO.",
+          "Angebotsbeobachtung: Automatische Abfragen nur über offiziell erlaubte Schnittstellen (derzeit eBay). Erfasste Preis- und Angabenstände werden gespeichert (Standard 365 Tage).",
+          "Benachrichtigungen: In-App; per E-Mail nur nach Aktivierung (Versanddienst: [Anbieter, z. B. Resend – AV-Vertrag prüfen]); Web-Push nur nach Zustimmung im Browser (Zustellung über den Push-Dienst deines Browserherstellers).",
+          "Teilen-Funktion: Über das Teilen-Menü übermittelte Inhalte liegen bis zu 30 Minuten in einem Eingang und werden erst nach deiner Anmeldung deinem Konto zugeordnet.",
+        ],
+      },
+      {
         h: "4. Empfänger / Auftragsverarbeiter",
         p: [
           "Hosting und Datenbank: [Hosting-Anbieter], Supabase Inc. (Datenbank, Authentifizierung, Speicher) – [Serverstandort, AV-Vertrag, ggf. Standardvertragsklauseln].",
