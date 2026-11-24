@@ -678,6 +678,12 @@ export class LocalStore implements DataStore {
       return { ...s };
     });
   }
+  setUploadExpiry(id: string, ownerKey: string, expiresAt: string) {
+    return this.tx((db) => {
+      const u = db.uploads.find((x) => x.id === id && x.ownerKey === ownerKey);
+      if (u) u.expiresAt = expiresAt;
+    });
+  }
   reassignUpload(id: string, fromOwner: string, toOwner: string) {
     return this.tx((db) => {
       const u = db.uploads.find((x) => x.id === id && x.ownerKey === fromOwner);

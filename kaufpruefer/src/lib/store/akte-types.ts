@@ -172,4 +172,6 @@ export interface AkteStore {
   putShareInbox(s: ShareInboxRecord): Promise<void>;
   takeShareInbox(id: string, userId: string, now: string): Promise<ShareInboxRecord | null>;
   reassignUpload(id: string, fromOwner: string, toOwner: string): Promise<void>;
+  /** Löschfrist eines eigenen Uploads ändern (z. B. Besichtigungsfotos länger aufbewahren) */
+  setUploadExpiry(id: string, ownerKey: string, expiresAt: string): Promise<void>;
 }

@@ -557,6 +557,9 @@ export class SupabaseStore implements DataStore {
     const rows = check(await this.db.rpc("share_inbox_take", { p_id: id, p_user: userId, p_now: now })) as Row[];
     return rows?.[0] ? toInbox(rows[0]) : null;
   }
+  async setUploadExpiry(id: string, ownerKey: string, expiresAt: string) {
+    check(await this.db.from("uploads").update({ expires_at: expiresAt }).eq("id", id).eq("owner_key", ownerKey));
+  }
   async reassignUpload(id: string, fromOwner: string, toOwner: string) {
     check(await this.db.from("uploads").update({ owner_key: toOwner }).eq("id", id).eq("owner_key", fromOwner));
   }

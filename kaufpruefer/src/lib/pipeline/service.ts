@@ -176,6 +176,15 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
       return report;
     });
 
+    // V4: Bildabgleich (nur Hashes, keine KI, keine Kosten) – Fehler blockieren die Analyse nicht
+    if (req.listing.images.some((i) => i.kind === "product_photo")) {
+      try {
+        const { runImageMatch } = await import("../images/match");
+        await runImageMatch(userId, id);
+      } catch (e) {
+        console.warn("[analysis] Bildabgleich übersprungen:", (e as Error).message);
+      }
+    }
     // Datenschutz: Bewertungs-Screenshots/Frames nach der Analyse sofort löschen
     for (const ref of req.seller?.imageIds ?? []) {
       const u = await store.getUpload(ref);
