@@ -192,6 +192,10 @@ export function buildInspectionChecklist(report: AnalysisReport, chatChecks: Cha
   for (const c of chatChecks.flatMap((x) => x.contradictions).slice(0, 4))
     add(item({ group: "Offene Fragen", title: `Widerspruch klären: ${c.explanation.slice(0, 90)}`, how: `Inserat: „${c.listingStatement.slice(0, 100)}“ – Chat: „${c.chatStatement.slice(0, 100)}“`, high: c.kind === "documented", origin: "chat", reason: "Aus der Chatprüfung" }));
 
+  // Offene Fragen an den Verkäufer vor Ort klären
+  for (const q of report.checklist.questionsForSeller.slice(0, 4))
+    add(item({ group: "Offene Fragen", title: q, origin: "template", reason: "Frage an den Verkäufer" }));
+
   // Gruppen in Vorlagenreihenfolge, dynamische Gruppen danach
   const order = [...new Set([...TEMPLATES[cat].map((t) => t.group), ...items.map((i) => i.group)])];
   const offen = order.indexOf("Offene Fragen");
