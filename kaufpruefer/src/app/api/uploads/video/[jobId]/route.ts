@@ -9,8 +9,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/uploads/video/[
   const user = await getCurrentUser();
   if (!user) return errorJson(401, "unauthorized", "Nicht angemeldet");
   const { jobId } = await ctx.params;
-  const job = getVideoJob(jobId, user.id);
+  const job = await getVideoJob(jobId, user.id);
   if (!job) return errorJson(404, "not_found", "Verarbeitung nicht gefunden oder abgelaufen");
-  const { ownerId: _o, createdAt: _c, ...pub } = job;
-  return Response.json(pub, { headers: { "Cache-Control": "no-store" } });
+  return Response.json(job, { headers: { "Cache-Control": "no-store" } });
 }

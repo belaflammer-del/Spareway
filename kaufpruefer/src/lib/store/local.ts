@@ -20,6 +20,17 @@ import {
   type UserRecord,
   type WalletTx,
 } from "./types";
+import type {
+  ImageHashRecord,
+  JobRecord,
+  JobType,
+  ModuleKind,
+  ModuleRecord,
+  NotificationRecord,
+  PushSubscriptionRecord,
+  ShareInboxRecord,
+  WatchRecord,
+} from "./akte-types";
 
 export interface LocalSession {
   tokenHash: string;
@@ -46,6 +57,13 @@ interface DB {
   rate: Record<string, { count: number; resetAt: string }>;
   config: AppConfig;
   counters: { quickChecks: number; [k: string]: number };
+  modules: ModuleRecord[];
+  jobs: JobRecord[];
+  watches: WatchRecord[];
+  notifications: NotificationRecord[];
+  pushSubs: PushSubscriptionRecord[];
+  imageHashes: ImageHashRecord[];
+  shareInbox: ShareInboxRecord[];
 }
 
 const empty = (): DB => ({
@@ -60,6 +78,13 @@ const empty = (): DB => ({
   rate: {},
   config: {},
   counters: { quickChecks: 0 },
+  modules: [],
+  jobs: [],
+  watches: [],
+  notifications: [],
+  pushSubs: [],
+  imageHashes: [],
+  shareInbox: [],
 });
 
 export class LocalStore implements DataStore {
@@ -159,6 +184,12 @@ export class LocalStore implements DataStore {
       db.analyses = db.analyses.filter((a) => a.userId !== userId);
       db.reservations = db.reservations.filter((r) => r.userId !== userId);
       db.uploads = db.uploads.filter((u) => u.ownerKey !== userId);
+      db.modules = db.modules.filter((m) => m.userId !== userId);
+      db.jobs = db.jobs.filter((j) => j.userId !== userId);
+      db.watches = db.watches.filter((w) => w.userId !== userId);
+      db.notifications = db.notifications.filter((n) => n.userId !== userId);
+      db.pushSubs = db.pushSubs.filter((n) => n.userId !== userId);
+      db.imageHashes = db.imageHashes.filter((n) => n.userId !== userId);
       // Zahlungs- und Buchungsdaten: gesetzliche Aufbewahrungspflichten (HGB/AO) –
       // pseudonymisieren statt löschen.
       for (const t of db.tx) if (t.userId === userId) t.userId = "deleted";
@@ -172,6 +203,10 @@ export class LocalStore implements DataStore {
       walletTransactions: db.tx.filter((t) => t.userId === userId),
       purchases: db.purchases.filter((p) => p.userId === userId),
       uploads: db.uploads.filter((u) => u.ownerKey === userId).map(({ storagePath: _sp, ...u }) => u),
+      kaufakteModule: db.modules.filter((m) => m.userId === userId),
+      beobachtungen: db.watches.filter((w) => w.userId === userId),
+      benachrichtigungen: db.notifications.filter((n) => n.userId === userId),
+      bildHashes: db.imageHashes.filter((h) => h.userId === userId).map(({ bands: _b, ...h }) => h),
     }));
   }
 
@@ -200,7 +235,13 @@ export class LocalStore implements DataStore {
   }
   deleteAnalysis(id: string, userId: string) {
     return this.tx((db) => {
-      db.analyses = db.analyses.filter((a) => !(a.id === id && a.userId === userId));
+      if (!db.analyses.some((a) => a.id === id && a.userId === userId)) return;
+      db.analyses = db.analyses.filter((a) => a.id !== id);
+      // Kaufakte vollständig mitlöschen
+      db.modules = db.modules.filter((m) => m.analysisId !== id);
+      db.watches = db.watches.filter((w) => w.analysisId !== id);
+      db.imageHashes = db.imageHashes.filter((h) => h.analysisId !== id);
+      db.jobs = db.jobs.filter((j) => j.analysisId !== id);
     });
   }
   countQuickCheck() {
@@ -448,6 +489,199 @@ export class LocalStore implements DataStore {
           .sort((a, b) => b.count - a.count)
           .slice(0, 5),
       };
+    });
+  }
+
+  // ── Kaufakte-Module ──────────────────────────────────────
+  addModule<T>(m: Omit<ModuleRecord<T>, "version">) {
+    return this.tx((db) => {
+      const version = 1 + Math.max(0, ...db.modules.filter((x) => x.analysisId === m.analysisId && x.kind === m.kind).map((x) => x.version));
+      const rec = { ...m, version } as ModuleRecord<T>;
+      db.modules.push(rec as ModuleRecord);
+      return rec;
+    });
+  }
+  updateModule<T>(id: string, userId: string, patch: { data: T; updatedAt: string }) {
+    return this.tx((db) => {
+      const m = db.modules.find((x) => x.id === id && x.userId === userId);
+      if (m) Object.assign(m, patch);
+    });
+  }
+  listModules(analysisId: string, userId: string, kind?: ModuleKind) {
+    return this.read((db) =>
+      db.modules
+        .filter((m) => m.analysisId === analysisId && m.userId === userId && (!kind || m.kind === kind) && (!m.expiresAt || m.expiresAt > nowIso()))
+        .sort((a, b) => a.version - b.version),
+    );
+  }
+  deleteModule(id: string, userId: string) {
+    return this.tx((db) => {
+      db.modules = db.modules.filter((m) => !(m.id === id && m.userId === userId));
+    });
+  }
+  deleteExpiredModules(now: string) {
+    return this.tx((db) => {
+      const before = db.modules.length;
+      db.modules = db.modules.filter((m) => !m.expiresAt || m.expiresAt > now);
+      return before - db.modules.length;
+    });
+  }
+
+  // ── Jobs ─────────────────────────────────────────────────
+  enqueueJob(j: JobRecord) {
+    return this.tx((db) => {
+      const existing = db.jobs.find((x) => x.idempotencyKey === j.idempotencyKey && x.status !== "failed" && x.status !== "cancelled");
+      if (existing) return { job: { ...existing }, created: false };
+      db.jobs.push(j);
+      // Alte, abgeschlossene Jobs aufräumen (7 Tage)
+      const cutoff = new Date(Date.now() - 7 * 864e5).toISOString();
+      db.jobs = db.jobs.filter((x) => !(["done", "failed", "cancelled"].includes(x.status) && x.updatedAt < cutoff));
+      return { job: { ...j }, created: true };
+    });
+  }
+  claimJob(now: string, leaseSeconds: number, types?: JobType[]) {
+    return this.tx((db) => {
+      const j = db.jobs
+        .filter((x) => (!types || types.includes(x.type)) && ((x.status === "queued" && x.runAfter <= now) || (x.status === "running" && (x.leaseUntil ?? "") < now)))
+        .sort((a, b) => a.runAfter.localeCompare(b.runAfter))[0];
+      if (!j) return null;
+      j.status = "running";
+      j.attempts += 1;
+      j.leaseUntil = new Date(Date.parse(now) + leaseSeconds * 1000).toISOString();
+      j.updatedAt = now;
+      return { ...j };
+    });
+  }
+  updateJob(id: string, patch: Partial<JobRecord>) {
+    return this.tx((db) => {
+      const j = db.jobs.find((x) => x.id === id);
+      if (j) Object.assign(j, patch, { updatedAt: nowIso() });
+    });
+  }
+  getJob(id: string) {
+    return this.read((db) => {
+      const j = db.jobs.find((x) => x.id === id);
+      return j ? { ...j } : null;
+    });
+  }
+  listJobs(f: { userId?: string; analysisId?: string; type?: JobType; limit?: number }) {
+    return this.read((db) =>
+      db.jobs
+        .filter((j) => (!f.userId || j.userId === f.userId) && (!f.analysisId || j.analysisId === f.analysisId) && (!f.type || j.type === f.type))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, f.limit ?? 20)
+        .map((j) => ({ ...j })),
+    );
+  }
+
+  // ── Beobachtungen ────────────────────────────────────────
+  upsertWatch(w: WatchRecord) {
+    return this.tx((db) => {
+      db.watches = db.watches.filter((x) => x.id !== w.id);
+      db.watches.push(w);
+    });
+  }
+  getWatchByAnalysis(analysisId: string, userId: string) {
+    return this.read((db) => db.watches.find((w) => w.analysisId === analysisId && w.userId === userId) ?? null);
+  }
+  getWatch(id: string) {
+    return this.read((db) => db.watches.find((w) => w.id === id) ?? null);
+  }
+  listWatches(userId: string) {
+    return this.read((db) => db.watches.filter((w) => w.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  }
+  listDueWatches(now: string, limit: number) {
+    return this.read((db) => db.watches.filter((w) => w.active && w.mode === "auto" && (w.nextCheckAt ?? "") <= now).slice(0, limit));
+  }
+  deleteWatch(id: string, userId: string) {
+    return this.tx((db) => {
+      db.watches = db.watches.filter((w) => !(w.id === id && w.userId === userId));
+    });
+  }
+
+  // ── Benachrichtigungen ───────────────────────────────────
+  addNotification(n: NotificationRecord) {
+    return this.tx((db) => {
+      db.notifications.push(n);
+      const mine = db.notifications.filter((x) => x.userId === n.userId);
+      if (mine.length > 200) {
+        const drop = new Set(mine.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(0, mine.length - 200).map((x) => x.id));
+        db.notifications = db.notifications.filter((x) => !drop.has(x.id));
+      }
+    });
+  }
+  listNotifications(userId: string, limit = 50) {
+    return this.read((db) => db.notifications.filter((n) => n.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit));
+  }
+  markNotificationsRead(userId: string, ids?: string[]) {
+    return this.tx((db) => {
+      for (const n of db.notifications) if (n.userId === userId && !n.readAt && (!ids || ids.includes(n.id))) n.readAt = nowIso();
+    });
+  }
+  countNotificationsSince(userId: string, since: string) {
+    return this.read((db) => db.notifications.filter((n) => n.userId === userId && n.createdAt >= since).length);
+  }
+  savePushSubscription(s: PushSubscriptionRecord) {
+    return this.tx((db) => {
+      db.pushSubs = db.pushSubs.filter((x) => x.endpoint !== s.endpoint);
+      db.pushSubs.push(s);
+    });
+  }
+  listPushSubscriptions(userId: string) {
+    return this.read((db) => db.pushSubs.filter((s) => s.userId === userId));
+  }
+  deletePushSubscription(endpoint: string) {
+    return this.tx((db) => {
+      db.pushSubs = db.pushSubs.filter((x) => x.endpoint !== endpoint);
+    });
+  }
+
+  // ── Bild-Hashes ──────────────────────────────────────────
+  addImageHashes(rows: ImageHashRecord[]) {
+    return this.tx((db) => {
+      const ids = new Set(rows.map((r) => r.id));
+      db.imageHashes = db.imageHashes.filter((h) => !ids.has(h.id)).concat(rows);
+    });
+  }
+  findImageHashCandidates(bands: string[], limit: number) {
+    return this.read((db) => {
+      const now = nowIso();
+      return db.imageHashes.filter((h) => h.expiresAt > now && h.bands.some((b, i) => b === bands[i])).slice(0, limit);
+    });
+  }
+  listImageHashes(analysisId: string, userId: string) {
+    return this.read((db) => db.imageHashes.filter((h) => h.analysisId === analysisId && h.userId === userId));
+  }
+  deleteExpiredImageHashes(now: string) {
+    return this.tx((db) => {
+      const before = db.imageHashes.length;
+      db.imageHashes = db.imageHashes.filter((h) => h.expiresAt > now);
+      return before - db.imageHashes.length;
+    });
+  }
+
+  // ── Teilen-Eingang ───────────────────────────────────────
+  putShareInbox(s: ShareInboxRecord) {
+    return this.tx((db) => {
+      const now = nowIso();
+      db.shareInbox = db.shareInbox.filter((x) => x.expiresAt > now && !x.claimedBy);
+      db.shareInbox.push(s);
+    });
+  }
+  takeShareInbox(id: string, userId: string, now: string) {
+    return this.tx((db) => {
+      const s = db.shareInbox.find((x) => x.id === id && x.expiresAt > now);
+      if (!s) return null;
+      // Einmalig: erneutes Abholen durch denselben Nutzer liefert dasselbe Ergebnis (Doppelaufruf), andere Nutzer nichts
+      if (s.claimedBy && s.claimedBy !== userId) return null;
+      s.claimedBy = userId;
+      return { ...s };
+    });
+  }
+  reassignUpload(id: string, fromOwner: string, toOwner: string) {
+    return this.tx((db) => {
+      const u = db.uploads.find((x) => x.id === id && x.ownerKey === fromOwner);
+      if (u) u.ownerKey = toOwner;
     });
   }
 }

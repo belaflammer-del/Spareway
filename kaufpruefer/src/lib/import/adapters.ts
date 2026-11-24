@@ -15,6 +15,8 @@ import { extractListingLink, resolveShortLink } from "./share-text";
 export interface ImportContext {
   ebay?: { clientId?: string; clientSecret?: string; marketplaceId: string };
   fetchImpl?: typeof fetch;
+  /** SSRF-geschützter fetch für die Kurzlink-Auflösung (nutzergelieferte URLs) */
+  shortLinkFetch?: typeof fetch;
 }
 
 export interface ImportResult {
@@ -175,7 +177,7 @@ export async function importFromUrl(raw: string, ctx: ImportContext): Promise<Im
   // Akzeptiert auch komplette Teilen-Texte aus den Marktplatz-Apps
   const extracted = extractListingLink(raw);
   if (!extracted.url) return { error: "Wir haben in deiner Eingabe keinen Link gefunden. Kopiere den Link über „Teilen“ in der App und füge ihn hier ein." };
-  const resolved = extracted.shortLink ? await resolveShortLink(extracted.url, ctx.fetchImpl) : extracted.url;
+  const resolved = extracted.shortLink ? await resolveShortLink(extracted.url, ctx.shortLinkFetch ?? ctx.fetchImpl) : extracted.url;
   const url = parseListingUrl(resolved);
   if (!url) return { error: "Das sieht nicht nach einem gültigen Link aus." };
   const adapter = detectPlatform(url);

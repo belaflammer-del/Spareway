@@ -13,6 +13,17 @@ import {
   type UserRecord,
   type WalletTx,
 } from "./types";
+import type {
+  ImageHashRecord,
+  JobRecord,
+  JobType,
+  ModuleKind,
+  ModuleRecord,
+  NotificationRecord,
+  PushSubscriptionRecord,
+  ShareInboxRecord,
+  WatchRecord,
+} from "./akte-types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Row = Record<string, any>;
@@ -68,6 +79,44 @@ const fromAnalysis = (a: Partial<AnalysisRecord>): Row => {
   };
   return Object.fromEntries(Object.entries(a).filter(([k]) => m[k]).map(([k, v]) => [m[k], v]));
 };
+const toModule = (r: Row): ModuleRecord => ({
+  id: r.id, analysisId: r.analysis_id, userId: r.user_id, kind: r.kind, version: r.version, createdAt: r.created_at,
+  updatedAt: r.updated_at ?? undefined, inputHash: r.input_hash ?? undefined, expiresAt: r.expires_at ?? undefined, data: r.data,
+});
+const JOB_MAP: Record<string, string> = {
+  id: "id", type: "type", userId: "user_id", analysisId: "analysis_id", idempotencyKey: "idempotency_key", status: "status",
+  attempts: "attempts", maxAttempts: "max_attempts", runAfter: "run_after", leaseUntil: "lease_until", progress: "progress",
+  message: "message", input: "input", result: "result", error: "error", cancelRequested: "cancel_requested", createdAt: "created_at", updatedAt: "updated_at",
+};
+const fromJob = (j: Partial<JobRecord>): Row => Object.fromEntries(Object.entries(j).filter(([k]) => JOB_MAP[k]).map(([k, v]) => [JOB_MAP[k], v ?? null]));
+const toJob = (r: Row): JobRecord => ({
+  id: r.id, type: r.type, userId: r.user_id ?? undefined, analysisId: r.analysis_id ?? undefined, idempotencyKey: r.idempotency_key, status: r.status,
+  attempts: r.attempts, maxAttempts: r.max_attempts, runAfter: r.run_after, leaseUntil: r.lease_until ?? undefined, progress: r.progress,
+  message: r.message ?? undefined, input: r.input ?? {}, result: r.result ?? undefined, error: r.error ?? undefined,
+  cancelRequested: !!r.cancel_requested, createdAt: r.created_at, updatedAt: r.updated_at,
+});
+const toWatch = (r: Row): WatchRecord => ({
+  id: r.id, analysisId: r.analysis_id, userId: r.user_id, platform: r.platform, url: r.url ?? undefined, externalId: r.external_id ?? undefined,
+  mode: r.mode, intervalHours: r.interval_hours, active: r.active, notify: r.notify, createdAt: r.created_at,
+  lastCheckedAt: r.last_checked_at ?? undefined, nextCheckAt: r.next_check_at ?? undefined, lastError: r.last_error ?? undefined,
+});
+const fromWatch = (w: WatchRecord): Row => ({
+  id: w.id, analysis_id: w.analysisId, user_id: w.userId, platform: w.platform, url: w.url ?? null, external_id: w.externalId ?? null, mode: w.mode,
+  interval_hours: w.intervalHours, active: w.active, notify: w.notify, created_at: w.createdAt, last_checked_at: w.lastCheckedAt ?? null,
+  next_check_at: w.nextCheckAt ?? null, last_error: w.lastError ?? null,
+});
+const toNotification = (r: Row): NotificationRecord => ({
+  id: r.id, userId: r.user_id, kind: r.kind, title: r.title, body: r.body, link: r.link ?? undefined, createdAt: r.created_at, readAt: r.read_at ?? undefined,
+});
+const toImageHash = (r: Row): ImageHashRecord => ({
+  id: r.id, analysisId: r.analysis_id, userId: r.user_id, listingKey: r.listing_key ?? undefined, platform: r.platform, listingUrl: r.listing_url ?? undefined,
+  imageRef: r.image_ref ?? undefined, dhash: r.dhash, phash: r.phash, bands: [r.band0, r.band1, r.band2, r.band3], sha256: r.sha256,
+  width: r.width, height: r.height, capturedAt: r.captured_at, expiresAt: r.expires_at,
+});
+const toInbox = (r: Row): ShareInboxRecord => ({
+  id: r.id, createdAt: r.created_at, expiresAt: r.expires_at, title: r.title ?? undefined, text: r.text ?? undefined, url: r.url ?? undefined,
+  uploadIds: r.upload_ids ?? [], claimedBy: r.claimed_by ?? undefined,
+});
 const toTx = (r: Row): WalletTx => ({
   id: r.id, userId: r.user_id, type: r.type, amount: r.amount, balanceAfter: r.balance_after, refId: r.ref_id ?? undefined,
   idempotencyKey: r.idempotency_key, note: r.note ?? undefined, createdAt: r.created_at,
@@ -127,7 +176,20 @@ export class SupabaseStore implements DataStore {
       this.db.from("wallet_transactions").select("*").eq("user_id", userId),
       this.db.from("purchases").select("*").eq("user_id", userId),
     ]);
-    return { user: await this.getUser(userId), analyses: analyses.data, walletTransactions: tx.data, purchases: purchases.data };
+    const [modules, watches, notifications] = await Promise.all([
+      this.db.from("kaufakte_modules").select("*").eq("user_id", userId),
+      this.db.from("watches").select("*").eq("user_id", userId),
+      this.db.from("notifications").select("*").eq("user_id", userId),
+    ]);
+    return {
+      user: await this.getUser(userId),
+      analyses: analyses.data,
+      walletTransactions: tx.data,
+      purchases: purchases.data,
+      kaufakteModule: modules.data,
+      beobachtungen: watches.data,
+      benachrichtigungen: notifications.data,
+    };
   }
 
   async createAnalysis(a: AnalysisRecord) {
@@ -336,5 +398,166 @@ export class SupabaseStore implements DataStore {
         .sort((x, y) => y.count - x.count)
         .slice(0, 5),
     };
+  }
+
+  // ── Kaufakte-Module ──────────────────────────────────────
+  async addModule<T>(m: Omit<ModuleRecord<T>, "version">): Promise<ModuleRecord<T>> {
+    const version = check(
+      await this.db.rpc("kaufakte_add_module", {
+        p_id: m.id, p_analysis: m.analysisId, p_user: m.userId, p_kind: m.kind, p_created: m.createdAt,
+        p_input_hash: m.inputHash ?? null, p_expires: m.expiresAt ?? null, p_data: m.data,
+      }),
+    ) as number;
+    return { ...m, version } as ModuleRecord<T>;
+  }
+  async updateModule<T>(id: string, userId: string, patch: { data: T; updatedAt: string }) {
+    check(await this.db.from("kaufakte_modules").update({ data: patch.data, updated_at: patch.updatedAt }).eq("id", id).eq("user_id", userId));
+  }
+  async listModules(analysisId: string, userId: string, kind?: ModuleKind) {
+    let q = this.db.from("kaufakte_modules").select("*").eq("analysis_id", analysisId).eq("user_id", userId);
+    if (kind) q = q.eq("kind", kind);
+    const rows = check(await q.or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`).order("version", { ascending: true })) as Row[];
+    return rows.map(toModule);
+  }
+  async deleteModule(id: string, userId: string) {
+    check(await this.db.from("kaufakte_modules").delete().eq("id", id).eq("user_id", userId));
+  }
+  async deleteExpiredModules(now: string) {
+    const rows = check(await this.db.from("kaufakte_modules").delete().lt("expires_at", now).select("id")) as Row[];
+    return rows.length;
+  }
+
+  // ── Jobs ─────────────────────────────────────────────────
+  async enqueueJob(j: JobRecord) {
+    const existing = check(
+      await this.db.from("jobs").select("*").eq("idempotency_key", j.idempotencyKey).in("status", ["queued", "running", "done"]).maybeSingle(),
+    ) as Row | null;
+    if (existing) return { job: toJob(existing), created: false };
+    const res = await this.db.from("jobs").insert(fromJob(j));
+    if (res.error?.code === "23505") {
+      const again = check(await this.db.from("jobs").select("*").eq("idempotency_key", j.idempotencyKey).in("status", ["queued", "running", "done"]).maybeSingle()) as Row;
+      return { job: toJob(again), created: false };
+    }
+    check(res);
+    return { job: j, created: true };
+  }
+  async claimJob(now: string, leaseSeconds: number, types?: JobType[]) {
+    const rows = check(await this.db.rpc("jobs_claim", { p_now: now, p_lease_seconds: leaseSeconds, p_types: types ?? null })) as Row[];
+    return rows?.[0] ? toJob(rows[0]) : null;
+  }
+  async updateJob(id: string, patch: Partial<JobRecord>) {
+    check(await this.db.from("jobs").update({ ...fromJob(patch), updated_at: new Date().toISOString() }).eq("id", id));
+  }
+  async getJob(id: string) {
+    const r = check(await this.db.from("jobs").select("*").eq("id", id).maybeSingle()) as Row | null;
+    return r ? toJob(r) : null;
+  }
+  async listJobs(f: { userId?: string; analysisId?: string; type?: JobType; limit?: number }) {
+    let q = this.db.from("jobs").select("*");
+    if (f.userId) q = q.eq("user_id", f.userId);
+    if (f.analysisId) q = q.eq("analysis_id", f.analysisId);
+    if (f.type) q = q.eq("type", f.type);
+    const rows = check(await q.order("created_at", { ascending: false }).limit(f.limit ?? 20)) as Row[];
+    return rows.map(toJob);
+  }
+
+  // ── Beobachtungen ────────────────────────────────────────
+  async upsertWatch(w: WatchRecord) {
+    check(await this.db.from("watches").upsert(fromWatch(w), { onConflict: "id" }));
+  }
+  async getWatchByAnalysis(analysisId: string, userId: string) {
+    const r = check(await this.db.from("watches").select("*").eq("analysis_id", analysisId).eq("user_id", userId).maybeSingle()) as Row | null;
+    return r ? toWatch(r) : null;
+  }
+  async getWatch(id: string) {
+    const r = check(await this.db.from("watches").select("*").eq("id", id).maybeSingle()) as Row | null;
+    return r ? toWatch(r) : null;
+  }
+  async listWatches(userId: string) {
+    return (check(await this.db.from("watches").select("*").eq("user_id", userId).order("created_at", { ascending: false })) as Row[]).map(toWatch);
+  }
+  async listDueWatches(now: string, limit: number) {
+    return (check(await this.db.from("watches").select("*").eq("active", true).eq("mode", "auto").lte("next_check_at", now).limit(limit)) as Row[]).map(toWatch);
+  }
+  async deleteWatch(id: string, userId: string) {
+    check(await this.db.from("watches").delete().eq("id", id).eq("user_id", userId));
+  }
+
+  // ── Benachrichtigungen ───────────────────────────────────
+  async addNotification(n: NotificationRecord) {
+    check(await this.db.from("notifications").insert({ id: n.id, user_id: n.userId, kind: n.kind, title: n.title, body: n.body, link: n.link ?? null, created_at: n.createdAt }));
+  }
+  async listNotifications(userId: string, limit = 50) {
+    return (check(await this.db.from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit)) as Row[]).map(toNotification);
+  }
+  async markNotificationsRead(userId: string, ids?: string[]) {
+    let q = this.db.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", userId).is("read_at", null);
+    if (ids) q = q.in("id", ids);
+    check(await q);
+  }
+  async countNotificationsSince(userId: string, since: string) {
+    const { count, error } = await this.db.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", since);
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  }
+  async savePushSubscription(s: PushSubscriptionRecord) {
+    check(await this.db.from("push_subscriptions").upsert({ endpoint: s.endpoint, user_id: s.userId, keys: s.keys, created_at: s.createdAt }, { onConflict: "endpoint" }));
+  }
+  async listPushSubscriptions(userId: string) {
+    const rows = check(await this.db.from("push_subscriptions").select("*").eq("user_id", userId)) as Row[];
+    return rows.map((r) => ({ endpoint: r.endpoint, userId: r.user_id, keys: r.keys, createdAt: r.created_at }));
+  }
+  async deletePushSubscription(endpoint: string) {
+    check(await this.db.from("push_subscriptions").delete().eq("endpoint", endpoint));
+  }
+
+  // ── Bild-Hashes ──────────────────────────────────────────
+  async addImageHashes(rows: ImageHashRecord[]) {
+    if (!rows.length) return;
+    check(
+      await this.db.from("image_hashes").upsert(
+        rows.map((h) => ({
+          id: h.id, analysis_id: h.analysisId, user_id: h.userId, listing_key: h.listingKey ?? null, platform: h.platform, listing_url: h.listingUrl ?? null,
+          image_ref: h.imageRef ?? null, dhash: h.dhash, phash: h.phash, band0: h.bands[0], band1: h.bands[1], band2: h.bands[2], band3: h.bands[3],
+          sha256: h.sha256, width: h.width, height: h.height, captured_at: h.capturedAt, expires_at: h.expiresAt,
+        })),
+        { onConflict: "id" },
+      ),
+    );
+  }
+  async findImageHashCandidates(bands: string[], limit: number) {
+    const safe = bands.map((b) => b.replace(/[^0-9a-f]/gi, ""));
+    const rows = check(
+      await this.db
+        .from("image_hashes")
+        .select("*")
+        .gt("expires_at", new Date().toISOString())
+        .or(safe.map((b, i) => `band${i}.eq.${b}`).join(","))
+        .limit(limit),
+    ) as Row[];
+    return rows.map(toImageHash);
+  }
+  async listImageHashes(analysisId: string, userId: string) {
+    return (check(await this.db.from("image_hashes").select("*").eq("analysis_id", analysisId).eq("user_id", userId)) as Row[]).map(toImageHash);
+  }
+  async deleteExpiredImageHashes(now: string) {
+    return (check(await this.db.from("image_hashes").delete().lt("expires_at", now).select("id")) as Row[]).length;
+  }
+
+  // ── Teilen-Eingang ───────────────────────────────────────
+  async putShareInbox(s: ShareInboxRecord) {
+    await this.db.from("share_inbox").delete().lt("expires_at", new Date().toISOString());
+    check(
+      await this.db.from("share_inbox").insert({
+        id: s.id, created_at: s.createdAt, expires_at: s.expiresAt, title: s.title ?? null, text: s.text ?? null, url: s.url ?? null, upload_ids: s.uploadIds,
+      }),
+    );
+  }
+  async takeShareInbox(id: string, userId: string, now: string) {
+    const rows = check(await this.db.rpc("share_inbox_take", { p_id: id, p_user: userId, p_now: now })) as Row[];
+    return rows?.[0] ? toInbox(rows[0]) : null;
+  }
+  async reassignUpload(id: string, fromOwner: string, toOwner: string) {
+    check(await this.db.from("uploads").update({ owner_key: toOwner }).eq("id", id).eq("owner_key", fromOwner));
   }
 }

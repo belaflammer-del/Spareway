@@ -1,4 +1,8 @@
 import type { AnalysisReport, Category, Platform } from "../domain/schemas";
+import type { AkteStore } from "./akte-types";
+import type { CostTableEntry } from "../costs/table";
+
+export type * from "./akte-types";
 
 export interface UserRecord {
   id: string;
@@ -123,7 +127,26 @@ export interface AppConfig {
     videoMaxSeconds?: number;
     videoMaxMb?: number;
     chatQuestionsPerAnalysis?: number;
+    /** V4: Verkäuferchat-Prüfungen je Kaufakte */
+    chatChecksPerAnalysis?: number;
+    chatScreenshotsMax?: number;
+    /** V4: Besichtigung */
+    inspectionPhotosMax?: number;
+    inspectionPhotoAiMax?: number;
+    /** V4: Bildabgleich-Läufe je Kaufakte */
+    imageMatchPerAnalysis?: number;
+    /** V4: Beobachtung */
+    watchesPerUser?: number;
+    watchMinIntervalHours?: number;
+    watchManualUpdatesPerDay?: number;
+    notificationsPerUserDay?: number;
   };
+  /** V4: Löschfristen in Tagen */
+  retention?: { chatDays?: number; inspectionDays?: number; imageHashDays?: number; snapshotDays?: number };
+  /** V4: Gesamtkosten-Richtwerte – nur vom Betreiber gepflegte, belegte Einträge */
+  costTable?: CostTableEntry[];
+  /** V4: Guardian-Paket (Produktkonzept, standardmäßig deaktiviert, keine Zahlung) */
+  guardian?: { enabled?: boolean; priceCents?: number; chatChecks?: number };
   /** Kategorie-Status: live = kostenpflichtiger Komplettcheck, beta = nur Schnellcheck */
   categories?: Record<string, "live" | "beta" | "off">;
 }
@@ -161,7 +184,7 @@ export class WalletError extends Error {
   }
 }
 
-export interface DataStore {
+export interface DataStore extends AkteStore {
   kind: "local" | "supabase";
 
   // Benutzer

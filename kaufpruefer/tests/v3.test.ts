@@ -201,15 +201,15 @@ describe("Zusatz: Bildschirmaufnahme asynchron", () => {
     await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="720" height="3200"><rect width="720" height="3200" fill="#fff"/>${rows}</svg>`)).png().toFile(path.join(dir, "p.png"));
     const video = path.join(dir, "input");
     execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-loop", "1", "-i", path.join(dir, "p.png"), "-vf", "crop=720:1280:0:'min(t*250,1920)',format=yuv420p", "-t", "8", "-r", "30", "-f", "mp4", video]);
-    const job = startVideoJob({ ownerId: "u1", workDir: dir, videoPath: video, maxSeconds: 90 });
-    let j = getVideoJob(job.id, "u1")!;
+    const job = await startVideoJob({ ownerId: "u1", workDir: dir, videoPath: video, maxSeconds: 90 });
+    let j = (await getVideoJob(job.id, "u1"))!;
     for (let i = 0; i < 100 && j.stage !== "done" && j.stage !== "failed"; i++) {
       await new Promise((r) => setTimeout(r, 200));
-      j = getVideoJob(job.id, "u1")!;
+      j = (await getVideoJob(job.id, "u1"))!;
     }
     expect(j.stage).toBe("done");
     expect(j.frameIds!.length).toBeGreaterThan(1);
-    expect(getVideoJob(job.id, "someone-else")).toBeNull();
+    expect(await getVideoJob(job.id, "someone-else")).toBeNull();
     await new Promise((r) => setTimeout(r, 100));
     expect(existsSync(video)).toBe(false); // Rohvideo gelöscht
   }, 60_000);

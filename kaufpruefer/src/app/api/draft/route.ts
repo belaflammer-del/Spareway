@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { env } from "@/lib/config/env";
 import { clientIpHash, errorJson, rateLimit } from "@/lib/http";
 import { buildDraft } from "@/lib/pipeline/extract";
+import { shortLinkFetch } from "@/lib/share/import";
 import { assertOwnedUploads } from "@/lib/pipeline/service";
 import { getStore } from "@/lib/store";
 import { toDataUrl } from "@/lib/uploads/service";
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     { url, imageRefs: imageIds, pastedText },
     {
       ai: usesAi ? ai : null,
-      importCtx: { ebay: (await providerEnabled("ebay_api")) ? { clientId: env.ebay.clientId, clientSecret: env.ebay.clientSecret, marketplaceId: env.ebay.marketplaceId } : undefined },
+      importCtx: { shortLinkFetch: shortLinkFetch(), ebay: (await providerEnabled("ebay_api")) ? { clientId: env.ebay.clientId, clientSecret: env.ebay.clientSecret, marketplaceId: env.ebay.marketplaceId } : undefined },
       loadImage: (ref) => toDataUrl(ref, user ? [user.id] : []),
     },
   );

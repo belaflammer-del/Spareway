@@ -51,6 +51,6 @@ export async function POST(req: Request) {
     return errorJson(500, "processing_failed", "Das Video konnte nicht gespeichert werden.");
   }
   // Verarbeitung im Hintergrund – Fortschritt über GET /api/uploads/video/{jobId}
-  const job = startVideoJob({ ownerId: user.id, workDir: work, videoPath, maxSeconds });
-  return Response.json({ jobId: job.id, status: job.stage }, { status: 202 });
+  const job = await startVideoJob({ ownerId: user.id, workDir: work, videoPath, maxSeconds });
+  return Response.json({ jobId: job.id, status: "queued" }, { status: 202 });
 }

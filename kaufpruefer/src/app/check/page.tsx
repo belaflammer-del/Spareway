@@ -19,10 +19,13 @@ export default async function CheckPage({ searchParams }: PageProps<"/check">) {
   const compareNext = typeof sp.compareNext === "string" ? sp.compareNext.slice(0, 2000) : undefined;
   const url = typeof sp.url === "string" ? sp.url.slice(0, 2000) : undefined;
   const mode = sp.mode === "screenshots" ? "screenshots" : sp.mode === "text" ? "text" : "link";
+  // Über das Teilen-Menü übernommene Bilder (Besitz wird serverseitig beim Auslesen geprüft)
+  const shared = typeof sp.shared === "string" ? sp.shared.split(",").filter((x) => /^up_[a-z0-9]{6,32}$/.test(x)).slice(0, 12) : [];
   return (
     <CheckFlow
       initialUrl={url}
-      initialMode={mode}
+      initialMode={shared.length ? "screenshots" : mode}
+      sharedUploadIds={user ? shared : []}
       loggedIn={!!user}
       balance={balance}
       aiAvailable={aiOn}

@@ -49,6 +49,8 @@ export interface CheckFlowProps {
   compareWith?: string;
   /** Vergleichsmodus: danach dieses zweite Inserat prüfen */
   compareNext?: string;
+  /** Über das Teilen-Menü bereits übernommene Bilder */
+  sharedUploadIds?: string[];
 }
 
 /** Deutsche Zahlenschreibweise tolerant parsen („18.900 €“, „1,5“). */
@@ -124,12 +126,13 @@ export function CheckFlow(props: CheckFlowProps) {
   async function createDraft() {
     setError(null);
     if (mode === "link" && !url.trim()) return setError("Bitte füge einen Inseratslink ein.");
-    if (mode === "screenshots" && files.length === 0 && !url.trim()) return setError("Bitte lade mindestens einen Screenshot hoch.");
+    const shared = mode === "screenshots" ? (props.sharedUploadIds ?? []) : [];
+    if (mode === "screenshots" && files.length === 0 && shared.length === 0 && !url.trim()) return setError("Bitte lade mindestens einen Screenshot hoch.");
     if (mode === "text" && text.trim().length < 20) return setError("Bitte füge den Inseratstext ein (mindestens 20 Zeichen).");
     if (files.length > 0 && !props.loggedIn) return setError("Für den Screenshot-Upload brauchst du ein kostenloses Konto.");
     setBusy("draft");
     try {
-      const imageIds = mode === "screenshots" ? await uploadImages(files, setUploadPct) : [];
+      const imageIds = mode === "screenshots" ? [...shared, ...(await uploadImages(files, setUploadPct))] : [];
       setUploadPct(null);
       const res = await fetch("/api/draft", {
         method: "POST",
@@ -308,7 +311,20 @@ export function CheckFlow(props: CheckFlowProps) {
                   </div>
                 )}
                 {mode === "screenshots" && (
+                  <div>
+                  {(props.sharedUploadIds?.length ?? 0) > 0 && (
+                    <div className="mb-3 rounded-xl border border-accent/40 bg-accent-soft/30 p-3">
+                      <p className="text-sm font-medium">{props.sharedUploadIds!.length} geteilte{props.sharedUploadIds!.length > 1 ? " Bilder" : "s Bild"} übernommen</p>
+                      <div className="mt-2 flex gap-2 overflow-x-auto">
+                        {props.sharedUploadIds!.map((id) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={id} src={`/api/uploads/${id}`} alt="Geteiltes Bild" className="size-14 shrink-0 rounded-lg border border-border object-cover" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <Dropzone files={files} previews={previews} onChange={setFiles} disabled={!props.loggedIn} hint={props.aiAvailable ? "Die KI liest Preis, Angaben und Beschreibung aus." : "Ohne KI-Schlüssel (Demo-Modus) trägst du die Angaben im nächsten Schritt selbst ein."} />
+                  </div>
                 )}
                 {mode === "text" && (
                   <div className="space-y-1.5">

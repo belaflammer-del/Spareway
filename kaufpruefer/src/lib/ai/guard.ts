@@ -49,7 +49,7 @@ export class AiLimitError extends Error {
 
 export interface GuardContext {
   userId?: string;
-  scope: "extract" | "analysis" | "seller" | "video" | "chat";
+  scope: "extract" | "analysis" | "seller" | "video" | "chat" | "chat_check" | "inspection" | "watch";
 }
 
 /** Prüft globale bzw. nutzerbezogene Budgets (ohne Aufruf-Kontext). */
