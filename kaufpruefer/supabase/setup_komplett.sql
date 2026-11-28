@@ -1,4 +1,4 @@
--- DEAL-NIVO: komplette Einrichtung (0001–0004 in einer Datei). Wiederholbar, löscht keine Daten.
+-- DEAL-NIVO: komplette Einrichtung (0001–0005 in einer Datei). Wiederholbar, löscht keine Daten.
 
 -- ===== migrations/0001_init.sql =====
 -- ─────────────────────────────────────────────────────────────
@@ -509,3 +509,19 @@ create policy "own notifications" on public.notifications for select using (auth
 revoke all on function public.kaufakte_add_module(text, text, uuid, text, timestamptz, text, timestamptz, jsonb) from public, anon, authenticated;
 revoke all on function public.jobs_claim(timestamptz, integer, text[]) from public, anon, authenticated;
 revoke all on function public.share_inbox_take(text, uuid, timestamptz) from public, anon, authenticated;
+
+-- ===== migrations/0005_service_role_grants.sql =====
+-- DEAL-NIVO v5: Rechte für die Server-Rolle.
+-- Neue Supabase-Projekte vergeben keine Standardrechte mehr auf Tabellen im
+-- Schema public. Der App-Server arbeitet ausschließlich mit der service_role;
+-- anon/authenticated erhalten bewusst keine Tabellenrechte.
+grant usage on schema public to service_role;
+grant select, insert, update, delete on all tables in schema public to service_role;
+grant usage, select on all sequences in schema public to service_role;
+grant execute on all functions in schema public to service_role;
+alter default privileges in schema public grant select, insert, update, delete on tables to service_role;
+alter default privileges in schema public grant usage, select on sequences to service_role;
+alter default privileges in schema public grant execute on functions to service_role;
+
+-- Trigger-Funktion nicht per API aufrufbar machen (der Trigger läuft weiterhin)
+revoke execute on function public.handle_new_user() from public, anon, authenticated;

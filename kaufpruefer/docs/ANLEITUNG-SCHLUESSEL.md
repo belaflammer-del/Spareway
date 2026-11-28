@@ -33,7 +33,7 @@ Ohne Supabase gehen auf Render alle Konten und Tokens bei jedem Neustart verlore
    `belaflammer-del/Spareway` → Branch `claude/ki-kaufpruefer-gebrauchtwaren-6suttz` → `kaufpruefer/supabase/migrations/0001_init.sql` → oben **Raw** antippen → alles markieren → **Kopieren**.
 2. In Supabase links **SQL Editor** → **New query** → Text einfügen → **Run**.
    Es sollte „Success“ erscheinen.
-3. Danach genauso nacheinander `0002_v2.sql`, `0003_v3.sql` und `0004_v4_kaufakte.sql` aus demselben Ordner ausführen – jede Datei als eigene neue Abfrage (alle sind wiederholbar und verändern keine bestehenden Daten).
+3. Danach genauso nacheinander `0002_v2.sql`, `0003_v3.sql`, `0004_v4_kaufakte.sql` und `0005_service_role_grants.sql` aus demselben Ordner ausführen – jede Datei als eigene neue Abfrage (alle sind wiederholbar und verändern keine bestehenden Daten).
 
 ### C) Schlüssel kopieren
 In Supabase: **Project Settings → API** (bzw. **API Keys**). Du brauchst drei Werte:
