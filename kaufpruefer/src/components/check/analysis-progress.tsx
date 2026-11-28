@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { OrbitHero } from "@/components/home/three-views";
 import { Spinner } from "@/components/ui/misc";
@@ -30,14 +30,45 @@ export function AnalysisProgress({ ai, seller, status }: { ai: boolean; seller: 
         <p className="text-lg font-semibold tracking-tight">Dein Angebot wird geprüft …</p>
         <p className="mt-1 text-sm text-muted">Das dauert {ai ? "meist 20–60 Sekunden" : "nur einen Moment"}. Bitte lass dieses Fenster geöffnet.</p>
         {status && <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-sm">{status}</p>}
-        <ol className="mt-6 space-y-3">
+        {/* Fortschritt: weicher Balken mit Lichtreflex */}
+        <div className="relative mt-5 h-2 overflow-hidden rounded-full bg-surface-2">
+          <motion.div
+            className="absolute inset-y-0 left-0 rounded-full bg-accent"
+            initial={{ width: "4%" }}
+            animate={{ width: `${Math.round(((i + 0.6) / steps.length) * 100)}%` }}
+            transition={{ type: "spring", stiffness: 60, damping: 20 }}
+          />
+          <motion.div
+            className="absolute inset-y-0 w-16 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+            animate={{ left: ["-20%", "110%"] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+        <ol className="mt-5 space-y-3">
           {steps.map((s, idx) => (
-            <li key={s} className={cn("flex items-center gap-3 text-sm transition", idx > i && "text-muted")}>
-              <span className={cn("flex size-6 items-center justify-center rounded-full border", idx < i ? "border-good bg-good text-white" : idx === i ? "border-accent" : "border-border")}>
-                {idx < i ? <Check className="size-3.5" /> : idx === i ? <Spinner className="size-3 text-accent" /> : null}
+            <motion.li
+              key={s}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.08 * idx }}
+              className={cn("flex items-center gap-3 text-sm transition-colors", idx > i && "text-muted")}
+            >
+              <span className={cn("relative flex size-6 items-center justify-center rounded-full border transition-colors", idx < i ? "border-good bg-good text-white" : idx === i ? "border-accent" : "border-border")}>
+                <AnimatePresence mode="popLayout">
+                  {idx < i ? (
+                    <motion.span key="ok" initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 500, damping: 18 }}>
+                      <Check className="size-3.5" />
+                    </motion.span>
+                  ) : idx === i ? (
+                    <motion.span key="run" initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                      <Spinner className="size-3 text-accent" />
+                    </motion.span>
+                  ) : null}
+                </AnimatePresence>
+                {idx === i && <span className="absolute inset-0 animate-ping rounded-full border border-accent/60" />}
               </span>
-              {s}
-            </li>
+              <span className={cn(idx === i && "bg-gradient-to-r from-foreground via-accent to-foreground bg-[length:200%_100%] bg-clip-text font-medium text-transparent [animation:shimmer_2.2s_linear_infinite]")}>{s}</span>
+            </motion.li>
           ))}
         </ol>
       </motion.div>

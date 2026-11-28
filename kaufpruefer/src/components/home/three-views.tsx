@@ -50,12 +50,12 @@ export function OrbitHero({ className, showLabel = true }: { className?: string;
 
 export type GridObject = "carKey" | "phone" | "tshirt" | "watch" | "gamepad" | "parcel";
 
-const CATEGORY_ITEMS: { key: string; label: string; object: GridObject; icon: LucideIcon }[] = [
-  { key: "vehicle", label: "Autos", object: "carKey", icon: Car },
-  { key: "electronics", label: "Elektronik", object: "phone", icon: Smartphone },
-  { key: "fashion", label: "Mode", object: "tshirt", icon: Shirt },
-  { key: "watches", label: "Uhren", object: "watch", icon: Watch },
-  { key: "gaming", label: "Gaming", object: "gamepad", icon: Gamepad2 },
+const CATEGORY_ITEMS: { key: string; label: string; object: GridObject; model?: import("./three-models").ModelName; icon: LucideIcon }[] = [
+  { key: "vehicle", label: "Autos", object: "carKey", model: "sportwagen", icon: Car },
+  { key: "electronics", label: "Elektronik", object: "phone", model: "smartphone", icon: Smartphone },
+  { key: "fashion", label: "Mode", object: "tshirt", model: "jacke", icon: Shirt },
+  { key: "watches", label: "Uhren", object: "watch", model: "uhr", icon: Watch },
+  { key: "gaming", label: "Gaming", object: "gamepad", model: "controller", icon: Gamepad2 },
   { key: "other", label: "Sonstiges", object: "parcel", icon: Package },
 ];
 
@@ -74,7 +74,7 @@ export function CategoryGrid3D() {
     Promise.all([import("./three-scenes"), import("./three-objects")]).then(([{ createGridScene }, objs]) => {
       if (cancelled) return;
       const list = items
-        .map((it, i) => ({ el: tiles.current[i] as HTMLElement, make: objs[it.object] as (m: import("./three-objects").Mats) => import("three").Group }))
+        .map((it, i) => ({ el: tiles.current[i] as HTMLElement, make: objs[it.object] as (m: import("./three-objects").Mats) => import("three").Group, model: it.model }))
         .filter((x) => x.el);
       handle = createGridScene(host, list, { reducedMotion: reduced() });
       setHas3d(true);

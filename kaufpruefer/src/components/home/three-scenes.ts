@@ -6,7 +6,27 @@
  */
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { badge, carKey, coin, gamepad, materials, phone, tshirt, watch, type Mats } from "./three-objects";
+import { badge, carKey, gamepad, materials, phone, tshirt, watch, type Mats } from "./three-objects";
+import { loadModel, normalize, type ModelName } from "./three-models";
+
+/** Ersetzt den Platzhalter in `holder` durch das hochwertige Modell, sobald es geladen ist. */
+function swapIn(holder: THREE.Group, name: ModelName | undefined, onUnit: (u: number, side?: number) => void) {
+  if (!name) return;
+  loadModel(name)
+    .then((model) => {
+      const g = normalize(model);
+      const box = new THREE.Box3().setFromObject(g);
+      const size = box.getSize(new THREE.Vector3());
+      for (const c of [...holder.children]) holder.remove(c);
+      holder.add(g);
+      // Objekte drehen sich um die Hochachse → Breite über alle Blickwinkel gleich halten
+      // Lange Objekte (Fahrzeuge): Seitenansicht als Grundstellung, nur leicht schwenken
+      const long = Math.max(size.x, size.z) / Math.max(Math.min(size.x, size.z), 0.001) > 1.6;
+      if (long) onUnit(1 / Math.max(size.x, size.z, size.y, 0.001), size.z > size.x ? Math.PI / 2 : 0);
+      else onUnit(1 / Math.max(Math.hypot(size.x, size.z) * 0.85, size.y, 0.001));
+    })
+    .catch(() => undefined); // Platzhalter bleibt
+}
 
 export interface SceneHandle {
   dispose(): void;
@@ -63,7 +83,16 @@ function runLoop(container: HTMLElement, frame: (t: number) => void, reducedMoti
 
 /* ── 3D-Karussell: Produkte kreisen um den Prüf-Ring ─────────── */
 
-export const ORBIT_LABELS = ["Smartphone", "Uhr", "Auto", "Mode", "Konsole", "Preis", "Deal"];
+export const ORBIT_LABELS = ["Smartphone", "Uhr", "Auto", "Mode", "Konsole", "Motorrad", "Sneaker"];
+const ORBIT_ITEMS: { make: (m: Mats) => THREE.Group; model?: ModelName }[] = [
+  { make: phone, model: "smartphone" },
+  { make: watch, model: "uhr" },
+  { make: carKey, model: "sportwagen" },
+  { make: tshirt, model: "jacke" },
+  { make: gamepad, model: "controller" },
+  { make: carKey, model: "motorrad" },
+  { make: badge, model: "sneaker" },
+];
 
 export function createOrbitScene(
   container: HTMLElement,
@@ -76,7 +105,7 @@ export function createOrbitScene(
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
 
   const m = materials();
-  const makers = [phone, watch, carKey, tshirt, gamepad, coin, badge];
+  const makers = ORBIT_ITEMS.map((x) => x.make);
   const R = 2.6;
   const carousel = new THREE.Group();
   scene.add(carousel);
@@ -92,7 +121,9 @@ export function createOrbitScene(
     const a = (i / makers.length) * Math.PI * 2;
     holder.position.set(Math.sin(a) * R, 0, Math.cos(a) * R);
     carousel.add(holder);
-    return { holder, unit, angle: a, phase: i * 0.8 };
+    const item = { holder, unit, angle: a, phase: i * 0.8 };
+    swapIn(holder, ORBIT_ITEMS[i].model, (u) => (item.unit = 1.75 * u));
+    return item;
   });
 
   // Prüf-Ring in der Mitte + Scan-Strahl
@@ -188,7 +219,7 @@ export function createOrbitScene(
 
 export function createGridScene(
   container: HTMLElement,
-  items: { el: HTMLElement; make: (m: Mats) => THREE.Group }[],
+  items: { el: HTMLElement; make: (m: Mats) => THREE.Group; model?: ModelName }[],
   opts: { reducedMotion: boolean },
 ): SceneHandle {
   const { renderer, scene, pmrem } = setup(container);
@@ -207,7 +238,12 @@ export function createGridScene(
     let hover = 0;
     it.el.addEventListener("pointerenter", () => (hover = 1));
     it.el.addEventListener("pointerleave", () => (hover = 0));
-    return { wrap, el: it.el, unit, phase: i * 0.9, hover: () => hover, h: 0 };
+    const o = { wrap, el: it.el, unit, phase: i * 0.9, hover: () => hover, h: 0, side: undefined as number | undefined };
+    swapIn(wrap, it.model, (u, side) => {
+      o.unit = u;
+      o.side = side;
+    });
+    return o;
   });
 
   let cw = 1;
@@ -234,7 +270,8 @@ export function createGridScene(
       o.h += (o.hover() - o.h) * 0.12;
       o.wrap.position.set(r.left - cr.left + r.width / 2, -(r.top - cr.top + r.height * 0.4), 0);
       o.wrap.scale.setScalar(px * o.unit * (1 + o.h * 0.12));
-      o.wrap.rotation.set(0.25 + Math.sin(t * 0.7 + o.phase) * 0.12, t * (0.5 + o.h * 2) + o.phase, Math.sin(t * 0.5 + o.phase) * 0.08);
+      const ry = o.side != null ? o.side + 0.5 + Math.sin(t * 0.6 + o.phase) * 0.45 + o.h * t : t * (0.5 + o.h * 2) + o.phase;
+      o.wrap.rotation.set(0.25 + Math.sin(t * 0.7 + o.phase) * 0.12, ry, Math.sin(t * 0.5 + o.phase) * 0.08);
     }
     renderer.render(scene, camera);
   };

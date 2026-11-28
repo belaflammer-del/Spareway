@@ -39,6 +39,10 @@ import { PriceScale } from "./price-scale";
 import { ReportAssistant } from "./report-assistant";
 import { SellerAddon } from "./seller-addon";
 import { ScoreBox, scoreTone, toTen } from "./score-ring";
+import dynamic from "next/dynamic";
+import { modelForListing } from "@/components/home/model-choice";
+
+const ModelViewer = dynamic(() => import("./model-viewer").then((m) => m.ModelViewer), { ssr: false });
 
 type SectionId = "price" | "product" | "weak" | "risks" | "seller" | "payment" | "checklist" | "messages" | "data" | "method";
 
@@ -131,6 +135,8 @@ export function ReportView({
 
   const cmpId = analysisId ?? (report.isDemo ? `demo:${report.id.replace(/^demo_/, "")}` : undefined);
   const heroImg = img(listing.images.find((i) => i.kind === "product_photo")?.ref ?? listing.images[0]?.ref);
+  // Ohne Produktfoto: passendes 3D-Symbolbild (z. B. Karosserieform)
+  const heroModel = !listing.images.some((i) => i.kind === "product_photo") ? modelForListing(listing.category, [listing.title, listing.brand, listing.model, listing.variant].filter(Boolean).join(" ")) : null;
   const stale = !report.isDemo && Date.now() - Date.parse(market.collectedAt) > 30 * 864e5;
   const visit =
     score.recommendation === "interesting"
@@ -187,7 +193,8 @@ export function ReportView({
 
       {/* Urteil */}
       <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
-        {heroImg && (
+        {heroModel && <ModelViewer model={heroModel} className="h-44 bg-gradient-to-b from-surface-2/70 to-surface sm:h-56" />}
+        {!heroModel && heroImg && (
           <div className="relative h-40 bg-surface-2 sm:h-52">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={heroImg} alt="" className="size-full object-cover" />
