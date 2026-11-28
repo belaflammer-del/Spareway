@@ -43,6 +43,7 @@ export const FIELD_SOURCE_LABELS: Record<FieldSource, string> = {
   url: "Aus Link erkannt",
   platform_api: "Plattform-Schnittstelle",
   ai_extraction: "KI aus Screenshot",
+  page: "Von der Inseratsseite",
   user: "Von dir angegeben",
   demo: "Demo-Daten",
 };

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, Spinner } from "@/components/ui/misc";
 import type { ShareImportResult } from "@/lib/share/import";
+import { PAGE_KEY, PageCaptureFlow } from "./page-capture-flow";
 
 const ERRORS: Record<string, string> = {
   rate: "Zu viele geteilte Inhalte in kurzer Zeit. Bitte versuche es später erneut.",
@@ -24,11 +25,28 @@ export function ShareLanding(props: { loggedIn: boolean; inboxId?: string; url?:
   const [err, setErr] = useState<string | null>(props.error ? (ERRORS[props.error] ?? "Fehler beim Teilen") : null);
   const [loading, setLoading] = useState(false);
   const once = useRef(false);
+  // „→ DEAL-NIVO“-Button: Seitendaten stehen im Adress-Anker (#seite=…) bzw. nach dem Login im Sitzungsspeicher
+  const [page, setPage] = useState<unknown>(null);
+  useEffect(() => {
+    try {
+      const h = window.location.hash;
+      if (h.startsWith("#seite=")) {
+        const json = decodeURIComponent(h.slice(7));
+        JSON.parse(json);
+        sessionStorage.setItem(PAGE_KEY, json);
+        history.replaceState(null, "", window.location.pathname);
+      }
+      const stored = sessionStorage.getItem(PAGE_KEY);
+      if (stored) setPage(JSON.parse(stored));
+    } catch {
+      setErr("Die Inseratsseite konnte nicht übernommen werden. Bitte versuche es erneut oder lade Screenshots hoch.");
+    }
+  }, []);
   const needsLogin = !!props.inboxId && !props.loggedIn;
   const hasInput = !!(props.inboxId || props.url || props.text || props.title);
 
   useEffect(() => {
-    if (once.current || !hasInput || needsLogin) return;
+    if (once.current || !hasInput || needsLogin || page) return;
     once.current = true; // React-StrictMode/Doppelaufrufe: nur ein Import
     setLoading(true);
     fetch("/api/share/import", {
@@ -43,7 +61,7 @@ export function ShareLanding(props: { loggedIn: boolean; inboxId?: string; url?:
       })
       .catch((e) => setErr((e as Error).message))
       .finally(() => setLoading(false));
-  }, [hasInput, needsLogin, props.inboxId, props.url, props.text, props.title]);
+  }, [hasInput, needsLogin, page, props.inboxId, props.url, props.text, props.title]);
 
   const shared = res?.uploadIds.length ? `&shared=${res.uploadIds.join(",")}` : "";
   const checkHref = res?.url ? `/check?url=${encodeURIComponent(res.url)}${shared}${res.uploadIds.length ? "&mode=screenshots" : ""}` : `/check?mode=screenshots${shared}`;
@@ -72,7 +90,9 @@ export function ShareLanding(props: { loggedIn: boolean; inboxId?: string; url?:
         </Alert>
       )}
 
-      {needsLogin && (
+      {page != null && <PageCaptureFlow capture={page} loggedIn={props.loggedIn} />}
+
+      {page == null && needsLogin && (
         <div className="mt-6 rounded-2xl border border-border bg-surface p-5">
           <p className="font-semibold">Fast geschafft</p>
           <p className="mt-1 text-sm text-muted">Melde dich an, damit wir die geteilten Bilder deinem Konto zuordnen können. Die Inhalte bleiben 30 Minuten abrufbar.</p>
@@ -84,11 +104,18 @@ export function ShareLanding(props: { loggedIn: boolean; inboxId?: string; url?:
         </div>
       )}
 
-      {!hasInput && !err && (
+      {page == null && !hasInput && !err && (
         <div className="mt-6 rounded-2xl border border-border bg-surface p-5 text-sm">
           <p className="font-semibold">So teilst du ein Inserat mit DEAL-NIVO</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
-            <li>Inserat in der Marktplatz-App öffnen und auf „Teilen“ tippen.</li>
+            <li>
+              Am schnellsten:{" "}
+              <Link href="/button" className="font-medium text-accent underline">
+                „→ DEAL-NIVO“-Button einrichten
+              </Link>{" "}
+              – dann im Browser auf dem Inserat antippen, fertig.
+            </li>
+            <li>Oder: Inserat in der Marktplatz-App öffnen und auf „Teilen“ tippen.</li>
             <li>„DEAL-NIVO“ auswählen (Android: nach Installation der App über „Zum Startbildschirm hinzufügen“).</li>
             <li>Auf dem iPhone: „Link kopieren“ und in DEAL-NIVO einfügen – eine eigene iOS-App mit Teilen-Erweiterung ist in Vorbereitung.</li>
           </ol>

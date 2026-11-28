@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, FileText, ImagePlus,
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,8 @@ export interface CheckFlowProps {
   compareNext?: string;
   /** Über das Teilen-Menü bereits übernommene Bilder */
   sharedUploadIds?: string[];
+  /** Vorausgefüllter Entwurf aus dem „→ DEAL-NIVO“-Button (Sitzungsspeicher) */
+  prefill?: boolean;
 }
 
 /** Deutsche Zahlenschreibweise tolerant parsen („18.900 €“, „1,5“). */
@@ -122,6 +124,24 @@ export function CheckFlow(props: CheckFlowProps) {
   const extraPhotos = useRef<HTMLInputElement>(null);
 
   const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
+
+  // Übernahme aus der Inseratsseite: direkt zum Prüfschritt
+  useEffect(() => {
+    if (!props.prefill) return;
+    try {
+      const raw = sessionStorage.getItem("dn-prefill");
+      if (!raw) return;
+      sessionStorage.removeItem("dn-prefill");
+      const d = JSON.parse(raw) as Draft;
+      setDraft(d);
+      setListing(d.listing);
+      setConflicts(d.conflicts ?? []);
+      if (d.listing.url) setUrl(d.listing.url);
+      setStep("review");
+    } catch {
+      /* ungültige Daten ignorieren */
+    }
+  }, [props.prefill]);
 
   async function createDraft() {
     setError(null);
@@ -305,7 +325,11 @@ export function CheckFlow(props: CheckFlowProps) {
                     <Input id="url" inputMode="url" placeholder="https://www.kleinanzeigen.de/s-anzeige/…" value={url} onChange={(e) => setUrl(e.target.value)} />
                     {mode === "link" && (
                       <p className="text-xs text-muted">
-                        Wir lesen Inserate nur über offizielle Schnittstellen aus. Wo keine verfügbar ist, ergänzt du die Angaben im nächsten Schritt oder lädst Screenshots hoch.
+                        Schneller geht es mit dem{" "}
+                        <Link href="/button" className="font-medium text-accent underline">
+                          „→ DEAL-NIVO“-Button
+                        </Link>
+                        : Inserat öffnen, antippen – Titel, Preis, Details und Bilder werden übernommen. Mit Link allein ergänzt du die Angaben im nächsten Schritt oder lädst Screenshots hoch.
                       </p>
                     )}
                   </div>
@@ -752,7 +776,7 @@ function FieldInput({ field, listing, low, missing, onChange }: { field: Listing
         </Label>
         <span className="flex gap-1">
           {low && src === "ai_extraction" && <Badge tone="warn">Bitte prüfen</Badge>}
-          {src && <Badge tone={src === "user" ? "accent" : src === "ai_extraction" ? "warn" : "neutral"}>{FIELD_SOURCE_LABELS[src]}</Badge>}
+          {src && <Badge tone={src === "user" ? "accent" : src === "ai_extraction" ? "warn" : src === "page" ? "good" : "neutral"}>{FIELD_SOURCE_LABELS[src]}</Badge>}
         </span>
       </div>
       {isLong ? (
@@ -825,7 +849,7 @@ function RecognizedCard({ listing, aiAvailable, notes, beta }: { listing: Listin
         <ul className="mt-3 flex flex-wrap gap-1.5">
           {facts.map(({ f, v }) => (
             <li key={f} className="flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1 text-xs">
-              <span className={cn("size-1.5 rounded-full", listing.provenance[f] === "user" ? "bg-accent" : listing.provenance[f] === "ai_extraction" ? "bg-warn" : "bg-muted")} />
+              <span className={cn("size-1.5 rounded-full", listing.provenance[f] === "user" ? "bg-accent" : listing.provenance[f] === "ai_extraction" ? "bg-warn" : listing.provenance[f] === "page" ? "bg-good" : "bg-muted")} />
               {fmt(f as ListingFieldKey, v)}
             </li>
           ))}
@@ -833,6 +857,7 @@ function RecognizedCard({ listing, aiAvailable, notes, beta }: { listing: Listin
       )}
       <p className="mt-3 text-[11px] text-muted">
         <span className="mr-2"><span className="mr-1 inline-block size-1.5 rounded-full bg-muted" />aus Link/Plattform</span>
+        {Object.values(listing.provenance).includes("page") && <span className="mr-2"><span className="mr-1 inline-block size-1.5 rounded-full bg-good" />von der Inseratsseite</span>}
         <span className="mr-2"><span className="mr-1 inline-block size-1.5 rounded-full bg-warn" />KI aus Screenshot</span>
         <span><span className="mr-1 inline-block size-1.5 rounded-full bg-accent" />von dir</span>
         {!aiAvailable && " · Ohne KI-Schlüssel werden Screenshots nicht ausgelesen."}

@@ -31,6 +31,7 @@ export const FieldSourceSchema = z.enum([
   "platform_api", // über offizielle Plattform-Schnittstelle importiert
   "ai_extraction", // von der KI aus Screenshots/Text gelesen
   "user", // vom Nutzer angegeben bzw. bestätigt
+  "page", // vom Nutzer per „→ DEAL-NIVO“-Button aus der geöffneten Inseratsseite übernommen
   "demo", // fiktive Demo-Daten
 ]);
 export type FieldSource = z.infer<typeof FieldSourceSchema>;

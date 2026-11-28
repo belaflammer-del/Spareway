@@ -26,6 +26,7 @@ export default async function CheckPage({ searchParams }: PageProps<"/check">) {
       initialUrl={url}
       initialMode={shared.length ? "screenshots" : mode}
       sharedUploadIds={user ? shared : []}
+      prefill={sp.prefill === "1"}
       loggedIn={!!user}
       balance={balance}
       aiAvailable={aiOn}

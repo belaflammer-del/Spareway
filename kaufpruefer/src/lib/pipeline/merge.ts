@@ -1,6 +1,6 @@
 import { LISTING_FIELDS, type FieldSource, type Listing } from "../domain/schemas";
 
-const PRIORITY: Record<FieldSource, number> = { user: 5, platform_api: 4, ai_extraction: 3, url: 2, demo: 1 };
+const PRIORITY: Record<FieldSource, number> = { user: 5, platform_api: 4, page: 4, ai_extraction: 3, url: 2, demo: 1 };
 
 /**
  * Führt Angaben aus mehreren Quellen zusammen. Höher priorisierte Quellen

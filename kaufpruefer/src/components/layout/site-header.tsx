@@ -8,6 +8,7 @@ import { MobileNav } from "./mobile-nav";
 const NAV = [
   { href: "/demo", label: "Beispielanalysen" },
   { href: "/check", label: "Angebot prüfen" },
+  { href: "/button", label: "→ DEAL-NIVO-Button" },
   { href: "/vergleich", label: "Vergleichen" },
   { href: "/preise", label: "Preise" },
 ];

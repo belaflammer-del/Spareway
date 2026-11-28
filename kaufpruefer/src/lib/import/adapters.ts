@@ -96,7 +96,7 @@ const kleinanzeigenAdapter: PlatformAdapter = {
   id: "kleinanzeigen",
   name: "Kleinanzeigen",
   hosts: /(^|\.)(kleinanzeigen\.de|ebay-kleinanzeigen\.de)$/i,
-  importInfo: "Keine öffentliche Schnittstelle – bitte Screenshots hochladen",
+  importInfo: "Keine öffentliche Schnittstelle – öffne das Inserat und tippe auf den „→ DEAL-NIVO“-Button (oder lade Screenshots hoch)",
   extractId(url) {
     return url.pathname.match(/\/s-anzeige\/[^/]+\/(\d+)/)?.[1] ?? url.pathname.match(/(\d{8,})/)?.[1];
   },
@@ -107,7 +107,7 @@ const mobileDeAdapter: PlatformAdapter = {
   id: "mobile_de",
   name: "mobile.de",
   hosts: /(^|\.)mobile\.de$/i,
-  importInfo: "Import nur über eine mobile.de-Partnerschnittstelle (Vertrag erforderlich) – bitte Screenshots hochladen",
+  importInfo: "Keine freigegebene Schnittstelle – öffne das Inserat und tippe auf den „→ DEAL-NIVO“-Button (oder lade Screenshots hoch)",
   defaultCategory: "vehicle",
   extractId(url) {
     return url.searchParams.get("id") ?? url.pathname.match(/(\d{7,})/)?.[1];
@@ -120,7 +120,7 @@ const autoscoutAdapter: PlatformAdapter = {
   id: "autoscout24",
   name: "AutoScout24",
   hosts: /(^|\.)autoscout24\.(de|at|ch|com|it|fr|nl|be|es)$/i,
-  importInfo: "Import nur über eine AutoScout24-Partnerschnittstelle (Vertrag erforderlich) – bitte Screenshots hochladen",
+  importInfo: "Keine freigegebene Schnittstelle – öffne das Inserat und tippe auf den „→ DEAL-NIVO“-Button (oder lade Screenshots hoch)",
   defaultCategory: "vehicle",
   extractId(url) {
     return url.pathname.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)?.[1];
@@ -132,7 +132,7 @@ const vintedAdapter: PlatformAdapter = {
   id: "vinted",
   name: "Vinted",
   hosts: /(^|\.)vinted\.(de|at|fr|com|it|es|nl|be|pl|cz|lt|co\.uk)$/i,
-  importInfo: "Keine öffentliche Schnittstelle – bitte Screenshots hochladen",
+  importInfo: "Keine öffentliche Schnittstelle – öffne das Inserat und tippe auf den „→ DEAL-NIVO“-Button (oder lade Screenshots hoch)",
   defaultCategory: "fashion",
   extractId(url) {
     return url.pathname.match(/\/items\/(\d+)/)?.[1];
@@ -163,7 +163,7 @@ export function detectPlatform(url: URL): PlatformAdapter | null {
 export function guessCategory(text: string, fallback: Category = "other"): Category {
   const t = text.toLowerCase();
   const rules: [Category, RegExp][] = [
-    ["vehicle", /\b(audi|bmw|mercedes|vw|volkswagen|opel|ford|skoda|seat|toyota|honda|hyundai|kia|renault|peugeot|fiat|porsche|tesla|volvo|mazda|nissan|motorrad|roller|kawasaki|yamaha|ducati|harley|auto|pkw|kombi|limousine|cabrio|\d{3}d\b|tdi|tsi|tfsi)\b/],
+    ["vehicle", /\b(audi|bmw|mercedes|vw|volkswagen|opel|ford|skoda|seat|toyota|honda|hyundai|kia|renault|peugeot|fiat|porsche|tesla|volvo|mazda|nissan|motorrad|motorroller|roller|scooter|mofa|moped|vespa|piaggio|gilera|aprilia|kawasaki|yamaha|ducati|harley|auto|pkw|kombi|limousine|cabrio|\d{3}d\b|tdi|tsi|tfsi)\b/],
     ["electronics", /\b(iphone|ipad|macbook|samsung\s+galaxy|galaxy\s+s\d+|pixel\s?\d|smartphone|handy|laptop|notebook|airpods|apple\s+watch|kamera|camera|drohne|tablet|fernseher|tv)\b/],
     ["watches_jewelry", /\b(rolex|omega|breitling|tag\s+heuer|cartier|patek|audemars|tudor|seiko|uhr|armbanduhr|submariner|datejust|speedmaster|ring|kette|armband|schmuck|gold)\b/],
     ["gaming_collectibles", /\b(playstation|ps[345]|xbox|nintendo|switch|gameboy|game\s?boy|n64|snes|sega|pokemon|pokémon|sammelkarte|funko|lego|videospiel|spiel\s+ovp|ovp|cib|sealed)\b/],
