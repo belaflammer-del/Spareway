@@ -11,20 +11,20 @@ type Device = "iphone" | "android" | "computer";
 const STEPS: Record<Device, { setup: string[]; use: string[] }> = {
   iphone: {
     setup: [
-      "Oben auf „Code kopieren“ tippen.",
-      "Diese Seite in Safari als Lesezeichen sichern: Teilen-Symbol □↑ → „Lesezeichen hinzufügen“ → Name: → DEAL-NIVO → Sichern.",
-      "Lesezeichen öffnen (Buch-Symbol) → „Bearbeiten“ → „→ DEAL-NIVO“ antippen.",
-      "Die Adresse darunter komplett löschen, den kopierten Code einfügen → Fertig.",
+      "Oben auf „Code kopieren“ tippen. Wichtig: Den Code NICHT in die Adressleiste einfügen – Safari führt ihn dort nicht aus.",
+      "Diese Seite als Lesezeichen sichern: Teilen-Symbol (□↑) → „Lesezeichen hinzufügen“ → Name: DEAL-NIVO → Ort: Favoriten → Sichern.",
+      "Buch-Symbol (Lesezeichen) → Reiter „Lesezeichen“ → „Favoriten“ → unten „Bearbeiten“ → auf „DEAL-NIVO“ tippen.",
+      "Im zweiten Feld (Adresse) alles löschen und den kopierten Code einfügen → „Fertig“.",
     ],
     use: [
-      "Inserat in Safari öffnen. Aus der Kleinanzeigen- oder eBay-App: Teilen → „In Safari öffnen“ bzw. Link kopieren und in Safari einfügen.",
-      "Oben in die Adressleiste tippen und „DEAL“ schreiben – das Lesezeichen „→ DEAL-NIVO“ erscheint. Antippen.",
-      "DEAL-NIVO öffnet sich mit Titel, Preis, Details und Bildern – ohne Screenshots.",
+      "Inserat in Safari öffnen. Aus der Kleinanzeigen- oder eBay-App: Teilen → „In Safari öffnen“ (oder „Link kopieren“ und in Safari einfügen).",
+      "Oben in die Adressleiste tippen – darunter erscheinen deine Favoriten. Auf „DEAL-NIVO“ tippen.",
+      "DEAL-NIVO öffnet sich in einem neuen Tab mit Titel, Preis, Details und Bildern.",
     ],
   },
   android: {
     setup: [
-      "Oben auf „Code kopieren“ tippen.",
+      "Oben auf „Code kopieren“ tippen (nicht in die Adressleiste einfügen).",
       "In Chrome: Menü ⋮ → Stern ☆ (Lesezeichen) → „Bearbeiten“.",
       "Name: → DEAL-NIVO. Bei „URL“ alles löschen und den kopierten Code einfügen. Zurück.",
     ],
