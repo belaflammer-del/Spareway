@@ -20,6 +20,11 @@ export class OpenAIProvider implements AIProvider {
         ? ({ type: "input_text", text: p.text } as const)
         : ({ type: "input_image", image_url: p.dataUrl, detail: "auto" } as const),
     );
+    // Reasoning-Modelle (gpt-5, o-Serie): geringer Denkaufwand reicht für Extraktion/Prüfung,
+    // spart Zeit und Kosten und verhindert, dass das Denken das Ausgabelimit aufbraucht.
+    const reasoningModel = /^(gpt-5|o\d)/i.test(this.model);
+    const effort = (process.env.OPENAI_REASONING_EFFORT?.trim() || "low") as "minimal" | "low" | "medium" | "high";
+    const base = req.maxOutputTokens ?? 6000;
     const response = await this.client.responses.parse({
       model: this.model,
       input: [
@@ -27,9 +32,11 @@ export class OpenAIProvider implements AIProvider {
         { role: "user", content },
       ],
       text: { format: zodTextFormat(req.schema as never, req.schemaName) },
-      max_output_tokens: req.maxOutputTokens ?? 6000,
+      max_output_tokens: reasoningModel ? base + 12000 : base,
+      ...(reasoningModel ? { reasoning: { effort } } : {}),
       store: false,
     });
+    if (response.status === "incomplete") throw new Error(`KI-Antwort unvollständig (incomplete: ${response.incomplete_details?.reason ?? "unbekannt"})`);
     const parsed = response.output_parsed;
     console.info(`[ai] ${req.task} model=${this.model} in=${response.usage?.input_tokens ?? 0} out=${response.usage?.output_tokens ?? 0}`);
     if (parsed == null) throw new Error("KI lieferte keine verwertbare strukturierte Antwort");

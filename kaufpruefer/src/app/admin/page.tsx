@@ -153,7 +153,10 @@ export default async function AdminPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-5">
-          <h2 className="font-semibold">KI-Modelle & Limits</h2>
+          <h2 className="flex items-center justify-between gap-2 font-semibold">
+            KI-Modelle & Limits
+            <a href="/api/admin/ai-test" target="_blank" rel="noopener" className="text-sm font-normal text-accent underline">Verbindung testen</a>
+          </h2>
           <p className="mt-1 text-sm text-muted">Bei erreichtem Tagesbudget werden keine KI-Aufrufe mehr gestartet.</p>
           <div className="mt-4">
             <AiConfigForm
