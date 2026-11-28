@@ -51,7 +51,7 @@ export async function aiExtractListing(
   ai: AIProvider,
   meter: UsageMeter,
   input: { images: AIImage[]; pastedText?: string; hint?: Partial<Listing> },
-): Promise<{ patch: Partial<Listing>; imageKinds: Record<string, ListingImage["kind"]>; lowConfidence: string[]; issues: string[]; conflicts: DraftConflict[]; observations: Observation[] }> {
+): Promise<{ platform?: Listing["platform"]; patch: Partial<Listing>; imageKinds: Record<string, ListingImage["kind"]>; lowConfidence: string[]; issues: string[]; conflicts: DraftConflict[]; observations: Observation[] }> {
   const parts: AIPart[] = [];
   if (input.hint) parts.push({ type: "text", text: `Bereits bekannt (aus Link): ${JSON.stringify({ platform: input.hint.platform, title: input.hint.title })}` });
   if (input.pastedText) parts.push({ type: "text", text: wrapUntrusted("inseratstext", input.pastedText) });
@@ -101,7 +101,7 @@ export async function aiExtractListing(
   for (const c of aiConflicts) if (!conflicts.some((x) => x.field === c.field)) conflicts.push(c);
   for (const c of conflicts) delete (patch as Record<string, unknown>)[c.field];
   const lowConfidence = [...new Set([...data.lowConfidenceFields, ...observations.filter((o) => o.confidence === "low").map((o) => o.field)])];
-  return { patch, imageKinds, lowConfidence, issues: data.readabilityIssues, conflicts, observations };
+  return { platform: data.platform !== "unknown" ? data.platform : undefined, patch, imageKinds, lowConfidence, issues: data.readabilityIssues, conflicts, observations };
 }
 
 /* ── 2) Produkt- und Bildanalyse ────────────────────────────── */

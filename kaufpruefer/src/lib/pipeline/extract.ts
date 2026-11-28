@@ -69,6 +69,11 @@ export async function buildDraft(
       const keepCategory = listing.provenance.category === "platform_api";
       listing = mergeListing(listing, keepCategory ? { ...r.patch, category: undefined } : r.patch, "ai_extraction");
       listing.images = listing.images.map((im) => ({ ...im, kind: r.imageKinds[im.ref] ?? im.kind }));
+      // Plattform aus dem Screenshot nur übernehmen, wenn der Link sie nicht schon festlegt
+      if (r.platform && (listing.platform === "unknown" || listing.platform === "other")) {
+        listing.platform = r.platform;
+        listing.provenance = { ...listing.provenance, platform: "ai_extraction" };
+      }
       lowConfidence = r.lowConfidence;
       conflicts = r.conflicts;
       observations = r.observations;

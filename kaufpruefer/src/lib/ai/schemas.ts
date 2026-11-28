@@ -12,6 +12,8 @@ const n = () => z.number().nullable();
 
 export const ExtractionOutputSchema = z.object({
   category: CategorySchema,
+  /** Plattform anhand von Logo/Design/URL im Screenshot */
+  platform: z.enum(["kleinanzeigen", "ebay", "mobile_de", "autoscout24", "vinted", "unknown"]),
   fields: z.object({
     title: s(),
     brand: s(),

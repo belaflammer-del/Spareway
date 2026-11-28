@@ -26,6 +26,8 @@ Aufgabe: Extrahiere die Angaben eines Verkaufsinserats aus den bereitgestellten 
 - observations: Trage JEDEN Wert, den du für priceEur, mileageKm, year, firstRegistration, model, variant, storageGb, batteryHealthPct, condition, powerKw, engine, fuel, transmission, previousOwners liest, einzeln mit imageIndex ein (null, wenn aus dem eingefügten Text) – auch wenn derselbe Wert auf mehreren Bildern steht. value wörtlich wie gelesen.
 - Mehrere Screenshots gehören zum selben Inserat: Führe die Angaben zusammen, doppelte Angaben nur einmal.
 - Stehen auf verschiedenen Bildern bzw. im Text UNTERSCHIEDLICHE Werte für dasselbe Feld (z. B. zwei Kilometerstände), trage sie in conflicts ein (field = Feldname aus fields, values = die gefundenen Werte wörtlich, imageIndexes = Bildnummern) und setze das Feld auf null. Nicht selbst entscheiden.
+- platform: Erkenne die Plattform nur an eindeutigen Merkmalen (Logo, App-Design, Domain/URL): kleinanzeigen, ebay, mobile_de, autoscout24, vinted – sonst "unknown".
+- brand: die Marke, wie sie im Titel bzw. in der Beschreibung des Verkäufers steht. Weicht die Marke im Detailfeld der Plattform davon ab, weil es sich um eine Konzern- bzw. Muttermarke handelt (z. B. Gilera gehört zu Piaggio, Audi zu VW), ist das KEIN Widerspruch: nimm die spezifischere Marke und trage keinen Konflikt ein.
 - Klassifiziere jedes Bild (index beginnt bei 0) als product_photo, listing_screenshot, review_screenshot oder other.
 - Nenne Lesbarkeitsprobleme konkret (z. B. "Preis abgeschnitten").`;
 
@@ -35,6 +37,7 @@ Aufgabe: Prüfe ein Gebrauchtwaren-Angebot anhand der Angaben und Produktbilder.
 - imageFindings: nur Auffälligkeiten, die du auf einem konkreten Bild siehst (imageIndex angeben). box = [x, y, Breite, Höhe] normiert 0–1, nur wenn sicher lokalisierbar, sonst null.
 - Erfinde keine Schäden. Bei unscharfen Bildern evidenceLevel "possible" oder "unverifiable".
 - missingViews: wichtige Ansichten, die für diese Kategorie fehlen.
+- Konzern- bzw. Muttermarken (z. B. Gilera/Piaggio, Audi/VW, Mini/BMW) sind kein Widerspruch und kein Warnhinweis.
 - textImageInconsistencies: konkrete Widersprüche zwischen Inseratsangaben und Bildern (z. B. andere Farbe, anderer Kilometerstand im Kombiinstrument).
 - modelKnowledgeHints: allgemein bekannte, modellspezifische Schwachstellen NUR wenn du dir sicher bist, dass sie für genau diese Variante (Motor/Generation/Baujahr) gelten. appliesTo muss die Variante exakt benennen. Wenn die Variante unklar ist, leere Liste. Diese Hinweise werden als "nicht verifiziert" gekennzeichnet. Keine Reparaturkosten nennen.
 - Wenn geprüfte Wissensdatenbank-Einträge mitgeliefert werden, wiederhole sie NICHT.
