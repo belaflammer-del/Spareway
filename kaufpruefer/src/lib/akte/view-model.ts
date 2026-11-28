@@ -6,7 +6,7 @@ import { getStore } from "../store";
 import { akteLimits } from "./limits";
 import type { Akte } from "./service";
 import type { NextStep } from "./service";
-import type { ChatCheckData, CostAnalysisData, ImageMatchData, InspectionData, SnapshotData } from "./schemas";
+import type { ChatCheckData, CostAnalysisData, ImageMatchData, InspectionData, OutcomeData, SnapshotData } from "./schemas";
 import type { Category, Platform, Recommendation } from "../domain/schemas";
 import type { WatchRecord } from "../store/akte-types";
 
@@ -24,6 +24,8 @@ export interface AkteViewModel {
   costs: CostAnalysisData | null;
   imageMatch: ImageMatchData | null;
   snapshots: { version: number; data: SnapshotData }[];
+  outcome: OutcomeData | null;
+  askingEur: number | null;
   watch: Pick<WatchRecord, "mode" | "intervalHours" | "active" | "lastCheckedAt" | "nextCheckAt" | "lastError" | "notify" | "paidUntil" | "periodsPaid"> | null;
   watchPricing: { tokenCost: number; periodDays: number; balance: number };
   autoWatchPossible: boolean;
@@ -50,6 +52,8 @@ export async function toViewModel(akte: Akte): Promise<AkteViewModel> {
     costs: akte.costs?.data ?? null,
     imageMatch: akte.imageMatch?.data ?? null,
     snapshots: akte.snapshots.map((s) => ({ version: s.version, data: s.data })),
+    outcome: akte.outcome?.data ?? null,
+    askingEur: r.listing.priceEur || null,
     watch: akte.watch
       ? { mode: akte.watch.mode, intervalHours: akte.watch.intervalHours, active: akte.watch.active, lastCheckedAt: akte.watch.lastCheckedAt, nextCheckAt: akte.watch.nextCheckAt, lastError: akte.watch.lastError, notify: akte.watch.notify, paidUntil: akte.watch.paidUntil, periodsPaid: akte.watch.periodsPaid }
       : null,

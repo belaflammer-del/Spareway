@@ -515,6 +515,14 @@ export class LocalStore implements DataStore {
         .sort((a, b) => a.version - b.version),
     );
   }
+  listUserModules(userId: string, kind: ModuleKind, limit: number) {
+    return this.read((db) =>
+      db.modules
+        .filter((m) => m.userId === userId && m.kind === kind && (!m.expiresAt || m.expiresAt > nowIso()))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, limit),
+    );
+  }
   deleteModule(id: string, userId: string) {
     return this.tx((db) => {
       db.modules = db.modules.filter((m) => !(m.id === id && m.userId === userId));

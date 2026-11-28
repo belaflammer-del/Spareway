@@ -266,3 +266,24 @@ export const SnapshotDataSchema = z.object({
     .optional(),
 });
 export type SnapshotData = z.infer<typeof SnapshotDataSchema>;
+
+// ── Kaufausgang („Gespart“-Zähler) ─────────────────────────
+/** Angaben des Nutzers, wie es ausgegangen ist. Ersparnis = Angebotspreis − bezahlter Preis. */
+export const OutcomeInputSchema = z
+  .object({
+    status: z.enum(["bought", "not_bought"]),
+    paidEur: z.number().positive().max(10_000_000).optional(),
+  })
+  .refine((x) => x.status === "not_bought" || x.paidEur != null, { message: "Bitte gib den bezahlten Preis an." });
+export type OutcomeInput = z.infer<typeof OutcomeInputSchema>;
+
+export const OutcomeDataSchema = z.object({
+  status: z.enum(["bought", "not_bought"]),
+  paidEur: z.number().positive().optional(),
+  /** Angebotspreis laut Anzeige zum Zeitpunkt der Prüfung */
+  askingEur: z.number().positive().optional(),
+  /** Gesamtempfehlung zum Entscheidungszeitpunkt */
+  recommendation: RecommendationSchema,
+  decidedAt: z.string(),
+});
+export type OutcomeData = z.infer<typeof OutcomeDataSchema>;

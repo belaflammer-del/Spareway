@@ -9,7 +9,7 @@
  */
 import type { Platform } from "../domain/schemas";
 
-export type ModuleKind = "chat_check" | "inspection" | "costs" | "image_match" | "snapshot";
+export type ModuleKind = "chat_check" | "inspection" | "costs" | "image_match" | "snapshot" | "outcome";
 
 export interface ModuleRecord<T = unknown> {
   id: string;
@@ -142,6 +142,8 @@ export interface AkteStore {
   addModule<T>(m: Omit<ModuleRecord<T>, "version">): Promise<ModuleRecord<T>>;
   updateModule<T>(id: string, userId: string, patch: { data: T; updatedAt: string }): Promise<void>;
   listModules(analysisId: string, userId: string, kind?: ModuleKind): Promise<ModuleRecord[]>;
+  /** Alle Module einer Art über alle Analysen eines Nutzers (neueste zuerst) */
+  listUserModules(userId: string, kind: ModuleKind, limit: number): Promise<ModuleRecord[]>;
   deleteModule(id: string, userId: string): Promise<void>;
   deleteExpiredModules(now: string): Promise<number>;
 

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AnalysisList } from "@/components/dashboard/analysis-list";
 import { NotificationsPanel } from "@/components/dashboard/notifications";
+import { SavingsCard } from "@/components/dashboard/savings-card";
+import { savingsSummary } from "@/lib/akte/outcome";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert } from "@/components/ui/misc";
@@ -14,7 +16,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const user = await requireUser();
   const sp = await searchParams;
   const store = getStore();
-  const [balance, analyses, notifications, watches] = await Promise.all([store.getBalance(user.id), store.listAnalyses(user.id, 5), store.listNotifications(user.id, 20), store.listWatches(user.id)]);
+  const [balance, analyses, notifications, watches, savings] = await Promise.all([store.getBalance(user.id), store.listAnalyses(user.id, 5), store.listNotifications(user.id, 20), store.listWatches(user.id), savingsSummary(user.id)]);
   const watched = (await Promise.all(watches.map(async (w) => ({ w, a: await store.getAnalysis(w.analysisId, user.id) })))).filter((x) => x.a);
   return (
     <div className="space-y-6">
@@ -25,6 +27,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       {sp.verified && <Alert tone="good">Deine E-Mail-Adresse wurde bestätigt.</Alert>}
       {sp.pw === "updated" && <Alert tone="good">Dein Passwort wurde geändert.</Alert>}
       {!user.emailVerified && <Alert tone="warn">Bitte bestätige deine E-Mail-Adresse über den Link in der Bestätigungs-E-Mail.</Alert>}
+      <SavingsCard s={savings} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="p-5">
           <p className="text-sm text-muted">Token-Guthaben</p>

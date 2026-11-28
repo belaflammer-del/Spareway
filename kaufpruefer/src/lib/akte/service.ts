@@ -3,7 +3,7 @@ import type { Recommendation } from "../domain/schemas";
 import { getStore } from "../store";
 import type { JobRecord, ModuleRecord, WatchRecord } from "../store/akte-types";
 import type { AnalysisRecord } from "../store/types";
-import type { ChatCheckData, CostAnalysisData, ImageMatchData, InspectionData, SnapshotData } from "./schemas";
+import type { ChatCheckData, CostAnalysisData, ImageMatchData, InspectionData, OutcomeData, SnapshotData } from "./schemas";
 
 export interface Akte {
   analysis: AnalysisRecord;
@@ -13,6 +13,7 @@ export interface Akte {
   costs: ModuleRecord<CostAnalysisData> | null;
   imageMatch: ModuleRecord<ImageMatchData> | null;
   snapshots: ModuleRecord<SnapshotData>[];
+  outcome: ModuleRecord<OutcomeData> | null;
   watch: WatchRecord | null;
   activeJobs: JobRecord[];
   recommendation: { current: Recommendation; source: string; history: { at: string; value: Recommendation; source: string }[] };
@@ -68,6 +69,7 @@ export async function getAkte(userId: string, analysisId: string): Promise<Akte 
   const costs = of<CostAnalysisData>("costs").at(-1) ?? null;
   const imageMatch = of<ImageMatchData>("image_match").at(-1) ?? null;
   const snapshots = of<SnapshotData>("snapshot");
+  const outcome = of<OutcomeData>("outcome").at(-1) ?? null;
   const r = analysis.report;
   const recommendation = aggregateRecommendation(
     { value: r.score.recommendation, at: analysis.completedAt ?? analysis.createdAt },
@@ -82,6 +84,7 @@ export async function getAkte(userId: string, analysisId: string): Promise<Akte 
     costs,
     imageMatch,
     snapshots,
+    outcome,
     watch,
     activeJobs: jobs.filter((j) => j.status === "queued" || j.status === "running"),
     recommendation,
@@ -111,6 +114,7 @@ export function exportAkte(a: Akte) {
     gesamtkosten: a.costs?.data ?? null,
     bildabgleich: a.imageMatch?.data ?? null,
     preisverlauf: a.snapshots.map((s) => ({ version: s.version, ...s.data })),
+    kaufausgang: a.outcome?.data ?? null,
     beobachtung: a.watch ? { modus: a.watch.mode, intervallStunden: a.watch.intervalHours, aktiv: a.watch.active, zuletztGeprueft: a.watch.lastCheckedAt } : null,
   };
 }

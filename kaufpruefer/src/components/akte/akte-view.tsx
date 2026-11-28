@@ -26,6 +26,7 @@ import { postJson } from "@/lib/client/jobs";
 import { RECOMMENDATION_LABELS } from "@/lib/domain/labels";
 import { cn } from "@/lib/utils";
 import { CostsCard } from "./costs-card";
+import { OutcomeCard } from "./outcome-card";
 import { WatchCard } from "./watch-card";
 
 function Card({ id, icon: Icon, title, badge, children }: { id: string; icon: typeof Eye; title: string; badge?: React.ReactNode; children: React.ReactNode }) {
@@ -225,6 +226,8 @@ export function AkteView({ vm }: { vm: AkteViewModel }) {
       <CostsCard analysisId={vm.analysisId} costs={vm.costs} onCompute={computeCosts} busy={busy === "costs"} />
 
       <WatchCard vm={vm} />
+
+      <OutcomeCard vm={vm} />
 
       {/* Bildabgleich */}
       <Card id="s-images" icon={ScanSearch} title="Bildabgleich" badge={vm.imageMatch ? <Badge tone={vm.imageMatch.summary === "none" ? "good" : vm.imageMatch.summary === "possible" ? "info" : "warn"}>{MATCH_LABELS[vm.imageMatch.summary].split(" ")[0]}</Badge> : undefined}>

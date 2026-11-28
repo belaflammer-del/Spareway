@@ -17,6 +17,7 @@ import type { Category, FieldSource, Listing, ListingFieldKey, MissingInfo } fro
 import type { QuickCheckResult } from "@/lib/pipeline/quick";
 import { cn } from "@/lib/utils";
 import { uploadVideoWithProgress } from "@/lib/client/video";
+import { haptic } from "@/lib/client/haptics";
 import { AnalysisProgress } from "./analysis-progress";
 
 type Mode = "link" | "screenshots" | "text";
@@ -276,6 +277,7 @@ export function CheckFlow(props: CheckFlowProps) {
         }
         throw new Error(data.error?.message ?? "Analyse fehlgeschlagen");
       }
+      haptic(data.report?.score?.recommendation === "elevated_risk" ? "warning" : "success");
       if (data.reused) toast.success("Dieses Angebot hast du bereits geprüft – kein weiterer Token verbraucht.");
       if (props.compareNext) router.push(`/check?url=${encodeURIComponent(props.compareNext)}&compareWith=${encodeURIComponent(data.id)}`);
       else if (props.compareWith) router.push(`/vergleich?a=${encodeURIComponent(props.compareWith)}&b=${encodeURIComponent(data.id)}`);

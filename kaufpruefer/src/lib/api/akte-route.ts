@@ -17,7 +17,7 @@ export async function akteRoute(
     return await fn(user);
   } catch (e) {
     const code = (e as { code?: string }).code ?? "failed";
-    const status = code === "invalid_upload" ? 400 : code === "ai_budget" ? 503 : code === "insufficient_balance" ? 402 : 422;
+    const status = code === "not_found" ? 404 : code === "invalid_upload" ? 400 : code === "ai_budget" ? 503 : code === "insufficient_balance" ? 402 : 422;
     if (!(e as { code?: string }).code) console.error(`[${key}]`, safeErr(e));
     return errorJson(status, code, (e as { code?: string }).code ? safeErr(e) : "Die Aktion ist fehlgeschlagen. Bitte versuche es erneut.");
   }

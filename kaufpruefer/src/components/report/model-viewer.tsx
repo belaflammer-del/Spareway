@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  * Drehbares 3D-Modell (z. B. passende Karosserieform), wenn ein Inserat kein
  * Produktfoto hat. Rein dekorativ – kennzeichnet sich als Symbolbild.
  */
-export function ModelViewer({ model, className }: { model: import("@/components/home/three-models").ModelName; className?: string }) {
+export function ModelViewer({ model, className, label = true }: { model: import("@/components/home/three-models").ModelName; className?: string; label?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -105,7 +105,7 @@ export function ModelViewer({ model, className }: { model: import("@/components/
   return (
     <div ref={ref} className={cn("relative touch-pan-y", className)} aria-label="3D-Symbolbild">
       {!ready && <div className="absolute inset-0 animate-pulse rounded-2xl bg-surface-2/60" />}
-      {ready && <span className="pointer-events-none absolute bottom-2 right-3 text-[10px] uppercase tracking-wider text-muted">Symbolbild · ziehen zum Drehen</span>}
+      {ready && label && <span className="pointer-events-none absolute bottom-2 right-3 text-[10px] uppercase tracking-wider text-muted">Symbolbild · ziehen zum Drehen</span>}
     </div>
   );
 }

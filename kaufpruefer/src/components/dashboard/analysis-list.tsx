@@ -2,17 +2,16 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { ScoreBox } from "@/components/report/score-ring";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CATEGORY_LABELS, PLATFORM_LABELS, RECOMMENDATION_LABELS } from "@/lib/domain/labels";
 import type { AnalysisRecord } from "@/lib/store/types";
 
 export function AnalysisList({ items }: { items: AnalysisRecord[] }) {
   if (items.length === 0)
     return (
-      <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-        <p className="font-medium">Noch keine Analysen</p>
-        <p className="mt-1 text-sm text-muted">Starte deine erste Prüfung – der Schnellcheck ist kostenlos.</p>
+      <EmptyState model="sneaker" title="Noch keine Analysen" text="Starte deine erste Prüfung – der Schnellcheck ist kostenlos.">
         <Link href="/check" className="mt-4 inline-block text-sm font-medium text-accent underline-offset-4 hover:underline">Angebot prüfen</Link>
-      </div>
+      </EmptyState>
     );
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">

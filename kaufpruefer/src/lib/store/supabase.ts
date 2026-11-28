@@ -427,6 +427,19 @@ export class SupabaseStore implements DataStore {
     const rows = check(await q.or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`).order("version", { ascending: true })) as Row[];
     return rows.map(toModule);
   }
+  async listUserModules(userId: string, kind: ModuleKind, limit: number) {
+    const rows = check(
+      await this.db
+        .from("kaufakte_modules")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("kind", kind)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .order("created_at", { ascending: false })
+        .limit(limit),
+    ) as Row[];
+    return rows.map(toModule);
+  }
   async deleteModule(id: string, userId: string) {
     check(await this.db.from("kaufakte_modules").delete().eq("id", id).eq("user_id", userId));
   }

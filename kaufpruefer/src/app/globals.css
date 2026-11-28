@@ -172,3 +172,23 @@
 @media (prefers-reduced-motion: reduce) {
   [class*="animation:shimmer"] { animation: none !important; }
 }
+
+/* Seitenwechsel: kurzes Einblenden mit leichtem Anheben */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page-enter {
+  animation: pageEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+}
