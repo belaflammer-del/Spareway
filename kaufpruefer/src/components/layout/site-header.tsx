@@ -41,7 +41,7 @@ export async function SiteHeader() {
               </Button>
             </>
           )}
-          <MobileNav items={NAV} loggedIn={!!user} isAdmin={!!user?.isAdmin} />
+          <MobileNav items={NAV} loggedIn={!!user} isAdmin={!!user?.isAdmin} email={user?.email} />
         </div>
       </div>
     </header>

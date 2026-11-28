@@ -1,12 +1,13 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { signOutAction } from "@/lib/auth/actions";
 
-export function MobileNav({ items, loggedIn, isAdmin }: { items: { href: string; label: string }[]; loggedIn: boolean; isAdmin: boolean }) {
+export function MobileNav({ items, loggedIn, isAdmin, email }: { items: { href: string; label: string }[]; loggedIn: boolean; isAdmin: boolean; email?: string }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   useEffect(() => setOpen(false), [pathname]);
@@ -35,6 +36,16 @@ export function MobileNav({ items, loggedIn, isAdmin }: { items: { href: string;
                 {n.label}
               </Link>
             ))}
+            {loggedIn && (
+              <div className="mt-2 border-t border-border pt-3">
+                {email && <p className="truncate px-3 pb-2 text-xs text-muted">Angemeldet als {email}{isAdmin ? " · Admin" : ""}</p>}
+                <form action={signOutAction}>
+                  <button className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-left text-[15px] text-bad hover:bg-surface-2">
+                    <LogOut className="size-4" /> Abmelden
+                  </button>
+                </form>
+              </div>
+            )}
           </motion.nav>
         )}
       </AnimatePresence>
