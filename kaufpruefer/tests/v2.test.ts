@@ -113,6 +113,7 @@ describe("AI pipeline with a simulated provider", () => {
     const ai = fakeAI({
       listing_extraction: {
         category: "vehicle",
+        platform: "unknown",
         fields: { ...emptyFields, brand: "BMW", model: "320d", priceEur: 18900, mileageKm: 120000 },
         lowConfidenceFields: [],
         conflicts: [{ field: "mileageKm", values: ["120.000 km", "128.000 km"], imageIndexes: [0, 1] }],
@@ -131,6 +132,7 @@ describe("AI pipeline with a simulated provider", () => {
     const ai = fakeAI({
       listing_extraction: {
         category: "vehicle",
+        platform: "unknown",
         fields: { ...emptyFields, brand: "BMW", model: "320d", mileageKm: 125000, priceEur: 19900 },
         lowConfidenceFields: [],
         conflicts: [], // KI hat den Widerspruch nicht gemeldet
