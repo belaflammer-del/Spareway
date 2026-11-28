@@ -15,6 +15,9 @@ export const SHORTENER_HOSTS = /^(ebay\.us|ebay\.to|www\.ebay\.us|r\.kleinanzeig
 const TRACKING_PARAMS = /^(utm_\w+|fbclid|gclid|mc_\w+|ref|referrer|campaign|source|share_\w*|_trksid|_trkparms|mkevt|mkcid|mkrid|campid|toolid|customid|siteid|ul_noapp|amdata|sharesheet)$/i;
 
 const BOILERPLATE = [
+  /\bgerade\s+(bei|auf)\s+#?[\w.-]+(\s+(gefunden|entdeckt|gesehen))?\b[:!]?/gi,
+  /#(kleinanzeigen|ebay|vinted|mobilede|autoscout24)\b/gi,
+  /\b(entdeckt|gefunden)\s+(bei|auf)\s+#?[\w.-]+\b/gi,
   /\b(hey|hi|hallo|moin)\b[,!]?/gi,
   /\b(schau|guck|sieh)\s*(dir)?\s*(mal|doch mal)?\b/gi,
   /\b(was|das)\s+ich\s+(gerade\s+)?(auf|bei)\s+[\w.-]+\s+gefunden\s+habe\b/gi,
