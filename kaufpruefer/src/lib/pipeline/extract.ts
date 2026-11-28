@@ -3,7 +3,7 @@
  * Ergebnis ist ein Inseratsentwurf mit Herkunftsangaben je Feld, den der
  * Nutzer prüft und ergänzt, bevor die eigentliche Analyse startet.
  */
-import { describeAiError } from "../ai/errors";
+import { describeAiError, safeErr } from "../ai/errors";
 import type { AIProvider } from "../ai/provider";
 import { UsageMeter } from "../ai/provider";
 import type { Listing, MissingInfo, StepLog } from "../domain/schemas";
@@ -75,8 +75,8 @@ export async function buildDraft(
       if (r.issues.length) notes.push(...r.issues.map((i) => `Lesbarkeit: ${i}`));
       log.push({ step: "extract", label: "Daten extrahieren (KI)", status: "ok", durationMs: Date.now() - t0 });
     } catch (e) {
-      const why = (e as { code?: string }).code === "ai_budget" ? { code: "ai_budget", reason: (e as Error).message } : describeAiError(e, deps.ai.model);
-      console.error(`[extract] KI-Fehler (${why.code}):`, (e as Error).message?.slice(0, 300));
+      const why = (e as { code?: string }).code === "ai_budget" ? { code: "ai_budget", reason: safeErr(e) } : describeAiError(e, deps.ai.model);
+      console.error(`[extract] KI-Fehler (${why.code}):`, safeErr(e));
       notes.push(`Die automatische Texterkennung ist fehlgeschlagen (Grund: ${why.reason}). Bitte ergänze die Angaben manuell.`);
       log.push({ step: "extract", label: "Daten extrahieren (KI)", status: "failed", durationMs: Date.now() - t0, note: why.reason });
     }

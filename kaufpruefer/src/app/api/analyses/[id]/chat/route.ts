@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeErr } from "@/lib/ai/errors";
 import { UsageMeter } from "@/lib/ai/provider";
 import { assertAiBudget } from "@/lib/ai/budget";
 import { guard } from "@/lib/ai/guard";
@@ -49,8 +50,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/analyses/[id]/c
     return Response.json({ entry, remaining: limit - history.length - 1, basedOn: res.basedOn });
   } catch (e) {
     const code = (e as { code?: string }).code;
-    if (code === "ai_budget") return errorJson(503, code, (e as Error).message);
-    console.error("[chat] failed", (e as Error).message);
+    if (code === "ai_budget") return errorJson(503, code, safeErr(e));
+    console.error("[chat] failed", safeErr(e));
     return errorJson(502, "ai_failed", "Die Antwort konnte nicht erstellt werden. Bitte versuche es erneut – die Frage wurde nicht angerechnet.");
   }
 }

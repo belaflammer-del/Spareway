@@ -1,4 +1,5 @@
 import "server-only";
+import { safeErr } from "../ai/errors";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
 import { parseListingUrl } from "../import/adapters";
@@ -182,7 +183,7 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
         const { runImageMatch } = await import("../images/match");
         await runImageMatch(userId, id);
       } catch (e) {
-        console.warn("[analysis] Bildabgleich übersprungen:", (e as Error).message);
+        console.warn("[analysis] Bildabgleich übersprungen:", safeErr(e));
       }
     }
     // Datenschutz: Bewertungs-Screenshots/Frames nach der Analyse sofort löschen
@@ -197,8 +198,8 @@ export async function startFullAnalysis(userId: string, req: z.infer<typeof Anal
     if (code === "ai_budget") await store.countEvent("ai_limit_hit").catch(() => undefined);
     await store.updateAnalysis(id, { status: "failed", errorCode: code, completedAt: nowIso() });
     if (code === "insufficient_balance") throw new AnalysisError("insufficient_balance", "Nicht genügend Tokens.");
-    if (code === "ai_budget") throw Object.assign(new Error((e as Error).message), { code });
-    console.error("[analysis] failed", id, (e as Error).message);
+    if (code === "ai_budget") throw Object.assign(new Error(safeErr(e)), { code });
+    console.error("[analysis] failed", id, safeErr(e));
     throw new AnalysisError("pipeline_failed", "Die Analyse ist fehlgeschlagen. Dein Token wurde nicht verbraucht.");
   }
 }

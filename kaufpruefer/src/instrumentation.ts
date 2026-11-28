@@ -16,7 +16,7 @@ export async function register() {
       await getStore().deleteExpiredModules(now);
       await getStore().deleteExpiredImageHashes(now);
     } catch (e) {
-      console.warn("[housekeeping]", (e as Error).message);
+      console.warn("[housekeeping]", String((e as Error).message).slice(0, 200));
     }
   };
   setTimeout(housekeeping, 30_000).unref?.();

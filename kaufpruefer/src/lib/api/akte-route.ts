@@ -1,4 +1,5 @@
 import "server-only";
+import { safeErr } from "@/lib/ai/errors";
 import { getCurrentUser, type SessionUser } from "../auth/session";
 import { errorJson, rateLimit } from "../http";
 
@@ -17,8 +18,8 @@ export async function akteRoute(
   } catch (e) {
     const code = (e as { code?: string }).code ?? "failed";
     const status = code === "invalid_upload" ? 400 : code === "ai_budget" ? 503 : code === "insufficient_balance" ? 402 : 422;
-    if (!(e as { code?: string }).code) console.error(`[${key}]`, (e as Error).message);
-    return errorJson(status, code, (e as { code?: string }).code ? (e as Error).message : "Die Aktion ist fehlgeschlagen. Bitte versuche es erneut.");
+    if (!(e as { code?: string }).code) console.error(`[${key}]`, safeErr(e));
+    return errorJson(status, code, (e as { code?: string }).code ? safeErr(e) : "Die Aktion ist fehlgeschlagen. Bitte versuche es erneut.");
   }
 }
 

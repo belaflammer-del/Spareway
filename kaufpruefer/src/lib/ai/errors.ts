@@ -7,7 +7,11 @@ export function describeAiError(e: unknown, model?: string): { code: string; rea
   const err = e as { status?: number; code?: string; error?: { code?: string; type?: string }; message?: string; name?: string };
   const status = err.status;
   const code = err.code ?? err.error?.code ?? err.error?.type ?? "";
-  const msg = String(err.message ?? "").replace(/sk-[A-Za-z0-9_*-]{4,}/g, "sk-…");
+  const raw = String(err.message ?? "");
+  // Niemals Schlüssel oder Header-Werte ausgeben
+  if (/bearer|authorization|header|sk-|api[-_ ]?key/i.test(raw))
+    return { code: "auth_format", reason: "Der OpenAI-Schlüssel ist ungültig formatiert oder falsch (z. B. Leerzeichen/Zeilenumbruch beim Kopieren). Bitte neuen Schlüssel erstellen und ohne Leerzeichen bei Render eintragen." };
+  const msg = raw.replace(/sk-[^\s"']*/g, "sk-…").replace(/[A-Za-z0-9_-]{32,}/g, "…");
   const m = model ? `„${model}“` : "das Modell";
   if (status === 401) return { code: "auth", reason: "OpenAI-Schlüssel ungültig oder abgelaufen – bitte neuen Schlüssel bei Render eintragen." };
   if (status === 404 || code === "model_not_found") return { code: "model", reason: `Modell ${m} ist für dieses OpenAI-Konto nicht verfügbar – OPENAI_MODEL anpassen.` };
@@ -18,4 +22,11 @@ export function describeAiError(e: unknown, model?: string): { code: string; rea
   if (err.name === "APIConnectionTimeoutError" || /timed? ?out|timeout/i.test(msg)) return { code: "timeout", reason: "Zeitüberschreitung bei der KI – bitte erneut versuchen." };
   if (/incomplete|max_output_tokens/i.test(msg)) return { code: "incomplete", reason: "Die KI-Antwort wurde abgeschnitten (Ausgabelimit)." };
   return { code: code || "unknown", reason: msg.slice(0, 200) || "Unbekannter Fehler" };
+}
+
+/** Fehlertext ohne Schlüssel, Header-Werte oder lange Tokens – für Logs, Jobs und Anzeigen. */
+export function safeErr(e: unknown): string {
+  const raw = String((e as { message?: string })?.message ?? e ?? "");
+  if (/bearer|authorization|sk-|api[-_ ]?key/i.test(raw)) return describeAiError(e).reason;
+  return raw.replace(/[A-Za-z0-9_-]{32,}/g, "…").slice(0, 300);
 }

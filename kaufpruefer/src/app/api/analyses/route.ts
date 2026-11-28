@@ -1,4 +1,5 @@
 import { AnalysisRequestSchema } from "@/lib/api/schemas";
+import { safeErr } from "@/lib/ai/errors";
 import { getCurrentUser } from "@/lib/auth/session";
 import { errorJson, rateLimit } from "@/lib/http";
 import { startFullAnalysis } from "@/lib/pipeline/service";
@@ -20,9 +21,9 @@ export async function POST(req: Request) {
     const code = (e as { code?: string }).code;
     if (code === "insufficient_balance" || code === "invalid_upload" || code === "pipeline_failed" || code === "ai_budget") {
       const status = code === "insufficient_balance" ? 402 : code === "invalid_upload" ? 400 : code === "ai_budget" ? 503 : 500;
-      return errorJson(status, code, (e as Error).message);
+      return errorJson(status, code, safeErr(e));
     }
-    console.error("[analyses] unexpected", (e as Error).message);
+    console.error("[analyses] unexpected", safeErr(e));
     return errorJson(500, "internal", "Unerwarteter Fehler. Dein Token wurde nicht verbraucht.");
   }
 }

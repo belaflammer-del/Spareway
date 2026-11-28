@@ -1,4 +1,5 @@
 import "server-only";
+import { safeErr } from "../ai/errors";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { guard } from "../ai/guard";
@@ -227,7 +228,7 @@ export async function analyzeChat(
       aiUsed = true;
     } catch (e) {
       if ((e as { code?: string }).code === "ai_budget") throw e;
-      console.warn("[chat] KI-Abgleich übersprungen:", (e as Error).message);
+      console.warn("[chat] KI-Abgleich übersprungen:", safeErr(e));
     }
   }
 

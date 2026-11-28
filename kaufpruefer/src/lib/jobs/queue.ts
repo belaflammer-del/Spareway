@@ -1,4 +1,5 @@
 import "server-only";
+import { safeErr } from "../ai/errors";
 import { getStore } from "../store";
 import type { JobRecord, JobType } from "../store/akte-types";
 import { newId, nowIso } from "../utils";
@@ -129,14 +130,14 @@ export async function executeJob(job: JobRecord): Promise<JobRecord["status"]> {
       return "cancelled";
     }
     const permanent = err.nonRetryable || err.code === "ai_budget" || job.attempts >= job.maxAttempts;
-    console.warn(`[jobs] ${job.type} ${job.id} Versuch ${job.attempts} fehlgeschlagen: ${err.message}`);
+    console.warn(`[jobs] ${job.type} ${job.id} Versuch ${job.attempts} fehlgeschlagen: ${safeErr(err)}`);
     if (permanent) {
-      await store.updateJob(job.id, { status: "failed", error: err.message.slice(0, 500), message: "Fehlgeschlagen", leaseUntil: undefined });
+      await store.updateJob(job.id, { status: "failed", error: safeErr(err), message: "Fehlgeschlagen", leaseUntil: undefined });
       return "failed";
     }
     await store.updateJob(job.id, {
       status: "queued",
-      error: err.message.slice(0, 500),
+      error: safeErr(err),
       message: `Neuer Versuch in Kürze (${job.attempts}/${job.maxAttempts})`,
       runAfter: new Date(Date.now() + backoffSeconds(job.attempts) * 1000).toISOString(),
       leaseUntil: undefined,
@@ -176,7 +177,7 @@ export function kickWorker() {
         await runJobsOnce({ maxJobs: 10 });
       } while (state.again);
     } catch (e) {
-      console.error("[jobs] Worker-Fehler", (e as Error).message);
+      console.error("[jobs] Worker-Fehler", safeErr(e));
     } finally {
       state.running = false;
     }

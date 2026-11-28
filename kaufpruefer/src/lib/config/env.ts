@@ -30,7 +30,8 @@ export const env = {
 
   ai: {
     provider: str("AI_PROVIDER") ?? "openai",
-    openaiKey: str("OPENAI_API_KEY"),
+    // Schlüssel enthalten nie Leerzeichen – beim Kopieren entstandene Umbrüche/Leerzeichen entfernen
+    openaiKey: str("OPENAI_API_KEY")?.replace(/\s+/g, "").replace(/^["']|["']$/g, ""),
     openaiModel: str("OPENAI_MODEL") ?? "gpt-5",
     /** Günstigeres Modell für einfache Aufgaben (Extraktion, OCR, Texte). Leer = Hauptmodell */
     openaiFastModel: str("OPENAI_FAST_MODEL"),
