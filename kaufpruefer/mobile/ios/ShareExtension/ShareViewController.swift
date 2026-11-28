@@ -66,14 +66,33 @@ final class ShareViewController: UIViewController {
             let defaults = UserDefaults(suiteName: Self.appGroup)
             defaults?.set(inbox, forKey: "pendingShareInbox")
             defaults?.set(Date().timeIntervalSince1970, forKey: "pendingShareAt")
-            await MainActor.run { statusLabel.text = "Fertig! Öffne DEAL-NIVO, um die Prüfung zu starten." }
-            try? await Task.sleep(nanoseconds: 900_000_000)
+            let opened = await MainActor.run { openMainApp(inbox: inbox) }
+            await MainActor.run {
+                statusLabel.text = opened ? "Öffne DEAL-NIVO …" : "Fertig! Öffne DEAL-NIVO, um die Prüfung zu starten."
+            }
+            try? await Task.sleep(nanoseconds: opened ? 400_000_000 : 1_200_000_000)
             extensionContext?.completeRequest(returningItems: nil)
         } catch {
             await MainActor.run { statusLabel.text = "Übergabe fehlgeschlagen. Bitte kopiere den Link und füge ihn in DEAL-NIVO ein." }
             try? await Task.sleep(nanoseconds: 1_800_000_000)
             extensionContext?.cancelRequest(withError: error)
         }
+    }
+
+    /// Öffnet die Haupt-App direkt (dealnivo://teilen?inbox=…). Klappt das nicht,
+    /// übernimmt die App den Eingang beim nächsten Öffnen aus der App Group.
+    @MainActor
+    private func openMainApp(inbox: String) -> Bool {
+        guard let url = URL(string: "dealnivo://teilen?inbox=\(inbox)") else { return false }
+        var responder: UIResponder? = self
+        while let r = responder {
+            if let app = r as? UIApplication {
+                app.open(url, options: [:], completionHandler: nil)
+                return true
+            }
+            responder = r.next
+        }
+        return false
     }
 
     private func loadImageData(_ provider: NSItemProvider) async -> Data? {

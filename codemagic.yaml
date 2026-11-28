@@ -1,0 +1,39 @@
+# Cloud-Build der DEAL-NIVO-iOS-App (kein Mac nötig) → TestFlight.
+# Einrichtung: kaufpruefer/mobile/IOS-EINRICHTUNG.md
+# Geheimnisse (API-Schlüssel, Zertifikat) liegen NUR in Codemagic, nie im Repository.
+workflows:
+  ios-testflight:
+    name: DEAL-NIVO iOS → TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 40
+    integrations:
+      app_store_connect: DEAL-NIVO   # Name des App-Store-Connect-API-Schlüssels in Codemagic
+    environment:
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: de.dealnivo.app   # Profile für App und Teilen-Erweiterung (de.dealnivo.app.share)
+    scripts:
+      - name: Xcode-Projekt erzeugen
+        script: |
+          brew install xcodegen
+          cd kaufpruefer/mobile/ios
+          xcodegen generate
+      - name: Signatur-Profile anwenden
+        script: xcode-project use-profiles --project kaufpruefer/mobile/ios/DealNivo.xcodeproj
+      - name: Build-Nummer setzen
+        script: |
+          cd kaufpruefer/mobile/ios
+          agvtool new-version -all "$BUILD_NUMBER"
+      - name: App bauen
+        script: |
+          xcode-project build-ipa \
+            --project kaufpruefer/mobile/ios/DealNivo.xcodeproj \
+            --scheme DealNivo
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

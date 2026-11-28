@@ -1,6 +1,8 @@
 # DEAL-NIVO – Native Teilen-Integration
 
 **Status: technisch vorbereitet, NICHT gebaut und NICHT auf Geräten getestet.**
+
+**iOS ohne Mac:** siehe `IOS-EINRICHTUNG.md` (XcodeGen-Projekt `ios/project.yml` + Cloud-Build `codemagic.yaml` im Repo-Hauptordner).
 In der Entwicklungsumgebung stehen weder macOS/Xcode noch Android SDK zur Verfügung.
 Der Quellcode ist vollständig, muss aber vom Betreiber in Xcode bzw. Android Studio
 in ein Projekt eingebunden, signiert und getestet werden.
