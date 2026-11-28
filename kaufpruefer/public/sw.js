@@ -1,6 +1,6 @@
 // DEAL-NIVO Service Worker – App-Shell-Caching für statische Assets.
 // Personenbezogene Inhalte (API, Berichte, Uploads) werden NIE gecacht.
-const CACHE = "dealnivo-v2";
+const CACHE = "dealnivo-v3";
 // Nur die Besichtigungsseiten werden für die Offline-Nutzung auf DEINEM Gerät zwischengespeichert.
 const INSPECTION_CACHE = "dealnivo-inspection-v1";
 const OFFLINE_URL = "/offline.html";
@@ -37,7 +37,23 @@ self.addEventListener("fetch", (e) => {
   }
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/analysis/") || url.pathname.startsWith("/dashboard") || url.pathname.startsWith("/admin")) return;
 
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/demo/")) {
+  // Bilder & 3D-Modelle: sofort aus dem Speicher zeigen, im Hintergrund aktualisieren
+  if (url.pathname.startsWith("/demo/") || url.pathname.startsWith("/models/")) {
+    e.respondWith(
+      caches.open(CACHE).then((c) =>
+        c.match(req).then((hit) => {
+          const fresh = fetch(req).then((res) => {
+            if (res.ok) c.put(req, res.clone());
+            return res;
+          });
+          if (hit) fresh.catch(() => undefined);
+          return hit || fresh;
+        }),
+      ),
+    );
+    return;
+  }
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
     e.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
         const copy = res.clone();

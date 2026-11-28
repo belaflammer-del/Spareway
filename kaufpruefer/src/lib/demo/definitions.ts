@@ -34,8 +34,8 @@ export const DEMO_DEFINITIONS: DemoDefinition[] = [
       description:
         "Verkaufe unseren Familienkombi. Scheckheftgepflegt bis 120.000 km, danach freie Werkstatt. Kleine Gebrauchsspuren, Nichtraucher. Neue Bremsen vorne 2025. Probefahrt nach Absprache.",
       images: [
-        { ref: "/demo/3d/audi-side.webp", kind: "product_photo", label: "Front/Seite (Symbolbild)" },
-        { ref: "/demo/3d/audi-rear.webp", kind: "product_photo", label: "Heck (Symbolbild)" },
+        { ref: "/demo/3d/audi-side-v2.webp", kind: "product_photo", label: "Front/Seite (Symbolbild)" },
+        { ref: "/demo/3d/audi-rear-v2.webp", kind: "product_photo", label: "Heck (Symbolbild)" },
       ],
     },
     comparables: [
@@ -45,8 +45,8 @@ export const DEMO_DEFINITIONS: DemoDefinition[] = [
       { price: 17300, year: 2017, km: 149000, type: "sold" }, { price: 18600, year: 2018, km: 139000, ageDays: 75 }, { price: 17000, year: 2016, km: 133000 },
     ],
     findings: [
-      { title: "Kratzer am hinteren Stoßfänger", detail: "Oberflächlicher Kratzer im Lack rechts unten am Stoßfänger.", level: "visible", severity: "low", image: "/demo/3d/audi-rear.webp", box: [0.12, 0.5, 0.2, 0.13] },
-      { title: "Möglicher Farbtonunterschied am Kotflügel vorne", detail: "Der vordere Kotflügel wirkt minimal heller. Kann an Licht/Kamera liegen – mit Lackschichtdickenmessgerät prüfen.", level: "possible", severity: "medium", image: "/demo/3d/audi-side.webp", box: [0.27, 0.4, 0.17, 0.18] },
+      { title: "Kratzer am hinteren Stoßfänger", detail: "Oberflächlicher Kratzer im Lack rechts unten am Stoßfänger.", level: "visible", severity: "low", image: "/demo/3d/audi-rear-v2.webp", box: [0.12, 0.5, 0.2, 0.13] },
+      { title: "Möglicher Farbtonunterschied am Kotflügel vorne", detail: "Der vordere Kotflügel wirkt minimal heller. Kann an Licht/Kamera liegen – mit Lackschichtdickenmessgerät prüfen.", level: "possible", severity: "medium", image: "/demo/3d/audi-side-v2.webp", box: [0.27, 0.4, 0.17, 0.18] },
       { title: "Unterboden nicht beurteilbar", detail: "Es liegen keine Bilder des Unterbodens vor.", level: "unverifiable", severity: "info" },
     ],
     weaknesses: [
@@ -85,7 +85,7 @@ export const DEMO_DEFINITIONS: DemoDefinition[] = [
       sellerType: "Privat",
       description:
         "Wegen Auslandsaufenthalt schnell abzugeben. Ich bin beruflich im Ausland, das Fahrzeug steht bei einer Spedition. Bezahlung nur per Überweisung vorab, die Spedition übernimmt die Lieferung. Kontakt bitte per WhatsApp.",
-      images: [{ ref: "/demo/3d/bmw-side.webp", kind: "product_photo", label: "Front/Seite (Symbolbild)" }],
+      images: [{ ref: "/demo/3d/bmw-side-v2.webp", kind: "product_photo", label: "Front/Seite (Symbolbild)" }],
     },
     comparables: [
       { price: 15900, year: 2015, km: 160000 }, { price: 16400, year: 2015, km: 152000 }, { price: 14900, year: 2014, km: 175000 },
@@ -93,7 +93,7 @@ export const DEMO_DEFINITIONS: DemoDefinition[] = [
       { price: 16100, year: 2015, km: 149000 }, { price: 15700, year: 2015, km: 166000, type: "sold" },
     ],
     findings: [
-      { title: "Nur ein Foto vorhanden", detail: "Für ein Fahrzeug dieser Preisklasse sind deutlich mehr Ansichten üblich.", level: "visible", severity: "low", image: "/demo/3d/bmw-side.webp" },
+      { title: "Nur ein Foto vorhanden", detail: "Für ein Fahrzeug dieser Preisklasse sind deutlich mehr Ansichten üblich.", level: "visible", severity: "low", image: "/demo/3d/bmw-side-v2.webp" },
       { title: "Kennzeichen und Umgebung nicht erkennbar", detail: "Das Bild lässt keinen Rückschluss auf den Standort zu.", level: "unverifiable", severity: "info" },
     ],
     weaknesses: [
@@ -124,7 +124,7 @@ export const DEMO_DEFINITIONS: DemoDefinition[] = [
       sellerType: "Privat",
       description: "Verkaufe mein iPhone 15 Pro, immer mit Hülle und Panzerglas genutzt. Akku 88 %. Rechnung vorhanden. Abholung oder Versand mit Sicher bezahlen.",
       images: [
-        { ref: "/demo/3d/phone-back.webp", kind: "product_photo", label: "Rückseite (Symbolbild)" },
+        { ref: "/demo/3d/phone-back-v2.webp", kind: "product_photo", label: "Rückseite (Symbolbild)" },
       ],
     },
     comparables: [
@@ -132,8 +132,8 @@ export const DEMO_DEFINITIONS: DemoDefinition[] = [
       { price: 699, type: "sold" }, { price: 810, ageDays: 90 }, { price: 745 }, { price: 730, type: "sold" }, { price: 765 },
     ],
     findings: [
-      { title: "Feine Gebrauchsspur am Rahmen", detail: "Leichte Kratzer am Titanrahmen unten links.", level: "visible", severity: "low", image: "/demo/3d/phone-back.webp", box: [0.37, 0.78, 0.1, 0.13] },
-      { title: "Mögliche Luftblase unter Kamera-Schutzglas", detail: "Kleine Aufhellung an einer Kameralinse – vermutlich aufgeklebtes Schutzglas, kein Linsenschaden erkennbar.", level: "possible", severity: "info", image: "/demo/3d/phone-back.webp", box: [0.51, 0.11, 0.11, 0.18] },
+      { title: "Feine Gebrauchsspur am Rahmen", detail: "Leichte Kratzer am Titanrahmen unten links.", level: "visible", severity: "low", image: "/demo/3d/phone-back-v2.webp", box: [0.37, 0.78, 0.1, 0.13] },
+      { title: "Mögliche Luftblase unter Kamera-Schutzglas", detail: "Kleine Aufhellung an einer Kameralinse – vermutlich aufgeklebtes Schutzglas, kein Linsenschaden erkennbar.", level: "possible", severity: "info", image: "/demo/3d/phone-back-v2.webp", box: [0.51, 0.11, 0.11, 0.18] },
       { title: "Displayfunktion nicht prüfbar", detail: "Pixelfehler und Touch lassen sich nur am eingeschalteten Gerät prüfen.", level: "unverifiable", severity: "info" },
     ],
     missingViews: ["Einstellungen > Allgemein > Info", "Akkuzustand-Anzeige"],
@@ -169,12 +169,12 @@ export const DEMO_DEFINITIONS: DemoDefinition[] = [
       sellerType: "Privat",
       description: "Verkaufe meine Submariner, leider ohne Box und Papiere (Umzug). Läuft einwandfrei. Nur Barzahlung oder Überweisung, kein Versand ins Ausland.",
       images: [
-        { ref: "/demo/3d/watch.webp", kind: "product_photo", label: "Zifferblatt (Symbolbild)" },
+        { ref: "/demo/3d/watch-v2.webp", kind: "product_photo", label: "Zifferblatt (Symbolbild)" },
       ],
     },
     comparables: [{ price: 12400 }, { price: 12900 }, { price: 11800, type: "sold" }, { price: 13200 }, { price: 12100 }, { price: 12600, type: "sold" }],
     findings: [
-      { title: "Datumslupe nicht eindeutig beurteilbar", detail: "Vergrößerung und Ausrichtung der Datumslupe lassen sich auf diesem Foto nicht sicher bewerten.", level: "possible", severity: "medium", image: "/demo/3d/watch.webp", box: [0.49, 0.6, 0.11, 0.13] },
+      { title: "Datumslupe nicht eindeutig beurteilbar", detail: "Vergrößerung und Ausrichtung der Datumslupe lassen sich auf diesem Foto nicht sicher bewerten.", level: "possible", severity: "medium", image: "/demo/3d/watch-v2.webp", box: [0.49, 0.6, 0.11, 0.13] },
       { title: "Gravuren am Gehäuse nicht abgebildet", detail: "Referenz- und Seriennummer sind auf keinem Bild sichtbar.", level: "unverifiable", severity: "medium" },
     ],
     missingViews: ["Seriennummer zwischen den Bandanstößen", "Rehaut-Gravur", "Schließe im Detail", "Werk (nur durch Fachbetrieb)"],
@@ -203,13 +203,13 @@ export const DEMO_DEFINITIONS: DemoDefinition[] = [
       purchaseReceipt: "Nein",
       description: "Original Moncler Maya, wenig getragen. Kaufbeleg leider nicht mehr vorhanden. Versand über Vinted.",
       images: [
-        { ref: "/demo/3d/jacket.webp", kind: "product_photo", label: "Gesamtansicht (Symbolbild)" },
+        { ref: "/demo/3d/jacket-v2.webp", kind: "product_photo", label: "Gesamtansicht (Symbolbild)" },
       ],
     },
     comparables: [{ price: 450 }, { price: 520 }, { price: 480, type: "sold" }, { price: 430, type: "sold" }, { price: 560 }, { price: 470 }, { price: 499 }],
     findings: [
-      { title: "Logo-Patch am Ärmel sichtbar", detail: "Patch vorhanden; Stickqualität auf dem Foto nicht im Detail beurteilbar.", level: "possible", severity: "info", image: "/demo/3d/jacket.webp", box: [0.55, 0.3, 0.09, 0.15] },
-      { title: "Steppnähte leicht unregelmäßig", detail: "Zwei Steppnähte wirken auf dem Bild ungleichmäßig. Kann an Faltenwurf liegen.", level: "possible", severity: "low", image: "/demo/3d/jacket.webp", box: [0.41, 0.45, 0.19, 0.11] },
+      { title: "Logo-Patch am Ärmel sichtbar", detail: "Patch vorhanden; Stickqualität auf dem Foto nicht im Detail beurteilbar.", level: "possible", severity: "info", image: "/demo/3d/jacket-v2.webp", box: [0.55, 0.3, 0.09, 0.15] },
+      { title: "Steppnähte leicht unregelmäßig", detail: "Zwei Steppnähte wirken auf dem Bild ungleichmäßig. Kann an Faltenwurf liegen.", level: "possible", severity: "low", image: "/demo/3d/jacket-v2.webp", box: [0.41, 0.45, 0.19, 0.11] },
     ],
     missingViews: ["Echtheits-Etikett (QR/NFC)", "Pflegeetikett innen", "Reißverschluss-Zipper im Detail"],
     authenticity: [
