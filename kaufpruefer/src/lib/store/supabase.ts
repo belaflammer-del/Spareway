@@ -99,11 +99,15 @@ const toWatch = (r: Row): WatchRecord => ({
   id: r.id, analysisId: r.analysis_id, userId: r.user_id, platform: r.platform, url: r.url ?? undefined, externalId: r.external_id ?? undefined,
   mode: r.mode, intervalHours: r.interval_hours, active: r.active, notify: r.notify, createdAt: r.created_at,
   lastCheckedAt: r.last_checked_at ?? undefined, nextCheckAt: r.next_check_at ?? undefined, lastError: r.last_error ?? undefined,
+  paidUntil: r.paid_until ?? undefined, periodsPaid: r.periods_paid ?? undefined, reminderDays: r.reminder_days ?? undefined,
+  lastReminderAt: r.last_reminder_at ?? undefined, expiryNotifiedAt: r.expiry_notified_at ?? undefined,
 });
 const fromWatch = (w: WatchRecord): Row => ({
   id: w.id, analysis_id: w.analysisId, user_id: w.userId, platform: w.platform, url: w.url ?? null, external_id: w.externalId ?? null, mode: w.mode,
   interval_hours: w.intervalHours, active: w.active, notify: w.notify, created_at: w.createdAt, last_checked_at: w.lastCheckedAt ?? null,
   next_check_at: w.nextCheckAt ?? null, last_error: w.lastError ?? null,
+  paid_until: w.paidUntil ?? null, periods_paid: w.periodsPaid ?? 0, reminder_days: w.reminderDays ?? null,
+  last_reminder_at: w.lastReminderAt ?? null, expiry_notified_at: w.expiryNotifiedAt ?? null,
 });
 const toNotification = (r: Row): NotificationRecord => ({
   id: r.id, userId: r.user_id, kind: r.kind, title: r.title, body: r.body, link: r.link ?? undefined, createdAt: r.created_at, readAt: r.read_at ?? undefined,
@@ -481,7 +485,10 @@ export class SupabaseStore implements DataStore {
     return (check(await this.db.from("watches").select("*").eq("user_id", userId).order("created_at", { ascending: false })) as Row[]).map(toWatch);
   }
   async listDueWatches(now: string, limit: number) {
-    return (check(await this.db.from("watches").select("*").eq("active", true).eq("mode", "auto").lte("next_check_at", now).limit(limit)) as Row[]).map(toWatch);
+    return (check(await this.db.from("watches").select("*").eq("active", true).eq("mode", "auto").lte("next_check_at", now).or(`paid_until.is.null,paid_until.gt.${now}`).limit(limit)) as Row[]).map(toWatch);
+  }
+  async listActiveWatches(limit: number) {
+    return (check(await this.db.from("watches").select("*").eq("active", true).limit(limit)) as Row[]).map(toWatch);
   }
   async deleteWatch(id: string, userId: string) {
     check(await this.db.from("watches").delete().eq("id", id).eq("user_id", userId));

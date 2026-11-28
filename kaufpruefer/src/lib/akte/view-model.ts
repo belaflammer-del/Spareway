@@ -2,6 +2,8 @@ import "server-only";
 import { providerEnabled } from "../config/providers";
 import { emailConfig, pushConfig } from "../notify/service";
 import { autoWatchPossible } from "../watch/service";
+import { getStore } from "../store";
+import { akteLimits } from "./limits";
 import type { Akte } from "./service";
 import type { NextStep } from "./service";
 import type { ChatCheckData, CostAnalysisData, ImageMatchData, InspectionData, SnapshotData } from "./schemas";
@@ -22,7 +24,8 @@ export interface AkteViewModel {
   costs: CostAnalysisData | null;
   imageMatch: ImageMatchData | null;
   snapshots: { version: number; data: SnapshotData }[];
-  watch: Pick<WatchRecord, "mode" | "intervalHours" | "active" | "lastCheckedAt" | "nextCheckAt" | "lastError" | "notify"> | null;
+  watch: Pick<WatchRecord, "mode" | "intervalHours" | "active" | "lastCheckedAt" | "nextCheckAt" | "lastError" | "notify" | "paidUntil" | "periodsPaid"> | null;
+  watchPricing: { tokenCost: number; periodDays: number; balance: number };
   autoWatchPossible: boolean;
   channels: { email: boolean; push: boolean; pushPublicKey: string | null };
   hasPhotos: boolean;
@@ -48,8 +51,12 @@ export async function toViewModel(akte: Akte): Promise<AkteViewModel> {
     imageMatch: akte.imageMatch?.data ?? null,
     snapshots: akte.snapshots.map((s) => ({ version: s.version, data: s.data })),
     watch: akte.watch
-      ? { mode: akte.watch.mode, intervalHours: akte.watch.intervalHours, active: akte.watch.active, lastCheckedAt: akte.watch.lastCheckedAt, nextCheckAt: akte.watch.nextCheckAt, lastError: akte.watch.lastError, notify: akte.watch.notify }
+      ? { mode: akte.watch.mode, intervalHours: akte.watch.intervalHours, active: akte.watch.active, lastCheckedAt: akte.watch.lastCheckedAt, nextCheckAt: akte.watch.nextCheckAt, lastError: akte.watch.lastError, notify: akte.watch.notify, paidUntil: akte.watch.paidUntil, periodsPaid: akte.watch.periodsPaid }
       : null,
+    watchPricing: await (async () => {
+      const lim = akteLimits(await getStore().getConfig());
+      return { tokenCost: lim.watchTokenCost, periodDays: lim.watchPeriodDays, balance: await getStore().getBalance(a.userId) };
+    })(),
     autoWatchPossible: await autoWatchPossible(a),
     channels: { email: !!emailConfig(), push: !!push, pushPublicKey: push?.publicKey ?? null },
     hasPhotos: r.listing.images.some((i) => i.kind === "product_photo"),

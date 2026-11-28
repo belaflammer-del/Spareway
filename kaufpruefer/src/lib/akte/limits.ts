@@ -15,6 +15,9 @@ export function akteLimits(cfg: AppConfig) {
     watchMinIntervalHours: Math.max(1, l.watchMinIntervalHours ?? 24),
     watchManualUpdatesPerDay: l.watchManualUpdatesPerDay ?? 5,
     notificationsPerUserDay: l.notificationsPerUserDay ?? 20,
+    watchTokenCost: cfg.watch?.tokenCost ?? 1,
+    watchPeriodDays: Math.max(1, cfg.watch?.periodDays ?? 60),
+    watchReminderDays: Math.max(1, cfg.watch?.reminderDays ?? 3),
     retention: {
       chatDays: r.chatDays ?? 30,
       inspectionDays: r.inspectionDays ?? 180,

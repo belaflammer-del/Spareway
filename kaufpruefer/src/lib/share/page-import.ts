@@ -73,9 +73,10 @@ export async function importPageCapture(userId: string, capture: PageCapture, op
 
   const listingKey = listingKeyFor(listing);
   const prev = listingKey ? await getStore().findLatestByListingKey(userId, listingKey) : null;
+  const watch = prev ? await getStore().getWatchByAnalysis(prev.id, userId) : null;
   return {
     draft: { listing, missingInfo: detectMissingInfo(listing), notes, lowConfidence: [], conflicts: [] },
-    existing: prev ? { id: prev.id, createdAt: prev.createdAt, title: prev.title } : undefined,
+    existing: prev ? { id: prev.id, createdAt: prev.createdAt, title: prev.title, watchActive: !!watch?.active } : undefined,
     aiCostUsd,
   };
 }

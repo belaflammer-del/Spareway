@@ -74,6 +74,14 @@ export interface WatchRecord {
   lastCheckedAt?: string;
   nextCheckAt?: string;
   lastError?: string;
+  /** Bezahlte Laufzeit (Token je Zeitraum) */
+  paidUntil?: string;
+  periodsPaid?: number;
+  /** Erinnerung zum Aktualisieren (Plattformen ohne erlaubte automatische Abfrage) */
+  reminderDays?: number;
+  lastReminderAt?: string;
+  /** Hinweis „Beobachtung läuft ab/abgelaufen“ bereits verschickt */
+  expiryNotifiedAt?: string;
 }
 
 export interface NotificationRecord {
@@ -150,6 +158,8 @@ export interface AkteStore {
   getWatch(id: string): Promise<WatchRecord | null>;
   listWatches(userId: string): Promise<WatchRecord[]>;
   listDueWatches(now: string, limit: number): Promise<WatchRecord[]>;
+  /** Alle aktiven Beobachtungen (für Erinnerungen und Laufzeitende) */
+  listActiveWatches(limit: number): Promise<WatchRecord[]>;
   deleteWatch(id: string, userId: string): Promise<void>;
 
   // Benachrichtigungen

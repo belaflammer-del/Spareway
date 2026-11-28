@@ -24,9 +24,15 @@ export interface AkteConfigValues {
   guardianEnabled: boolean;
   guardianPrice: number;
   guardianChatChecks: number;
+  watchTokenCost: number;
+  watchPeriodDays: number;
+  watchReminderDays: number;
 }
 
 const FIELDS: [keyof AkteConfigValues, string][] = [
+  ["watchTokenCost", "Beobachtung: Token je Zeitraum"],
+  ["watchPeriodDays", "Beobachtung: Zeitraum (Tage)"],
+  ["watchReminderDays", "Erinnerung zum Aktualisieren alle … Tage"],
   ["chatChecksPerAnalysis", "Chatprüfungen je Kaufakte"],
   ["chatScreenshotsMax", "Max. Chat-Screenshots je Prüfung"],
   ["inspectionPhotosMax", "Max. Besichtigungsfotos"],

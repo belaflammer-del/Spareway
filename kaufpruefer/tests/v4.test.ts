@@ -357,6 +357,7 @@ describe("Funktion 4: Inseratsverlauf und Preisalarm", () => {
     const rec = record(audi());
     await store.createAnalysis(rec);
     const { manualWatchUpdate, startWatch } = await import("@/lib/watch/service");
+    await store.creditTokens("u1", 2, "test_credit", "t-watch");
     const w = await startWatch("u1", rec.id, {});
     expect(w.mode).toBe("manual"); // keine erlaubte automatische Abfrage für mobile.de
     expect(w.nextCheckAt).toBeUndefined();

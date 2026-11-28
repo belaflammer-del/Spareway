@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, FileSearch, ImageIcon, LogIn, RefreshCw } from "lucide-react";
+import { ArrowRight, CheckCircle2, Eye, FileSearch, ImageIcon, LogIn, RefreshCw, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -15,7 +15,7 @@ export const PREFILL_KEY = "dn-prefill";
 
 interface Result {
   draft: { listing: Listing; missingInfo: MissingInfo[]; notes: string[]; lowConfidence: string[]; conflicts: [] };
-  existing?: { id: string; createdAt: string; title: string };
+  existing?: { id: string; createdAt: string; title: string; watchActive?: boolean };
 }
 
 /** Übernahme einer Inseratsseite, die per „→ DEAL-NIVO“-Button übergeben wurde. */
@@ -24,6 +24,20 @@ export function PageCaptureFlow({ capture, loggedIn }: { capture: unknown; logge
   const [res, setRes] = useState<Result | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const once = useRef(false);
+  const [update, setUpdate] = useState<{ busy: boolean; text?: string; assessment?: string; none?: boolean }>({ busy: false });
+
+  async function updateWatch(analysisId: string) {
+    setUpdate({ busy: true });
+    try {
+      const r = await fetch(`/api/analyses/${analysisId}/watch/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ page: capture }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message ?? "Aktualisierung fehlgeschlagen");
+      setUpdate({ busy: false, text: d.summary?.text, assessment: d.summary?.assessment, none: !d.changes?.length });
+    } catch (e) {
+      setErr((e as Error).message);
+      setUpdate({ busy: false });
+    }
+  }
 
   useEffect(() => {
     if (!loggedIn || once.current) return;
@@ -118,6 +132,34 @@ export function PageCaptureFlow({ capture, loggedIn }: { capture: unknown; logge
           ))}
         </ul>
       </div>
+
+      {res.existing?.watchActive && (
+        <div className="rounded-2xl border border-accent/50 bg-accent-soft/40 p-4">
+          <p className="flex items-center gap-2 font-semibold">
+            <Eye className="size-4 text-accent" /> Du beobachtest dieses Angebot
+          </p>
+          {update.text || update.none ? (
+            <div className="mt-2 text-sm">
+              {update.none ? <p>Keine Änderungen seit der letzten Erfassung.</p> : <p className="font-medium">{update.text}</p>}
+              {update.assessment && (
+                <p className="mt-1 flex gap-1.5">
+                  <Sparkles className="mt-0.5 size-3.5 shrink-0 text-accent" /> {update.assessment}
+                </p>
+              )}
+              <Button asChild size="sm" className="mt-3">
+                <Link href={`/analysis/${res.existing.id}#s-watch`}>Zur Kaufakte</Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-muted">Speichere den aktuellen Stand – wir vergleichen mit der letzten Erfassung und fassen die Änderungen zusammen.</p>
+              <Button size="sm" className="mt-3" onClick={() => updateWatch(res.existing!.id)} disabled={update.busy}>
+                {update.busy ? <Spinner /> : "Beobachtung aktualisieren"}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {res.existing && (
         <div className="rounded-2xl border border-accent/40 bg-accent-soft/40 p-4">

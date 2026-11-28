@@ -592,7 +592,10 @@ export class LocalStore implements DataStore {
     return this.read((db) => db.watches.filter((w) => w.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   }
   listDueWatches(now: string, limit: number) {
-    return this.read((db) => db.watches.filter((w) => w.active && w.mode === "auto" && (w.nextCheckAt ?? "") <= now).slice(0, limit));
+    return this.read((db) => db.watches.filter((w) => w.active && w.mode === "auto" && (w.nextCheckAt ?? "") <= now && (!w.paidUntil || w.paidUntil > now)).slice(0, limit));
+  }
+  listActiveWatches(limit: number) {
+    return this.read((db) => db.watches.filter((w) => w.active).slice(0, limit));
   }
   deleteWatch(id: string, userId: string) {
     return this.tx((db) => {

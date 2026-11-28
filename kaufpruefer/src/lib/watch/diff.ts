@@ -63,7 +63,7 @@ export function diffSnapshots(prev: SnapshotData, next: SnapshotData): SnapshotD
       field: "priceEur",
       before: fmtEur(prev.priceEur),
       after: fmtEur(next.priceEur),
-      summary: `Preis ${d < 0 ? "gesenkt" : "erhöht"} um ${fmtEur(Math.abs(d))} (${d > 0 ? "+" : ""}${pct} %)`,
+      summary: `Preis ${d < 0 ? "gesenkt" : "erhöht"} um ${fmtEur(Math.abs(d))} (${d > 0 ? "+" : "−"}${Math.abs(pct).toLocaleString("de-DE")} %)`,
       important: true,
     });
   }

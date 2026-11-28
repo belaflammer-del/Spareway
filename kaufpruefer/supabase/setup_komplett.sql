@@ -1,4 +1,4 @@
--- DEAL-NIVO: komplette Einrichtung (0001–0005 in einer Datei). Wiederholbar, löscht keine Daten.
+-- DEAL-NIVO: komplette Einrichtung (0001–0006 in einer Datei). Wiederholbar, löscht keine Daten.
 
 -- ===== migrations/0001_init.sql =====
 -- ─────────────────────────────────────────────────────────────
@@ -525,3 +525,12 @@ alter default privileges in schema public grant execute on functions to service_
 
 -- Trigger-Funktion nicht per API aufrufbar machen (der Trigger läuft weiterhin)
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
+
+-- ===== migrations/0006_watch_billing.sql =====
+-- DEAL-NIVO v6: Bezahlte Beobachtung (Token je Zeitraum), Erinnerungen
+alter table public.watches add column if not exists paid_until timestamptz;
+alter table public.watches add column if not exists periods_paid integer not null default 0;
+alter table public.watches add column if not exists reminder_days integer;
+alter table public.watches add column if not exists last_reminder_at timestamptz;
+alter table public.watches add column if not exists expiry_notified_at timestamptz;
+create index if not exists watches_active_idx on public.watches (active, paid_until);

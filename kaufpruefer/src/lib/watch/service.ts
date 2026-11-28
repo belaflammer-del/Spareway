@@ -16,7 +16,11 @@ import type { ModuleRecord, WatchRecord } from "../store/akte-types";
 import type { AnalysisRecord } from "../store/types";
 import { deleteUpload, toDataUrl } from "../uploads/service";
 import { newId, nowIso } from "../utils";
+import { WalletError } from "../store/types";
+import { parsePageCapture, type PageCapture } from "../share/page-capture";
+import { UsageMeter } from "../ai/provider";
 import { diffSnapshots, snapshotFromListing } from "./diff";
+import { buildWatchSummary } from "./summary";
 
 /**
  * Angebotsbeobachtung.
@@ -59,6 +63,24 @@ async function ensureInitialSnapshot(a: AnalysisRecord) {
   return [first];
 }
 
+/** Token für einen Beobachtungszeitraum abbuchen (idempotent je Zeitraum). */
+async function chargePeriod(userId: string, watchId: string, analysisId: string, periodStart: string, cost: number) {
+  if (cost <= 0) return;
+  const store = getStore();
+  try {
+    const r = await store.reserveTokens(userId, `watch:${analysisId}`, cost, `watch:${watchId}:${periodStart}`);
+    if (r.status === "reserved") await store.captureReservation(r.id);
+  } catch (e) {
+    if (e instanceof WalletError || (e as { code?: string }).code === "insufficient_balance")
+      throw new AnalysisError("insufficient_balance", `Für die Beobachtung brauchst du ${cost} Token. Lade dein Guthaben auf.`);
+    throw e;
+  }
+}
+
+/**
+ * Beobachtung starten: kostet `watchTokenCost` Token je `watchPeriodDays` Tage.
+ * Eine noch bezahlte Beobachtung wird nur in den Einstellungen aktualisiert (keine erneute Abbuchung).
+ */
 export async function startWatch(userId: string, analysisId: string, opts: { intervalHours?: number; notify?: Partial<WatchRecord["notify"]> }) {
   const store = getStore();
   const a = await store.getAnalysis(analysisId, userId);
@@ -66,12 +88,15 @@ export async function startWatch(userId: string, analysisId: string, opts: { int
   const lim = akteLimits(await store.getConfig());
   const existing = await store.getWatchByAnalysis(analysisId, userId);
   const all = await store.listWatches(userId);
-  if (!existing && all.filter((w) => w.active).length >= lim.watchesPerUser) throw new AnalysisError("pipeline_failed", `Du beobachtest bereits ${lim.watchesPerUser} Angebote. Beende eine Beobachtung, um eine neue zu starten.`);
+  if (!existing?.active && all.filter((w) => w.active).length >= lim.watchesPerUser) throw new AnalysisError("pipeline_failed", `Du beobachtest bereits ${lim.watchesPerUser} Angebote. Beende eine Beobachtung, um eine neue zu starten.`);
   const auto = await autoWatchPossible(a);
   const interval = Math.max(lim.watchMinIntervalHours, Math.min(168, Math.round(opts.intervalHours ?? 24)));
   const now = nowIso();
+  const id = existing?.id ?? newId("wat");
+  const stillPaid = !!existing?.paidUntil && existing.paidUntil > now;
+  if (!stillPaid) await chargePeriod(userId, id, analysisId, now.slice(0, 16), lim.watchTokenCost);
   const w: WatchRecord = {
-    id: existing?.id ?? newId("wat"),
+    id,
     analysisId,
     userId,
     platform: a.platform,
@@ -84,11 +109,31 @@ export async function startWatch(userId: string, analysisId: string, opts: { int
     createdAt: existing?.createdAt ?? now,
     lastCheckedAt: existing?.lastCheckedAt,
     nextCheckAt: auto ? new Date(Date.now() + interval * 3600_000).toISOString() : undefined,
+    paidUntil: stillPaid ? existing!.paidUntil : daysFromNow(lim.watchPeriodDays),
+    periodsPaid: (existing?.periodsPaid ?? 0) + (stillPaid ? 0 : 1),
+    reminderDays: auto ? undefined : lim.watchReminderDays,
+    lastReminderAt: existing?.lastReminderAt ?? now,
+    expiryNotifiedAt: undefined,
   };
   await store.upsertWatch(w);
   await ensureInitialSnapshot(a);
   await store.countEvent("watch_started");
   return w;
+}
+
+/** Beobachtung um einen weiteren Zeitraum verlängern (bucht Token ab). */
+export async function extendWatch(userId: string, analysisId: string) {
+  const store = getStore();
+  const w = await store.getWatchByAnalysis(analysisId, userId);
+  if (!w) throw new AnalysisError("pipeline_failed", "Keine Beobachtung gefunden.");
+  const lim = akteLimits(await store.getConfig());
+  const now = nowIso();
+  const base = w.paidUntil && w.paidUntil > now ? w.paidUntil : now;
+  await chargePeriod(userId, w.id, analysisId, base.slice(0, 16), lim.watchTokenCost);
+  const paidUntil = new Date(Date.parse(base) + lim.watchPeriodDays * 864e5).toISOString();
+  const next: WatchRecord = { ...w, active: true, paidUntil, periodsPaid: (w.periodsPaid ?? 0) + 1, expiryNotifiedAt: undefined, nextCheckAt: w.mode === "auto" ? (w.nextCheckAt && w.nextCheckAt > now ? w.nextCheckAt : now) : undefined };
+  await store.upsertWatch(next);
+  return next;
 }
 
 export async function stopWatch(userId: string, analysisId: string) {
@@ -104,6 +149,24 @@ export async function recordSnapshot(a: AnalysisRecord, snap: SnapshotData, opts
   const prev = snaps.at(-1)?.data;
   const changes = prev ? diffSnapshots(prev, snap) : [];
   const lim = akteLimits(await store.getConfig());
+  // Zusammenfassung mit Kaufeinschätzung (KI nur bei wichtigen Änderungen, sonst Regeln)
+  let summary: SnapshotData["summary"];
+  if (changes.length && a.report) {
+    const meter = new UsageMeter();
+    const raw = changes.some((c) => c.important) ? await getActiveAI("fast") : null;
+    let ai = null;
+    if (raw) {
+      try {
+        await assertAiBudget(raw, a.userId);
+        ai = guard(raw, { userId: a.userId, scope: "watch" });
+      } catch {
+        ai = null;
+      }
+    }
+    summary = await buildWatchSummary(changes, a.report, snap, { ai, meter });
+    const cost = meter.total.costUsd;
+    if (cost > 0) await store.updateAnalysis(a.id, { aiCostUsd: a.aiCostUsd + cost });
+  }
   const mod = await store.addModule<SnapshotData>({
     id: newId("mod"),
     analysisId: a.id,
@@ -111,7 +174,7 @@ export async function recordSnapshot(a: AnalysisRecord, snap: SnapshotData, opts
     kind: "snapshot",
     createdAt: snap.capturedAt,
     expiresAt: daysFromNow(lim.retention.snapshotDays),
-    data: { ...snap, changes },
+    data: { ...snap, changes, summary },
   });
   const important = changes.filter((c) => c.important);
   if (important.length) {
@@ -122,7 +185,7 @@ export async function recordSnapshot(a: AnalysisRecord, snap: SnapshotData, opts
       {
         kind: gone ? "listing_unavailable" : price ? "price_change" : "listing_change",
         title: gone ? `Nicht mehr verfügbar: ${a.title.slice(0, 60)}` : price ? `${price.summary.split(" (")[0]}: ${a.title.slice(0, 50)}` : `Inserat geändert: ${a.title.slice(0, 60)}`,
-        body: important.map((c) => c.summary).join(" "),
+        body: summary ? `${summary.text} ${summary.assessment}`.slice(0, 400) : important.map((c) => c.summary).join(" "),
         link: `/analysis/${a.id}#s-watch`,
       },
       opts.notifyChannels,
@@ -135,7 +198,7 @@ export async function recordSnapshot(a: AnalysisRecord, snap: SnapshotData, opts
 export async function manualWatchUpdate(
   userId: string,
   analysisId: string,
-  input: { priceEur?: number; imageIds?: string[]; pastedText?: string; available?: "yes" | "no" },
+  input: { priceEur?: number; imageIds?: string[]; pastedText?: string; available?: "yes" | "no"; page?: PageCapture },
 ) {
   const store = getStore();
   const a = await store.getAnalysis(analysisId, userId);
@@ -149,7 +212,11 @@ export async function manualWatchUpdate(
   const now = nowIso();
   let snap: SnapshotData;
 
-  if (imageIds.length || input.pastedText) {
+  if (input.page) {
+    // Aktualisierung per „→ DEAL-NIVO“-Button: regelbasiert, keine KI, keine Bilder nötig
+    const parsed = parsePageCapture(input.page);
+    snap = snapshotFromListing(parsed.listing, "page_capture", now, "yes");
+  } else if (imageIds.length || input.pastedText) {
     const rawAi = await getActiveAI("fast");
     if (imageIds.length && !rawAi) throw new AnalysisError("pipeline_failed", "Screenshots können nur mit aktivierter KI ausgelesen werden. Trage den neuen Preis alternativ direkt ein.");
     if (rawAi) await assertAiBudget(rawAi, userId);
@@ -214,4 +281,47 @@ export async function watchCheckJobHandler(ctx: JobContext) {
   const res = await recordSnapshot(a, snap, { notifyChannels: w.notify });
   await store.upsertWatch({ ...w, lastCheckedAt: now, nextCheckAt: snap.available === "no" ? undefined : next, active: snap.available !== "no", lastError: undefined });
   return { changes: res.changes.length };
+}
+
+/**
+ * Laufzeit und Erinnerungen (Hintergrund, alle 10 Minuten):
+ * - Hinweis 3 Tage vor Ablauf, bei Ablauf deaktivieren + Hinweis zum Verlängern
+ * - Plattformen ohne erlaubte automatische Abfrage: Erinnerung zum Aktualisieren
+ */
+export async function processWatchLifecycle(now = new Date()): Promise<{ expired: number; reminded: number; warned: number }> {
+  const store = getStore();
+  const lim = akteLimits(await store.getConfig());
+  const iso = now.toISOString();
+  let expired = 0;
+  let reminded = 0;
+  let warned = 0;
+  for (const w of await store.listActiveWatches(500)) {
+    const a = await store.getAnalysis(w.analysisId, w.userId);
+    if (!a) {
+      await store.deleteWatch(w.id, w.userId);
+      continue;
+    }
+    const title = a.title.slice(0, 60);
+    if (w.paidUntil && w.paidUntil <= iso) {
+      await store.upsertWatch({ ...w, active: false, nextCheckAt: undefined, expiryNotifiedAt: iso });
+      await notify(w.userId, { kind: "info", title: `Beobachtung beendet: ${title}`, body: `Der Beobachtungszeitraum ist abgelaufen. Für ${lim.watchTokenCost} Token kannst du ${lim.watchPeriodDays} weitere Tage beobachten.`, link: `/analysis/${w.analysisId}#s-watch` }, w.notify);
+      expired++;
+      continue;
+    }
+    if (w.paidUntil && !w.expiryNotifiedAt && Date.parse(w.paidUntil) - now.getTime() < 3 * 864e5) {
+      await store.upsertWatch({ ...w, expiryNotifiedAt: iso });
+      await notify(w.userId, { kind: "info", title: `Beobachtung läuft bald ab: ${title}`, body: `Die Beobachtung endet am ${new Date(w.paidUntil).toLocaleDateString("de-DE")}. Du kannst sie in der Kaufakte verlängern.`, link: `/analysis/${w.analysisId}#s-watch` }, w.notify);
+      warned++;
+      continue;
+    }
+    if (w.mode === "manual" && w.reminderDays) {
+      const last = Date.parse(w.lastReminderAt ?? w.lastCheckedAt ?? w.createdAt);
+      if (now.getTime() - last >= w.reminderDays * 864e5) {
+        await store.upsertWatch({ ...w, lastReminderAt: iso });
+        await notify(w.userId, { kind: "info", title: `Kurz nachsehen: ${title}`, body: "Hat sich am Inserat etwas geändert? Inserat öffnen und auf „→ DEAL-NIVO“ tippen – wir vergleichen automatisch und fassen die Änderungen zusammen.", link: `/analysis/${w.analysisId}#s-watch` }, w.notify);
+        reminded++;
+      }
+    }
+  }
+  return { expired, reminded, warned };
 }

@@ -120,6 +120,9 @@ const AkteForm = z.object({
   guardianEnabled: z.enum(["on", "off"]).default("off"),
   guardianPrice: z.coerce.number().min(0).max(1000),
   guardianChatChecks: int(0, 20),
+  watchTokenCost: int(0, 20),
+  watchPeriodDays: int(1, 365),
+  watchReminderDays: int(1, 60),
 });
 
 /** V4: Limits, Löschfristen, Kostentabelle und Guardian-Konzept (ohne Zahlungsaktivierung). */
@@ -155,6 +158,7 @@ export async function saveAkteConfigAction(_: FormState, fd: FormData): Promise<
     },
     retention: { chatDays: d.chatDays, inspectionDays: d.inspectionDays, imageHashDays: d.imageHashDays, snapshotDays: d.snapshotDays },
     costTable: valid,
+    watch: { tokenCost: d.watchTokenCost, periodDays: d.watchPeriodDays, reminderDays: d.watchReminderDays },
     // Guardian ist ein Produktkonzept: Die Anzeige lässt sich schalten, eine Zahlung wird NICHT aktiviert.
     guardian: { enabled: d.guardianEnabled === "on", priceCents: Math.round(d.guardianPrice * 100), chatChecks: d.guardianChatChecks },
   });

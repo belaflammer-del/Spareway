@@ -145,6 +145,8 @@ export interface AppConfig {
   retention?: { chatDays?: number; inspectionDays?: number; imageHashDays?: number; snapshotDays?: number };
   /** V4: Gesamtkosten-Richtwerte – nur vom Betreiber gepflegte, belegte Einträge */
   costTable?: CostTableEntry[];
+  /** Beobachtung: Kosten in Token je Zeitraum, Zeitraum in Tagen, Erinnerungsintervall */
+  watch?: { tokenCost?: number; periodDays?: number; reminderDays?: number };
   /** V4: Guardian-Paket (Produktkonzept, standardmäßig deaktiviert, keine Zahlung) */
   guardian?: { enabled?: boolean; priceCents?: number; chatChecks?: number };
   /** Kategorie-Status: live = kostenpflichtiger Komplettcheck, beta = nur Schnellcheck */

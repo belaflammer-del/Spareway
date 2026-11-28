@@ -242,7 +242,7 @@ export type ImageMatchData = z.infer<typeof ImageMatchDataSchema>;
 
 export const SnapshotDataSchema = z.object({
   capturedAt: z.string(),
-  source: z.enum(["initial_analysis", "platform_api", "manual_screenshot", "manual_text", "manual_price"]),
+  source: z.enum(["initial_analysis", "platform_api", "manual_screenshot", "manual_text", "manual_price", "page_capture"]),
   priceEur: z.number().optional(),
   title: z.string().optional(),
   description: z.string().optional(),
@@ -260,5 +260,9 @@ export const SnapshotDataSchema = z.object({
       }),
     )
     .default([]),
+  /** Kurze Zusammenfassung der Änderungen mit Kaufeinschätzung */
+  summary: z
+    .object({ text: z.string(), assessment: z.string(), tone: z.enum(["positive", "neutral", "caution"]), basis: z.enum(["rules", "ai"]) })
+    .optional(),
 });
 export type SnapshotData = z.infer<typeof SnapshotDataSchema>;

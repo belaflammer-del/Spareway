@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { akteRoute, readJson } from "@/lib/api/akte-route";
 import { errorJson } from "@/lib/http";
+import { PageCaptureSchema } from "@/lib/share/page-capture";
 import { manualWatchUpdate } from "@/lib/watch/service";
 
 export const runtime = "nodejs";
@@ -11,6 +12,7 @@ const Body = z.object({
   imageIds: z.array(z.string().regex(/^up_[a-z0-9]{6,32}$/)).max(6).optional(),
   pastedText: z.string().max(20000).optional(),
   available: z.enum(["yes", "no"]).optional(),
+  page: PageCaptureSchema.optional(),
 });
 
 /** Manuelle Aktualisierung (neuer Preis, Screenshot oder Text). */
@@ -20,6 +22,6 @@ export async function POST(req: Request, ctx: RouteContext<"/api/analyses/[id]/w
     if (!parsed.success) return errorJson(400, "invalid_request", "Ungültige Angaben");
     const { id } = await ctx.params;
     const r = await manualWatchUpdate(user.id, id, parsed.data);
-    return Response.json({ changes: r.changes, version: r.module.version });
+    return Response.json({ changes: r.changes, summary: r.module.data.summary, version: r.module.version });
   });
 }

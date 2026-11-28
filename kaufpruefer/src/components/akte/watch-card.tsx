@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, Eye, ImagePlus } from "lucide-react";
+import { Bell, CalendarClock, Eye, ImagePlus, MousePointerClick, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -13,7 +14,8 @@ import { postJson, uploadFiles } from "@/lib/client/jobs";
 import { formatEur } from "@/lib/domain/labels";
 import { cn } from "@/lib/utils";
 
-const SOURCE = { initial_analysis: "Erstprüfung", platform_api: "Offizielle Schnittstelle", manual_screenshot: "Screenshot", manual_text: "Text", manual_price: "Manuell" } as const;
+const SOURCE = { initial_analysis: "Erstprüfung", platform_api: "Offizielle Schnittstelle", manual_screenshot: "Screenshot", manual_text: "Text", manual_price: "Manuell", page_capture: "→ DEAL-NIVO-Button" } as const;
+const TONE = { positive: "border-good/50 bg-good-soft/30", neutral: "border-border bg-surface-2/60", caution: "border-warn/50 bg-warn-soft/30" } as const;
 
 /** Preisverlauf: ausschließlich tatsächlich erfasste Punkte, keine Interpolation zwischen Lücken. */
 function PriceChart({ points }: { points: { at: string; price: number }[] }) {
@@ -58,7 +60,13 @@ export function WatchCard({ vm }: { vm: AkteViewModel }) {
   const w = vm.watch;
   const snaps = vm.snapshots;
   const points = snaps.filter((s) => s.data.priceEur != null).map((s) => ({ at: s.data.capturedAt, price: s.data.priceEur as number }));
-  const changes = snaps.flatMap((s) => s.data.changes.map((c) => ({ ...c, at: s.data.capturedAt, source: s.data.source }))).reverse();
+  const updates = snaps.filter((s) => s.data.changes.length).slice().reverse();
+  const pr = vm.watchPricing;
+  const now = Date.now();
+  const paidMs = w?.paidUntil ? Date.parse(w.paidUntil) : undefined;
+  const expired = !!w && (!w.active || (paidMs != null && paidMs <= now));
+  const endsSoon = !!w && !expired && paidMs != null && paidMs - now < 7 * 864e5;
+  const priceLabel = `${pr.tokenCost} Token / ${pr.periodDays} Tage`;
 
   async function act(key: string, fn: () => Promise<unknown>, ok?: string) {
     setBusy(key);
@@ -126,20 +134,34 @@ export function WatchCard({ vm }: { vm: AkteViewModel }) {
       <div className="space-y-3 text-sm">
         {points.length >= 2 ? <PriceChart points={points} /> : points.length === 1 && <p className="text-muted">Erfasster Preis: {formatEur(points[0].price)} am {new Date(points[0].at).toLocaleDateString("de-DE")}. Ein Verlauf entsteht, sobald ein weiterer Stand erfasst wird.</p>}
 
-        {changes.length > 0 && (
-          <ul className="space-y-1.5">
-            {changes.slice(0, 8).map((c, i) => (
-              <li key={i} className={cn("rounded-lg border p-2.5", c.important ? "border-warn/50" : "border-border")}>
-                <p className={cn(c.important && "font-medium")}>{c.summary}</p>
-                {(c.before || c.after) && (c.type === "statement_removed" || c.type === "text_changed" || c.type === "statement_added") && (
-                  <div className="mt-1.5 grid grid-cols-1 gap-1.5 text-xs">
-                    {c.before && <p className="rounded bg-bad-soft/50 px-2 py-1 line-through decoration-bad/60">„{c.before}“</p>}
-                    {c.after && <p className="rounded bg-good-soft/50 px-2 py-1">„{c.after}“</p>}
-                  </div>
-                )}
-                <p className="mt-1 text-xs text-muted">
-                  {new Date(c.at).toLocaleDateString("de-DE")} · {SOURCE[c.source]}
+        {updates.length > 0 && (
+          <ul className="space-y-2">
+            {updates.slice(0, 6).map((u) => (
+              <li key={u.version} className={cn("rounded-xl border p-3", u.data.summary ? TONE[u.data.summary.tone] : "border-border")}>
+                <p className="text-xs text-muted">
+                  {new Date(u.data.capturedAt).toLocaleDateString("de-DE")} · {SOURCE[u.data.source]}
                 </p>
+                {u.data.summary ? (
+                  <>
+                    <p className="mt-1 font-medium">{u.data.summary.text}</p>
+                    <p className="mt-1 flex gap-1.5">
+                      <Sparkles className="mt-0.5 size-3.5 shrink-0 text-accent" />
+                      <span>{u.data.summary.assessment}</span>
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1">{u.data.changes.map((c) => c.summary).join(" ")}</p>
+                )}
+                {u.data.changes
+                  .filter((c) => (c.before || c.after) && (c.type === "statement_removed" || c.type === "text_changed" || c.type === "statement_added"))
+                  .filter((c, i, arr) => arr.findIndex((x) => x.before === c.before && x.after === c.after) === i)
+                  .slice(0, 2)
+                  .map((c, i) => (
+                    <div key={i} className="mt-2 grid grid-cols-1 gap-1.5 text-xs">
+                      {c.before && <p className="rounded bg-bad-soft/50 px-2 py-1 line-through decoration-bad/60">„{c.before}“</p>}
+                      {c.after && <p className="rounded bg-good-soft/50 px-2 py-1">„{c.after}“</p>}
+                    </div>
+                  ))}
               </li>
             ))}
           </ul>
@@ -150,7 +172,7 @@ export function WatchCard({ vm }: { vm: AkteViewModel }) {
             <p className="text-muted">
               {vm.autoWatchPossible
                 ? "Dieses Angebot kann über die offizielle eBay-Schnittstelle automatisch abgefragt werden. Du wirst bei Preis- oder Angabenänderungen benachrichtigt."
-                : "Für diese Plattform gibt es keine erlaubte automatische Abfrage. DEAL-NIVO überwacht das Inserat daher NICHT selbstständig – du aktualisierst den Stand per neuem Preis oder Screenshot, wir vergleichen und zeigen alle Änderungen."}
+                : "Für diese Plattform gibt es keine erlaubte automatische Abfrage. Wir erinnern dich regelmäßig – du öffnest das Inserat und tippst auf „→ DEAL-NIVO“. Wir vergleichen, fassen die Änderungen zusammen und geben eine kurze Kaufeinschätzung."}
             </p>
             {vm.autoWatchPossible && (
               <Select value={interval} onChange={(e) => setIntervalH(Number(e.target.value))}>
@@ -169,16 +191,49 @@ export function WatchCard({ vm }: { vm: AkteViewModel }) {
                 <input type="checkbox" checked={push} onChange={(e) => setPush(e.target.checked)} /> Push-Benachrichtigung auf diesem Gerät
               </label>
             )}
-            <Button size="sm" onClick={start} disabled={!!busy}>
-              {busy === "start" ? <Spinner /> : <><Bell /> Angebot beobachten</>}
+            <Button size="sm" onClick={start} disabled={!!busy || pr.balance < pr.tokenCost}>
+              {busy === "start" ? <Spinner /> : <><Bell /> Angebot beobachten · {priceLabel}</>}
             </Button>
+            <p className="text-xs text-muted">
+              Dein Guthaben: {pr.balance} Token.{" "}
+              {pr.balance < pr.tokenCost && (
+                <Link href="/dashboard/wallet" className="text-accent underline">
+                  Tokens aufladen
+                </Link>
+              )}
+              {pr.balance >= pr.tokenCost && "Jederzeit beendbar – keine automatische Verlängerung."}
+            </p>
           </div>
         ) : (
           <div className="space-y-2.5">
+            <div className={cn("flex items-center gap-2 rounded-xl px-3 py-2", expired ? "bg-bad-soft/40" : endsSoon ? "bg-warn-soft/40" : "bg-surface-2")}>
+              <CalendarClock className="size-4 shrink-0" />
+              <span className="flex-1">
+                {expired ? "Beobachtung abgelaufen" : w.paidUntil ? `Aktiv bis ${new Date(w.paidUntil).toLocaleDateString("de-DE")}` : "Aktiv"}
+              </span>
+              {(expired || endsSoon) && (
+                <Button size="sm" onClick={() => act("extend", () => postJson(`/api/analyses/${vm.analysisId}/watch/extend`), "Beobachtung verlängert")} disabled={!!busy || pr.balance < pr.tokenCost}>
+                  {busy === "extend" ? <Spinner /> : `Verlängern · ${priceLabel}`}
+                </Button>
+              )}
+            </div>
+            {!expired && w.mode === "manual" && (
+              <div className="rounded-xl border border-accent/40 bg-accent-soft/30 p-3">
+                <p className="flex items-center gap-1.5 font-medium">
+                  <MousePointerClick className="size-4 text-accent" /> Aktualisieren mit einem Tipp
+                </p>
+                <p className="mt-1 text-muted">
+                  Inserat öffnen und auf „→ DEAL-NIVO“ tippen – wir erkennen die Beobachtung automatisch.{" "}
+                  <Link href="/button" className="text-accent underline">
+                    Button einrichten
+                  </Link>
+                </p>
+              </div>
+            )}
             <p className="text-xs text-muted">
               {w.mode === "auto"
                 ? `Automatische Abfrage alle ${w.intervalHours} h über die offizielle Schnittstelle.${w.lastCheckedAt ? ` Zuletzt: ${new Date(w.lastCheckedAt).toLocaleString("de-DE")}.` : ""}`
-                : "Manuelle Beobachtung: Keine automatische Abfrage für diese Plattform."}
+                : "Keine automatische Abfrage für diese Plattform – wir erinnern dich alle paar Tage."}
               {w.lastError && <span className="block text-warn">{w.lastError}</span>}
             </p>
             <div className="flex gap-2">

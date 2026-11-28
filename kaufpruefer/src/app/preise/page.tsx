@@ -15,7 +15,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
   const pricing = await getPricing();
-  const guardian = (await getStore().getConfig()).guardian;
+  const cfgAll = await getStore().getConfig();
+  const guardian = cfgAll.guardian;
+  const watchCost = cfgAll.watch?.tokenCost ?? 1;
+  const watchDays = cfgAll.watch?.periodDays ?? 60;
   const packages = [...pricing.packages].sort((a, b) => a.tokens - b.tokens);
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
@@ -59,7 +62,7 @@ export default async function PricingPage() {
           ))}
         </ul>
         <p className="mt-5 text-xs text-muted">
-          Alle Preise inkl. MwSt. Externe Fahrzeughistorien (per FIN) wären eine separate Zusatzleistung ({formatEur(pricing.vehicleHistoryPriceCents / 100)}), sobald ein Datenanbieter angebunden ist. Keine Streichpreise, keine automatischen Verlängerungen.
+          Angebot beobachten (Preisalarm, Änderungen mit Zusammenfassung): {watchCost} Token je {watchDays} Tage, jederzeit beendbar, keine automatische Verlängerung. Alle Preise inkl. MwSt. Externe Fahrzeughistorien (per FIN) wären eine separate Zusatzleistung ({formatEur(pricing.vehicleHistoryPriceCents / 100)}), sobald ein Datenanbieter angebunden ist. Keine Streichpreise, keine automatischen Verlängerungen.
         </p>
       </Card>
       {guardian?.enabled && (

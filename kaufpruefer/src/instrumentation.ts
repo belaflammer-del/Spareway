@@ -10,7 +10,8 @@ export async function register() {
   startIntervalWorker(Number(process.env.JOB_WORKER_INTERVAL_SECONDS) || 20);
   const housekeeping = async () => {
     try {
-      const [{ scheduleDueWatches }, { getStore }] = await Promise.all([import("./lib/watch/service"), import("./lib/store")]);
+      const [{ scheduleDueWatches, processWatchLifecycle }, { getStore }] = await Promise.all([import("./lib/watch/service"), import("./lib/store")]);
+      await processWatchLifecycle();
       await scheduleDueWatches();
       const now = new Date().toISOString();
       await getStore().deleteExpiredModules(now);
